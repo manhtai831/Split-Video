@@ -7,4 +7,5 @@ const (
 	StatusProcessing Status = "processing"
 	StatusCompleted  Status = "completed"
 	StatusFailed     Status = "failed"
+	StatusCancelled  Status = "cancelled"
 )

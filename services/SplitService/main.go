@@ -5,6 +5,8 @@ import (
 	"app/entities"
 	"app/enums"
 	"os"
+
+	"github.com/google/uuid"
 )
 
 func CreateJob(videoPath string, name string) (entities.Job, error) {
@@ -14,8 +16,9 @@ func CreateJob(videoPath string, name string) (entities.Job, error) {
 	}
 	fileSize := fileStat.Size()
 	job := entities.Job{
-		Status: enums.StatusPending,
-		Type:   enums.JobTypeSplit,
+		Identifier: uuid.New().String(),
+		Status:     enums.StatusPending,
+		Type:       enums.JobTypeSplit,
 	}
 
 	result := Global.DB.Create(&job)

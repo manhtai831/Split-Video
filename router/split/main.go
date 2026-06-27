@@ -18,7 +18,6 @@ import (
 
 func Bootstrap() {
 	http.HandleFunc("/video/split", func(w http.ResponseWriter, r *http.Request) {
-
 		data := structs.ChunkVideoDto{
 			Result: "",
 		}

@@ -6,12 +6,14 @@ import (
 )
 
 type Job struct {
-	ID        int
-	Type      enums.JobType
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Status    enums.Status
-	Progress  float64
-	Error     string
-	Result    string
+	ID         int
+	Identifier string
+	UserID     string
+	Type       enums.JobType
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	Status     enums.Status
+	Progress   float64
+	Error      string
+	Result     string
 }

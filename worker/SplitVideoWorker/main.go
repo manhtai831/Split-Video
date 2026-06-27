@@ -16,7 +16,10 @@ import (
 
 const defaultSizeLimit = 8 * 1024 * 1024 // 8MB
 
-func Process(job entities.Job) error {
+func Process(job entities.Job, context context.Context) error {
+	if job.Status == enums.StatusCompleted || job.Status == enums.StatusFailed || job.Status == enums.StatusCancelled {
+		return nil
+	}
 	fmt.Printf("Processing job: %d\n", job.ID)
 
 	jobFileDatas, err := JobFileDataService.GetJobFileDataByJobId(job.ID)
@@ -38,7 +41,7 @@ func Process(job entities.Job) error {
 
 	outputDir := filepath.Join("uploads", "output", "splits", strconv.Itoa(job.ID))
 	baseFileName := filepath.Base(jobFileDataInput.Path)
-	segments, err := FfmpegService.SplitBySize(context.Background(), structs.SplitBySizeOptionsDto{
+	segments, err := FfmpegService.SplitBySize(context, structs.SplitBySizeOptionsDto{
 		InputPath:  jobFileDataInput.Path,
 		OutputDir:  outputDir,
 		SizeLimit:  defaultSizeLimit,

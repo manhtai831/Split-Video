@@ -5,12 +5,21 @@ import (
 	"app/enums"
 	"app/services/JobService"
 	"app/worker/SplitVideoWorker"
+	"context"
 	"fmt"
+	"sync"
 )
 
+type JobManager struct {
+	JobCancelMap map[string]context.CancelFunc
+	JobMutex     sync.Mutex
+}
+
 var JobChannel chan entities.Job
+var JobManagerInstance JobManager
 
 func Initialize() {
+	JobManagerInstance = JobManager{}
 	JobChannel = make(chan entities.Job)
 	for i := 0; i < 4; i++ {
 		go worker(i)
@@ -46,7 +55,13 @@ func processJob(job entities.Job) {
 	}
 
 	if job.Type == enums.JobTypeSplit {
-		SplitVideoWorker.Process(job)
+		context, cancel := context.WithCancel(context.Background())
+
+		JobManagerInstance.JobMutex.Lock()
+		JobManagerInstance.JobCancelMap[job.Identifier] = cancel
+		JobManagerInstance.JobMutex.Unlock()
+
+		SplitVideoWorker.Process(job, context)
 	}
 
 }
