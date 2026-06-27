@@ -11,6 +11,7 @@ type Job struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	Status    enums.Status
+	Progress  float64
 	Error     string
 	Result    string
 }

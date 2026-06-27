@@ -1,7 +1,6 @@
 package SplitVideoWorker
 
 import (
-	"app/common/Global"
 	"app/entities"
 	"app/enums"
 	"app/services/FfmpegService"
@@ -37,17 +36,23 @@ func Process(job entities.Job) error {
 		return errors.New("no input job file data found for job")
 	}
 
-	outputDir := filepath.Join("uploads", "output", strconv.Itoa(job.ID))
+	outputDir := filepath.Join("uploads", "output", "splits", strconv.Itoa(job.ID))
+	baseFileName := filepath.Base(jobFileDataInput.Path)
 	segments, err := FfmpegService.SplitBySize(context.Background(), structs.SplitBySizeOptionsDto{
 		InputPath:  jobFileDataInput.Path,
 		OutputDir:  outputDir,
 		SizeLimit:  defaultSizeLimit,
 		OutputExt:  "mp4",
-		NamePrefix: "video",
+		NamePrefix: baseFileName,
 		Encode: structs.FfmpegEncodeOptionsDto{
 			VideoCodec:  "libx264",
 			AudioCodec:  "aac",
 			PixelFormat: "yuv420p",
+		},
+		OnProgress: func(done structs.SegmentResultDto, totalDuration, encodedDuration float64) {
+			JobService.UpdateJob(job.ID, entities.Job{
+				Progress: encodedDuration / totalDuration,
+			})
 		},
 	})
 	if err != nil {
@@ -82,7 +87,7 @@ func Process(job entities.Job) error {
 }
 
 func updateJobFailed(jobID int, message string) {
-	_ = Global.DB.Model(&entities.Job{}).Where("id = ?", jobID).Updates(entities.Job{
+	JobService.UpdateJob(jobID, entities.Job{
 		Status: enums.StatusFailed,
 		Error:  message,
 	})
