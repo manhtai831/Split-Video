@@ -1,0 +1,17 @@
+services:
+  split_video_service:
+    build: .
+    restart: always
+    volumes:
+      - ./:/app
+      - ./data/database:/app/database
+      - ./data/uploads:/app/uploads
+    ports:
+      - 8002:8002
+      - 2345:2345
+
+    cap_add:
+      - SYS_PTRACE
+
+    security_opt:
+      - seccomp:unconfined

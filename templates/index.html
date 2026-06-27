@@ -242,7 +242,7 @@
       <div class="tool-section">
         <h2>Split Video</h2>
         <form
-          action="/file"
+          action="/video/split"
           enctype="multipart/form-data"
           method="post"
           onsubmit="this.querySelector('button').disabled = true; this.querySelector('button').innerText = 'Processing...'"
@@ -279,7 +279,7 @@
         </form>
       </div>
 
-      <div id="resultBox" class="result-box">{{result}}</div>
+      <div id="resultBox" class="result-box">{{.Result}}</div>
 
       <a href="/" class="home-link">← Back to Home</a>
     </div>
@@ -289,7 +289,7 @@
         const resultBox = document.getElementById("resultBox");
         const content = resultBox.innerHTML.trim();
 
-        if (content !== "{{result}}" && content !== "") {
+        if (content !== "{{.Result}}" && content !== "") {
           resultBox.style.display = "block";
         }
       });

@@ -1,0 +1,15 @@
+[build]
+cmd = "CGO_ENABLED=1  go build -gcflags='all=-N -l' -o ./dist/main ."
+full_bin = "./bin/air.sh"
+
+# Working directory
+dir = "dist"
+# Watch for changes in Go files
+include_ext = ["go"]
+# Ignore changes in the vendor folder
+exclude_dir = ["vendor"]
+# Ensure the binary is executable
+run_after_build = "chmod +x ./bin/air.sh"
+
+[log]
+level = "debug"
