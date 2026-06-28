@@ -11,5 +11,5 @@ func main() {
 	Global.Bootstrap()
 	router.Bootstrap()
 	channels.Initialize()
-	http.ListenAndServe(":8002", nil)
+	http.ListenAndServe(":3000", nil)
 }

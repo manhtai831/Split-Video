@@ -16,8 +16,8 @@ RUN go mod download
 # Copy the entire project
 COPY . .
 
-# Expose port 8080
-EXPOSE 8080
+# Expose port 3000
+EXPOSE 3000
 
 # Start the app with Air
 CMD [ "air", "-c", ".air.toml" ]

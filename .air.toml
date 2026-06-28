@@ -1,5 +1,5 @@
 [build]
-cmd = "CGO_ENABLED=1  go build -gcflags='all=-N -l' -o ./dist/main ."
+cmd = "CGO_ENABLED=1 go build -gcflags='all=-N -l' -o ./dist/main ."
 full_bin = "./bin/air.sh"
 
 # Working directory
