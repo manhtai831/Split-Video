@@ -1,11 +1,168 @@
 {{define "content"}}
-<div class="container">
-  <div class="welcome-box">
-    <h1>Video Tools</h1>
-    <p>
-      Chào mừng bạn đến với Video Tools. Chọn công cụ từ menu bên trái để bắt đầu
-      <strong>chia nhỏ video (Split)</strong> hoặc <strong>ghép video (Merge)</strong>.
-    </p>
+<link href="/static/css/home.css" rel="stylesheet" />
+
+<div class="container home-dashboard">
+  <!-- 1. Welcome compact -->
+  <div class="welcome-box welcome-box--compact">
+    <div class="welcome-box__text">
+      <h1>Video Tools</h1>
+      <p>Theo dõi job chia/ghép video của bạn</p>
+    </div>
+    <div class="welcome-box__actions">
+      <a href="/video/split" class="btn btn--primary">Chia video mới</a>
+      <a href="/merge" class="btn btn--secondary" aria-disabled="true" title="Sắp ra mắt">Ghép video</a>
+    </div>
   </div>
+
+  <!-- Error banner -->
+  <div id="homeErrorBanner" class="home-error-banner" hidden>
+    <span id="homeErrorMessage">Không thể tải dữ liệu.</span>
+    <button type="button" id="homeErrorRetry" class="btn btn--sm">Thử lại</button>
+  </div>
+
+  <!-- 2. Stats cards -->
+  <section class="home-section" aria-labelledby="statsHeading">
+    <h2 id="statsHeading" class="home-section__title">Tổng quan</h2>
+    <div id="statsGrid" class="stats-grid">
+      <div class="stat-card stat-card--processing">
+        <span class="stat-card__value" data-stat="processing">—</span>
+        <span class="stat-card__label">Đang xử lý</span>
+      </div>
+      <div class="stat-card stat-card--completed">
+        <span class="stat-card__value" data-stat="completed_today">—</span>
+        <span class="stat-card__label">Hoàn thành hôm nay</span>
+      </div>
+      <div class="stat-card stat-card--failed">
+        <span class="stat-card__value" data-stat="failed">—</span>
+        <span class="stat-card__label">Thất bại (7 ngày)</span>
+      </div>
+      <div class="stat-card stat-card--total">
+        <span class="stat-card__value" data-stat="total">—</span>
+        <span class="stat-card__label">Tổng job</span>
+      </div>
+      <div class="stat-card stat-card--avg stat-card--optional">
+        <span class="stat-card__value" data-stat="avg_encode">—</span>
+        <span class="stat-card__label">TB encode (7 ngày)</span>
+      </div>
+    </div>
+    <div id="statsSkeleton" class="stats-skeleton" hidden>
+      <div class="skeleton-block"></div>
+      <div class="skeleton-block"></div>
+      <div class="skeleton-block"></div>
+      <div class="skeleton-block"></div>
+    </div>
+  </section>
+
+  <!-- 3. Active jobs panel -->
+  <section id="activeSection" class="home-section" aria-labelledby="activeHeading">
+    <h2 id="activeHeading" class="home-section__title">Đang xử lý</h2>
+    <div id="activeJobsList" class="active-jobs-list"></div>
+    <p id="activeEmpty" class="home-empty home-empty--compact" hidden>Không có job đang chạy</p>
+    <div id="activeSkeleton" class="active-skeleton" hidden>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+    </div>
+  </section>
+
+  <!-- 4. Job history table -->
+  <section class="home-section" aria-labelledby="historyHeading">
+    <h2 id="historyHeading" class="home-section__title">Lịch sử job</h2>
+
+    <div class="history-filters">
+      <div class="form-field history-filter-field">
+        <label for="filterPeriod">Thời gian tạo</label>
+        <select id="filterPeriod" name="period">
+          <option value="all">Tất cả</option>
+          <option value="today">Hôm nay</option>
+          <option value="7d">7 ngày</option>
+          <option value="30d">30 ngày</option>
+        </select>
+      </div>
+      <div class="form-field history-filter-field">
+        <label for="filterStatus">Trạng thái</label>
+        <select id="filterStatus" name="status">
+          <option value="">Tất cả</option>
+          <option value="pending">Pending</option>
+          <option value="processing">Processing</option>
+          <option value="completed">Completed</option>
+          <option value="failed">Failed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="historyEmpty" class="home-empty" hidden>
+      <p>Chưa có job nào phù hợp bộ lọc.</p>
+      <a href="/video/split" class="btn btn--primary">Bắt đầu chia video</a>
+    </div>
+
+    <div id="historyTableWrap" class="history-table-wrap">
+      <table class="history-table" aria-label="Lịch sử job">
+        <thead>
+          <tr>
+            <th>File</th>
+            <th>Loại</th>
+            <th>Trạng thái</th>
+            <th>Tiến độ</th>
+            <th>Tạo lúc</th>
+            <th>Hoàn thành</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="historyTableBody"></tbody>
+      </table>
+      <div id="historyCardList" class="history-card-list"></div>
+    </div>
+
+    <div id="historySkeleton" class="history-skeleton" hidden>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+    </div>
+
+    <div id="historyPagination" class="history-pagination" hidden>
+      <span id="historyRange" class="history-pagination__range"></span>
+      <div class="history-pagination__controls">
+        <button type="button" id="pagePrev" class="btn btn--secondary btn--sm" disabled>« Trước</button>
+        <span id="pageInfo" class="history-pagination__info"></span>
+        <button type="button" id="pageNext" class="btn btn--secondary btn--sm">Sau »</button>
+      </div>
+    </div>
+  </section>
 </div>
+
+<!-- Failed job error modal -->
+<dialog id="errorModal" class="home-modal">
+  <div class="home-modal__content">
+    <h3 class="home-modal__title">Chi tiết lỗi</h3>
+    <p id="errorModalMessage" class="home-modal__message"></p>
+    <button type="button" id="errorModalClose" class="btn btn--primary btn--sm">Đóng</button>
+  </div>
+</dialog>
+
+<!-- Multi-file download picker -->
+<dialog id="downloadModal" class="home-modal home-modal--download">
+  <div class="home-modal__content">
+    <h3 class="home-modal__title home-modal__title--neutral">Chọn file tải về</h3>
+    <p id="downloadModalJobName" class="download-modal__job-name"></p>
+    <label class="download-modal__select-all">
+      <input type="checkbox" id="downloadSelectAll" />
+      <span>Chọn tất cả</span>
+    </label>
+    <ul id="downloadFileList" class="download-modal__list"></ul>
+    <div class="download-modal__actions">
+      <button type="button" id="downloadModalCancel" class="btn btn--secondary btn--sm">Hủy</button>
+      <button type="button" id="downloadModalConfirm" class="btn btn--primary btn--sm">Tải xuống đã chọn</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="/static/js/home-dashboard.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    if (typeof initHomeDashboard === "function") {
+      initHomeDashboard();
+    }
+  });
+</script>
 {{end}}

@@ -12,6 +12,12 @@ func GetJobFileDataByJobId(jobId int, jobFileDataType enums.JobFileDataType) ([]
 	return jobFileDatas, result.Error
 }
 
+func GetJobFileDataById(id int) (entities.JobFileData, error) {
+	var data entities.JobFileData
+	result := Global.DB.Where("id = ?", id).First(&data)
+	return data, result.Error
+}
+
 func CreateJobFileData(jobFileData entities.JobFileData) error {
 	result := Global.DB.Create(&jobFileData)
 	return result.Error

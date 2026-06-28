@@ -11,6 +11,8 @@ type JobFileData struct {
 	Name      string
 	Size      int64
 	Duration  float64
+	From      float64
+	To        float64
 	Path      string
 	Type      enums.JobFileDataType
 	CreatedAt time.Time

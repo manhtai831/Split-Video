@@ -6,6 +6,7 @@ import (
 	"app/services/JobService"
 	"app/worker/SplitVideoWorker"
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -70,6 +71,13 @@ func processJob(job entities.Job) {
 	}
 
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			JobService.UpdateJob(job.ID, entities.Job{
+				Status:     enums.StatusCancelled,
+				FinishedAt: time.Now(),
+			})
+			return
+		}
 		err = JobService.UpdateJob(job.ID, entities.Job{
 			Status:     enums.StatusFailed,
 			Error:      err.Error(),

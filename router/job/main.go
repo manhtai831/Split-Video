@@ -1,24 +1,62 @@
 package job
 
 import (
+	"app/entities"
+	"app/enums"
+	"app/middleware"
+	"app/services/JobService"
 	"app/worker/channels"
 	"net/http"
+	"time"
 )
 
 func Bootstrap() {
-	http.HandleFunc("/job/cancel", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		jobIdentifier := r.URL.Query().Get("jobIdentifier")
-		channels.JobManagerInstance.JobMutex.Lock()
-		cancel, ok := channels.JobManagerInstance.JobCancelMap[jobIdentifier]
-		if !ok {
-			http.Error(w, "Job not found", http.StatusNotFound)
-			return
-		}
+	http.HandleFunc("/job/cancel", middleware.WithUserID(handleCancel))
+}
+
+func handleCancel(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	jobIdentifier := r.URL.Query().Get("jobIdentifier")
+	if jobIdentifier == "" {
+		http.Error(w, "Missing jobIdentifier", http.StatusBadRequest)
+		return
+	}
+
+	userID := middleware.GetUserID(w, r)
+	job, err := JobService.GetJobByIdentifierForUser(jobIdentifier, userID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if job.Status == enums.StatusCompleted || job.Status == enums.StatusFailed || job.Status == enums.StatusCancelled {
+		http.Error(w, "Job cannot be cancelled", http.StatusConflict)
+		return
+	}
+
+	channels.JobManagerInstance.JobMutex.Lock()
+	cancel, ok := channels.JobManagerInstance.JobCancelMap[jobIdentifier]
+	channels.JobManagerInstance.JobMutex.Unlock()
+
+	if ok {
 		cancel()
-		channels.JobManagerInstance.JobMutex.Unlock()
-	})
+	} else if job.Status == enums.StatusPending {
+		err = JobService.UpdateJob(job.ID, entities.Job{
+			Status:     enums.StatusCancelled,
+			FinishedAt: time.Now(),
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		http.Error(w, "Job not found", http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

@@ -13,10 +13,7 @@
 
 .container {
   width: 100%;
-  background: var(--card-bg);
-  backdrop-filter: blur(10px);
   padding: 16px;
-  box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
   gap: 32px;
@@ -247,4 +244,10 @@
 
 .home-link:hover {
   color: var(--primary);
+}
+
+label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-main);
 }

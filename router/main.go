@@ -1,8 +1,11 @@
 package router
 
 import (
+	apijobs "app/router/api/jobs"
+	"app/router/job"
 	staticfiles "app/router/static"
 	"app/router/split"
+	"app/middleware"
 	"app/structs"
 	"app/templates"
 	"net/http"
@@ -14,9 +17,11 @@ var DB *gorm.DB
 
 func Bootstrap() {
 	staticfiles.Bootstrap()
+	apijobs.Bootstrap()
+	job.Bootstrap()
 	split.Bootstrap()
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/", middleware.WithUserID(func(w http.ResponseWriter, r *http.Request) {
 		data := structs.PageData{
 			Title:      "Home",
 			ActivePage: "home",
@@ -24,5 +29,5 @@ func Bootstrap() {
 		if err := templates.Render(w, "templates/pages/home.html", data); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
-	})
+	}))
 }

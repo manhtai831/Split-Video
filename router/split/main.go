@@ -2,6 +2,7 @@ package split
 
 import (
 	"app/entities"
+	"app/middleware"
 	"app/services/SplitService"
 	"app/structs"
 	"app/templates"
@@ -17,7 +18,7 @@ import (
 )
 
 func Bootstrap() {
-	http.HandleFunc("/video/split", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/video/split", middleware.WithUserID(func(w http.ResponseWriter, r *http.Request) {
 		data := structs.PageData{
 			Title:      "Split Video",
 			ActivePage: "split",
@@ -30,29 +31,37 @@ func Bootstrap() {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			filePath := ""
-			rawFileName := ""
+
+			type uploadedFile struct {
+				path string
+				name string
+			}
+
+			var uploadedFiles []uploadedFile
 			formFields := make(map[string]string)
 			for part, err := reader.NextPart(); err != io.EOF; part, err = reader.NextPart() {
 				if part.FileName() != "" {
-					rawFileName = part.FileName()
+					rawFileName := part.FileName()
 					fileNameHash := md5.Sum([]byte(rawFileName))
-					fileName := hex.EncodeToString(fileNameHash[:]) + strconv.FormatInt(time.Now().UnixMilli(), 10) + path.Ext(part.FileName())
+					fileName := hex.EncodeToString(fileNameHash[:]) + strconv.FormatInt(time.Now().UnixNano(), 10) + path.Ext(rawFileName)
 
 					dst, err := os.Create(path.Join("uploads", fileName))
 					if err != nil {
 						http.Error(w, err.Error(), http.StatusInternalServerError)
 						return
 					}
-					defer dst.Close()
-
-					filePath = dst.Name()
 
 					_, err = io.Copy(dst, part)
+					dst.Close()
 					if err != nil {
 						http.Error(w, err.Error(), http.StatusInternalServerError)
 						return
 					}
+
+					uploadedFiles = append(uploadedFiles, uploadedFile{
+						path: dst.Name(),
+						name: rawFileName,
+					})
 					continue
 				}
 
@@ -67,7 +76,7 @@ func Bootstrap() {
 				}
 				formFields[name] = string(body)
 			}
-			if filePath == "" {
+			if len(uploadedFiles) == 0 {
 				return
 			}
 
@@ -82,19 +91,24 @@ func Bootstrap() {
 				return
 			}
 
-			job, err := SplitService.CreateJob(filePath, rawFileName, extrasJSON)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
+			for _, uploaded := range uploadedFiles {
+				userID := middleware.GetUserID(w, r)
+				job, err := SplitService.CreateJob(uploaded.path, uploaded.name, extrasJSON, userID)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				channels.JobChannel <- entities.Job{
+					ID: job.ID,
+				}
 			}
 
-			channels.JobChannel <- entities.Job{
-				ID: job.ID,
-			}
+			http.Redirect(w, r, "/#historyHeading", http.StatusSeeOther)
 		}
 
 		if err := templates.Render(w, "templates/pages/split.html", data); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
-	})
+	}))
 }

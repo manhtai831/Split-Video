@@ -15,9 +15,9 @@ func runCommand(ctx context.Context, name string, args ...string) ([]byte, error
 	output, err := cmd.Output()
 	if err != nil {
 		if stderr.Len() > 0 {
-			return output, fmt.Errorf("%s %v: %s", name, err, stderr.String())
+			return output, fmt.Errorf("%s: %w: %s", name, err, stderr.String())
 		}
-		return output, fmt.Errorf("%s %v", name, err)
+		return output, fmt.Errorf("%s: %w", name, err)
 	}
 
 	return output, nil
