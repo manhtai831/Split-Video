@@ -1,6 +1,11 @@
 (function () {
-  const SIZE_LIMIT = 8 * 1024 * 1024;
   const BASE_ENCODE_MULTIPLIER = 1.5;
+
+  const UNIT_MULTIPLIERS = {
+    kb: 1024,
+    mb: 1024 * 1024,
+    gb: 1024 * 1024 * 1024,
+  };
 
   const PRESET_FACTORS = {
     ultrafast: 0.25,
@@ -41,13 +46,38 @@
     return "~" + minutes + " phút " + seconds + " giây";
   }
 
+  function getSizeLimitBytes() {
+    const amountEl = document.getElementById("split_size");
+    const unitEl = document.getElementById("split_unit");
+    if (!amountEl) {
+      return 0;
+    }
+
+    const amount = parseInt(amountEl.value, 10);
+    if (!amount || amount <= 0) {
+      return 0;
+    }
+
+    const unit = unitEl ? unitEl.value : "mb";
+    const multiplier = UNIT_MULTIPLIERS[unit] || UNIT_MULTIPLIERS.mb;
+    return amount * multiplier;
+  }
+
+  function getSegmentCount() {
+    const sizeLimit = getSizeLimitBytes();
+    if (sizeLimit <= 0) {
+      return 1;
+    }
+    return Math.ceil(fileSize / sizeLimit);
+  }
+
   function estimateSeconds() {
     if (!videoDuration || !fileSize) {
       return 0;
     }
 
     const size = document.getElementById("size").value;
-    const segmentCount = Math.ceil(fileSize / SIZE_LIMIT);
+    const segmentCount = getSegmentCount();
     const splitOverhead = segmentCount * 2;
 
     if (size === "keep") {
@@ -189,7 +219,7 @@
       });
     }
 
-    ["size", "crf", "fps", "preset", "audio_codec", "audio_bitrate"].forEach(function (id) {
+    ["size", "crf", "fps", "preset", "audio_codec", "audio_bitrate", "split_size", "split_unit"].forEach(function (id) {
       const el = document.getElementById(id);
       if (!el) {
         return;

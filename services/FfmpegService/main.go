@@ -112,20 +112,19 @@ func EncodeSegment(
 	if err := validateInputFile(input); err != nil {
 		return structs.SegmentResultDto{}, err
 	}
-	if sizeLimit <= 0 {
-		return structs.SegmentResultDto{}, fmt.Errorf("size limit must be greater than 0")
-	}
 
 	outputDir := filepath.Dir(output)
 	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return structs.SegmentResultDto{}, fmt.Errorf("create output dir: %w", err)
 	}
 
-	args := []string{
-		"-y",
-		"-ss", formatSeconds(startAt),
-		"-i", input,
-		"-fs", strconv.FormatInt(sizeLimit, 10),
+	args := []string{"-y"}
+	if startAt > 0 {
+		args = append(args, "-ss", formatSeconds(startAt))
+	}
+	args = append(args, "-i", input)
+	if sizeLimit > 0 {
+		args = append(args, "-fs", strconv.FormatInt(sizeLimit, 10))
 	}
 	args = append(args, BuildEncodeArgs(opts)...)
 	args = append(args, output)

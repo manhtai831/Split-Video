@@ -7,7 +7,8 @@ import (
 )
 
 type SplitJobExtrasDto struct {
-	Encode FfmpegEncodeOptionsDto `json:"encode"`
+	Encode    FfmpegEncodeOptionsDto `json:"encode"`
+	SizeLimit int64                  `json:"size_limit,omitempty"`
 }
 
 var allowedSizes = map[string]bool{
@@ -104,7 +105,39 @@ func ParseSplitForm(fields map[string]string) (SplitJobExtrasDto, error) {
 		encode.AudioBitrate = bitrate
 	}
 
-	return SplitJobExtrasDto{Encode: encode}, nil
+	sizeLimit, err := parseSplitSize(fields["split_size"], fields["split_unit"])
+	if err != nil {
+		return SplitJobExtrasDto{}, err
+	}
+
+	return SplitJobExtrasDto{Encode: encode, SizeLimit: sizeLimit}, nil
+}
+
+func parseSplitSize(amount, unit string) (int64, error) {
+	if amount == "" || amount == "0" {
+		return 0, nil
+	}
+	n, err := strconv.ParseInt(amount, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid split_size: %q", amount)
+	}
+	if n < 0 {
+		return 0, fmt.Errorf("split_size must be non-negative, got %d", n)
+	}
+	if n == 0 {
+		return 0, nil
+	}
+
+	switch unit {
+	case "kb":
+		return n * 1024, nil
+	case "mb", "":
+		return n * 1024 * 1024, nil
+	case "gb":
+		return n * 1024 * 1024 * 1024, nil
+	default:
+		return 0, fmt.Errorf("invalid split_unit: %q", unit)
+	}
 }
 
 func parseCRF(raw string, defaultVal int) (int, error) {

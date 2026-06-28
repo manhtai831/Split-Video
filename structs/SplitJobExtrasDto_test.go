@@ -196,6 +196,70 @@ func TestSplitJobExtrasDto_ToJSONRoundTrip(t *testing.T) {
 	}
 }
 
+func TestParseSplitForm_SplitSizeZero(t *testing.T) {
+	extras, err := ParseSplitForm(map[string]string{
+		"size":       "1080",
+		"split_size": "0",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if extras.SizeLimit != 0 {
+		t.Fatalf("expected size limit 0, got %d", extras.SizeLimit)
+	}
+}
+
+func TestParseSplitForm_SplitSizeMB(t *testing.T) {
+	extras, err := ParseSplitForm(map[string]string{
+		"size":       "1080",
+		"split_size": "8",
+		"split_unit": "mb",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := int64(8 * 1024 * 1024)
+	if extras.SizeLimit != want {
+		t.Fatalf("expected size limit %d, got %d", want, extras.SizeLimit)
+	}
+}
+
+func TestParseSplitForm_SplitSizeKB(t *testing.T) {
+	extras, err := ParseSplitForm(map[string]string{
+		"size":       "1080",
+		"split_size": "512",
+		"split_unit": "kb",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := int64(512 * 1024)
+	if extras.SizeLimit != want {
+		t.Fatalf("expected size limit %d, got %d", want, extras.SizeLimit)
+	}
+}
+
+func TestParseSplitForm_SplitSizeInvalidUnit(t *testing.T) {
+	_, err := ParseSplitForm(map[string]string{
+		"size":       "1080",
+		"split_size": "10",
+		"split_unit": "tb",
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid split_unit")
+	}
+}
+
+func TestParseSplitForm_SplitSizeNegative(t *testing.T) {
+	_, err := ParseSplitForm(map[string]string{
+		"size":       "1080",
+		"split_size": "-1",
+	})
+	if err == nil {
+		t.Fatal("expected error for negative split_size")
+	}
+}
+
 func containsArgPair(args []string, key string) bool {
 	for i, arg := range args {
 		if arg == key {

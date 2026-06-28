@@ -16,8 +16,6 @@ import (
 	"strings"
 )
 
-const defaultSizeLimit = 8 * 1024 * 1024 // 8MB
-
 func Process(job entities.Job, ctx context.Context) error {
 	if job.Status == enums.StatusCompleted || job.Status == enums.StatusFailed || job.Status == enums.StatusCancelled {
 		return nil
@@ -50,26 +48,46 @@ func Process(job entities.Job, ctx context.Context) error {
 	os.RemoveAll(outputDir)
 
 	baseFileName := strings.TrimSuffix(filepath.Base(jobFileDataInput.Path), filepath.Ext(jobFileDataInput.Path))
-	encodeOpts := resolveEncodeOptions(job)
-	segments, err := FfmpegService.SplitBySize(ctx, structs.SplitBySizeOptionsDto{
-		InputPath:  jobFileDataInput.Path,
-		OutputDir:  outputDir,
-		SizeLimit:  defaultSizeLimit,
-		OutputExt:  "mp4",
-		NamePrefix: baseFileName,
-		Encode:     encodeOpts,
-		OnProgress: func(done structs.SegmentResultDto, totalDuration, encodedDuration float64) {
-			JobService.UpdateJob(job.ID, entities.Job{
-				Progress: encodedDuration / totalDuration,
-			})
-		},
-	})
-	if err != nil {
-		if errors.Is(err, context.Canceled) {
+	extras := resolveExtras(job)
+	encodeOpts := extras.Encode
+	sizeLimit := extras.SizeLimit
+
+	var segments []structs.SegmentResultDto
+	if sizeLimit <= 0 {
+		output := filepath.Join(outputDir, baseFileName+"-1.mp4")
+		seg, err := FfmpegService.EncodeSegment(ctx, jobFileDataInput.Path, output, 0, 0, encodeOpts)
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return err
+			}
+			updateJobFailed(job.ID, err.Error())
 			return err
 		}
-		updateJobFailed(job.ID, err.Error())
-		return err
+		JobService.UpdateJob(job.ID, entities.Job{Progress: 1})
+		seg.Index = 1
+		segments = []structs.SegmentResultDto{seg}
+	} else {
+		var err error
+		segments, err = FfmpegService.SplitBySize(ctx, structs.SplitBySizeOptionsDto{
+			InputPath:  jobFileDataInput.Path,
+			OutputDir:  outputDir,
+			SizeLimit:  sizeLimit,
+			OutputExt:  "mp4",
+			NamePrefix: baseFileName,
+			Encode:     encodeOpts,
+			OnProgress: func(done structs.SegmentResultDto, totalDuration, encodedDuration float64) {
+				JobService.UpdateJob(job.ID, entities.Job{
+					Progress: encodedDuration / totalDuration,
+				})
+			},
+		})
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				return err
+			}
+			updateJobFailed(job.ID, err.Error())
+			return err
+		}
 	}
 
 	for _, segment := range segments {
@@ -80,6 +98,8 @@ func Process(job entities.Job, ctx context.Context) error {
 			Duration: segment.Duration,
 			Path:     segment.Path,
 			Type:     enums.JobFileDataTypeOutput,
+			From:     segment.StartAt,
+			To:       segment.StartAt + segment.Duration,
 		})
 		if err != nil {
 			return fmt.Errorf("[SplitVideoWorker] create output job file data: %w", err)
@@ -89,15 +109,15 @@ func Process(job entities.Job, ctx context.Context) error {
 	return nil
 }
 
-func resolveEncodeOptions(job entities.Job) structs.FfmpegEncodeOptionsDto {
+func resolveExtras(job entities.Job) structs.SplitJobExtrasDto {
 	if job.Extras == "" {
-		return structs.DefaultSplitEncodeOptions()
+		return structs.SplitJobExtrasDto{Encode: structs.DefaultSplitEncodeOptions()}
 	}
 	extras, err := structs.ParseSplitJobExtrasJSON(job.Extras)
 	if err != nil {
-		return structs.DefaultSplitEncodeOptions()
+		return structs.SplitJobExtrasDto{Encode: structs.DefaultSplitEncodeOptions()}
 	}
-	return extras.Encode
+	return extras
 }
 
 func updateJobFailed(jobID int, message string) {

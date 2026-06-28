@@ -145,6 +145,46 @@
   gap: 6px;
 }
 
+.input-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.input-row input[type="number"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.input-row select {
+  flex: 0 0 100px;
+  width: 100px;
+}
+
+.advanced-options {
+  margin: 16px 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.advanced-options summary {
+  padding: 14px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-main);
+  user-select: none;
+}
+
+.advanced-options[open] summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.advanced-options > .gap-col-16 {
+  padding: 16px;
+}
+
 .field-hint {
   margin: 0;
   font-size: 13px;
