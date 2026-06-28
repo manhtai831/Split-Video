@@ -1,0 +1,23 @@
+{{define "root"}}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{.Title}} - Video Tools</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="/static/css/layout.css" rel="stylesheet" />
+  <link href="/static/css/root.css" rel="stylesheet" />
+</head>
+<body>
+  {{template "navbar" .}}
+  <div class="app-shell">
+    {{template "sidebar" .}}
+    <main class="main">{{template "content" .}}</main>
+    {{template "rightbar" .}}
+  </div>
+  <div class="sidebar-backdrop" aria-hidden="true"></div>
+  <script src="/static/js/layout.js"></script>
+</body>
+</html>
+{{end}}

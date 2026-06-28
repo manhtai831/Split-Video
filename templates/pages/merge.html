@@ -1,0 +1,17 @@
+{{define "content"}}
+<div class="container" style="height: 100%;">
+    
+    <h2>Merge Video</h2>
+    <form
+      action="/merge"
+      enctype="multipart/form-data"
+      method="post"
+      onsubmit="this.querySelector('button').disabled = true; this.querySelector('button').innerText = 'Processing...'"
+    >
+      <input type="file" name="files" multiple accept="video/*" required />
+      <button type="submit" name="mergeButton">Merge Videos</button>
+    </form>
+
+  <div id="resultBox" class="result-box">{{.Result}}</div>
+</div>
+{{end}}

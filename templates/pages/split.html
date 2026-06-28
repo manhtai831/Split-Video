@@ -1,0 +1,42 @@
+{{define "content"}}
+<div class="container" style="height: 100%;">
+    <h2>Split Video</h2>
+    <form
+      action="/video/split"
+      enctype="multipart/form-data"
+      method="post"
+      onsubmit="this.querySelector('button').disabled = true; this.querySelector('button').innerText = 'Processing...'"
+    >
+      <input type="file" name="file" accept="video/*" required />
+
+      <select name="size">
+        <option value="1080" selected>1080P Full HD</option>
+        <option value="keep">Original Size (Split Only)</option>
+        <option value="3840">4K Ultra HD</option>
+        <option value="2560">2K QHD</option>
+        <option value="1920">1920P</option>
+        <option value="1440">1440P</option>
+        <option value="720">720P HD</option>
+        <option value="480">480P</option>
+        <option value="360">360P</option>
+        <option value="240">240P</option>
+      </select>
+
+      <button type="submit" name="myButton">Zip & Download</button>
+    </form>
+
+  <div id="resultBox" class="result-box">{{.Result}}</div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const resultBox = document.getElementById("resultBox");
+    if (!resultBox) return;
+    const content = resultBox.innerHTML.trim();
+
+    if (content !== "{{.Result}}" && content !== "") {
+      resultBox.style.display = "block";
+    }
+  });
+</script>
+{{end}}

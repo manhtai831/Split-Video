@@ -1,0 +1,15 @@
+{{define "sidebar"}}
+<aside class="sidebar">
+ 
+  <div class="sidebar-part sidebar-part--content">
+    {{block "sidebar-content" .}}{{end}}
+  </div>
+  <div class="sidebar-part sidebar-part--nav">
+    <ul class="sidebar-nav">
+      <li><a href="/" class="{{if eq .ActivePage "home"}}active{{end}}">Home</a></li>
+      <li><a href="/video/split" class="{{if eq .ActivePage "split"}}active{{end}}">Split Video</a></li>
+      <li><a href="/merge" class="{{if eq .ActivePage "merge"}}active{{end}}">Merge Video</a></li>
+    </ul>
+  </div>
+</aside>
+{{end}}

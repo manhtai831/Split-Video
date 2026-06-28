@@ -4,6 +4,7 @@ import (
 	"app/common/Global"
 	"app/entities"
 	"app/enums"
+	"time"
 )
 
 func GetAllJobs() ([]entities.Job, error) {
@@ -13,6 +14,7 @@ func GetAllJobs() ([]entities.Job, error) {
 }
 
 func UpdateJob(id int, job entities.Job) error {
+	job.UpdatedAt = time.Now()
 	result := Global.DB.Model(&entities.Job{}).Where("id = ?", id).Updates(job)
 	return result.Error
 }

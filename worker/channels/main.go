@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 )
 
 type JobManager struct {
@@ -19,7 +20,9 @@ var JobChannel chan entities.Job
 var JobManagerInstance JobManager
 
 func Initialize() {
-	JobManagerInstance = JobManager{}
+	JobManagerInstance = JobManager{
+		JobCancelMap: make(map[string]context.CancelFunc),
+	}
 	JobChannel = make(chan entities.Job)
 	for i := 0; i < 4; i++ {
 		go worker(i)
@@ -45,7 +48,8 @@ func processJob(job entities.Job) {
 	fmt.Printf("Worker processing job: %d\n", job.ID)
 
 	JobService.UpdateJob(job.ID, entities.Job{
-		Status: enums.StatusProcessing,
+		Status:    enums.StatusProcessing,
+		StartedAt: time.Now(),
 	})
 
 	job, err := JobService.GetJobById(job.ID)
@@ -53,6 +57,7 @@ func processJob(job entities.Job) {
 		fmt.Printf("Error getting job: %v\n", err)
 		return
 	}
+	err = nil
 
 	if job.Type == enums.JobTypeSplit {
 		context, cancel := context.WithCancel(context.Background())
@@ -61,7 +66,20 @@ func processJob(job entities.Job) {
 		JobManagerInstance.JobCancelMap[job.Identifier] = cancel
 		JobManagerInstance.JobMutex.Unlock()
 
-		SplitVideoWorker.Process(job, context)
+		err = SplitVideoWorker.Process(job, context)
 	}
 
+	if err != nil {
+		err = JobService.UpdateJob(job.ID, entities.Job{
+			Status:     enums.StatusFailed,
+			Error:      err.Error(),
+			FinishedAt: time.Now(),
+		})
+		return
+	}
+
+	err = JobService.UpdateJob(job.ID, entities.Job{
+		Status:     enums.StatusCompleted,
+		FinishedAt: time.Now(),
+	})
 }

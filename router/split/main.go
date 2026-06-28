@@ -4,10 +4,10 @@ import (
 	"app/entities"
 	"app/services/SplitService"
 	"app/structs"
+	"app/templates"
 	"app/worker/channels"
 	"crypto/md5"
 	"encoding/hex"
-	"html/template"
 	"io"
 	"net/http"
 	"os"
@@ -18,8 +18,10 @@ import (
 
 func Bootstrap() {
 	http.HandleFunc("/video/split", func(w http.ResponseWriter, r *http.Request) {
-		data := structs.ChunkVideoDto{
-			Result: "",
+		data := structs.PageData{
+			Title:      "Split Video",
+			ActivePage: "split",
+			Result:     "",
 		}
 
 		if r.Method == "POST" {
@@ -68,16 +70,8 @@ func Bootstrap() {
 			}
 		}
 
-		tmpl, err := template.ParseFiles("templates/index.html")
-
-		if err != nil {
+		if err := templates.Render(w, "templates/pages/split.html", data); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		err = tmpl.Execute(w, data)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
 		}
 	})
 }

@@ -138,7 +138,7 @@ func EncodeSegment(
 	if err != nil {
 		return structs.SegmentResultDto{}, fmt.Errorf("probe encoded segment: %w", err)
 	}
-	if duration <= 0 {
+	if int(duration) <= 0 {
 		return structs.SegmentResultDto{}, fmt.Errorf("encoded segment has zero duration: %s", output)
 	}
 
@@ -191,7 +191,7 @@ func SplitBySize(ctx context.Context, opts structs.SplitBySizeOptionsDto) ([]str
 	curDuration := 0.0
 	maxIterations := int(math.Ceil(totalDuration)) + 1000
 
-	for i := 1; curDuration < totalDuration && i <= maxIterations; i++ {
+	for i := 1; int(curDuration) < int(totalDuration) && i <= maxIterations; i++ {
 		output := filepath.Join(opts.OutputDir, fmt.Sprintf("%s-%d.%s", namePrefix, i, outputExt))
 
 		seg, err := EncodeSegment(ctx, opts.InputPath, output, curDuration, opts.SizeLimit, opts.Encode)
@@ -202,18 +202,22 @@ func SplitBySize(ctx context.Context, opts structs.SplitBySizeOptionsDto) ([]str
 		seg.Index = i
 		results = append(results, seg)
 
+		nextDuration := curDuration + seg.Duration
 		if opts.OnProgress != nil {
-			opts.OnProgress(seg, totalDuration, curDuration+seg.Duration)
+			opts.OnProgress(seg, float64(int(totalDuration)), float64(int(nextDuration)))
 		}
 
-		nextDuration := curDuration + seg.Duration
+		if int(nextDuration) >= int(totalDuration) {
+			curDuration = nextDuration
+			break
+		}
 		if nextDuration <= curDuration {
 			return nil, fmt.Errorf("split stalled at part %d", i)
 		}
 		curDuration = nextDuration
 	}
 
-	if curDuration < totalDuration {
+	if int(curDuration) < int(totalDuration) {
 		return nil, fmt.Errorf("split incomplete: encoded %.2fs of %.2fs", curDuration, totalDuration)
 	}
 

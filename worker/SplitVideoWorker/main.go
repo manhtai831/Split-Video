@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 )
@@ -20,12 +21,10 @@ func Process(job entities.Job, context context.Context) error {
 	if job.Status == enums.StatusCompleted || job.Status == enums.StatusFailed || job.Status == enums.StatusCancelled {
 		return nil
 	}
-	fmt.Printf("Processing job: %d\n", job.ID)
 
-	jobFileDatas, err := JobFileDataService.GetJobFileDataByJobId(job.ID)
+	jobFileDatas, err := JobFileDataService.GetJobFileDataByJobId(job.ID, enums.JobFileDataTypeInput)
 	if err != nil {
-		fmt.Printf("Error getting job file data: %v\n", err)
-		return errors.New("error getting job file data")
+		return errors.New("[SplitVideoWorker] error getting job file data: " + err.Error())
 	}
 
 	var jobFileDataInput entities.JobFileData
@@ -36,10 +35,19 @@ func Process(job entities.Job, context context.Context) error {
 		}
 	}
 	if jobFileDataInput.Path == "" {
-		return errors.New("no input job file data found for job")
+		return errors.New("[SplitVideoWorker] no input job file data found for job")
 	}
 
+	jobFileDataInput.Duration, err = FfmpegService.GetDuration(context, jobFileDataInput.Path)
+	if err != nil {
+		return errors.New("[SplitVideoWorker] error getting metadata: " + err.Error())
+	}
+	JobFileDataService.UpdateJobFileData(&jobFileDataInput)
+
 	outputDir := filepath.Join("uploads", "output", "splits", strconv.Itoa(job.ID))
+
+	os.RemoveAll(outputDir)
+
 	baseFileName := filepath.Base(jobFileDataInput.Path)
 	segments, err := FfmpegService.SplitBySize(context, structs.SplitBySizeOptionsDto{
 		InputPath:  jobFileDataInput.Path,
@@ -66,24 +74,15 @@ func Process(job entities.Job, context context.Context) error {
 	for _, segment := range segments {
 		err = JobFileDataService.CreateJobFileData(entities.JobFileData{
 			JobID:    job.ID,
-			Name:     filepath.Base(segment.Path),
+			Name:     jobFileDataInput.Name + "-" + strconv.Itoa(segment.Index) + ".mp4",
 			Size:     segment.Size,
 			Duration: segment.Duration,
 			Path:     segment.Path,
 			Type:     enums.JobFileDataTypeOutput,
 		})
 		if err != nil {
-			updateJobFailed(job.ID, err.Error())
-			return fmt.Errorf("create output job file data: %w", err)
+			return fmt.Errorf("[SplitVideoWorker] create output job file data: %w", err)
 		}
-	}
-
-	err = JobService.UpdateJob(job.ID, entities.Job{
-		Status: enums.StatusCompleted,
-		Result: outputDir,
-	})
-	if err != nil {
-		return fmt.Errorf("update job status: %w", err)
 	}
 
 	return nil

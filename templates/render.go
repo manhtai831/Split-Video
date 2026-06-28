@@ -1,0 +1,22 @@
+package templates
+
+import (
+	"html/template"
+	"net/http"
+)
+
+var layoutFiles = []string{
+	"templates/layouts/root.html",
+	"templates/partials/navbar.html",
+	"templates/partials/sidebar.html",
+	"templates/partials/rightbar.html",
+}
+
+func Render(w http.ResponseWriter, page string, data any) error {
+	files := append(layoutFiles, page)
+	tmpl, err := template.ParseFiles(files...)
+	if err != nil {
+		return err
+	}
+	return tmpl.ExecuteTemplate(w, "root", data)
+}

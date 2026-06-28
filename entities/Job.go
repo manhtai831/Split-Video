@@ -8,12 +8,15 @@ import (
 type Job struct {
 	ID         int
 	Identifier string
-	UserID     string
 	Type       enums.JobType
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	UserID     string
 	Status     enums.Status
 	Progress   float64
 	Error      string
-	Result     string
+
+	StartedAt  time.Time
+	FinishedAt time.Time
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }

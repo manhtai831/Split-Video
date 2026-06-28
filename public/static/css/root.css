@@ -1,0 +1,202 @@
+:root {
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  --card-bg: rgba(255, 255, 255, 0.95);
+  --text-main: #1f2937;
+  --text-muted: #6b7280;
+  --border: #e5e7eb;
+  --radius: 16px;
+  --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1),
+    0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.container {
+  width: 100%;
+  background: var(--card-bg);
+  backdrop-filter: blur(10px);
+  padding: 16px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  box-sizing: border-box;
+}
+
+.welcome-box {
+  background: #e0e7ff;
+  padding: 24px;
+  border-radius: 12px;
+  border-left: 5px solid var(--primary);
+}
+
+.welcome-box h1 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  color: var(--primary);
+}
+
+.welcome-box p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-main);
+}
+
+.tool-section {
+  border: 1px solid var(--border);
+  padding: 24px;
+  border-radius: 12px;
+  background: #fff;
+  transition: transform 0.2s ease;
+}
+
+.tool-section:hover {
+  border-color: #c7d2fe;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.main h2 {
+  margin: 0 0 20px 0;
+  font-size: 20px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.main h2::before {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 8px;
+  background: var(--primary);
+  border-radius: 50%;
+}
+
+.main form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.main input[type="file"] {
+  font-size: 14px;
+  color: var(--text-muted);
+  background: #f9fafb;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  transition: 0.2s;
+}
+
+.main input[type="file"]:hover {
+  background: #f3f4f6;
+  border-color: var(--primary);
+}
+
+.main input[type="file"]::file-selector-button {
+  border: none;
+  background: var(--primary);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  margin-right: 12px;
+  transition: 0.2s;
+}
+
+.main input[type="file"]::file-selector-button:hover {
+  background: var(--primary-hover);
+}
+
+.main select {
+  appearance: none;
+  padding: 14px;
+  font-size: 15px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 0.8em auto;
+  cursor: pointer;
+  color: var(--text-main);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.main select:focus,
+.main input:focus {
+  outline: 2px solid #c7d2fe;
+  border-color: var(--primary);
+}
+
+.main button[type="submit"] {
+  padding: 16px;
+  font-size: 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3);
+  transition: all 0.2s;
+  margin-top: 8px;
+}
+
+.main button[type="submit"]:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 10px -1px rgba(79, 70, 229, 0.4);
+}
+
+.main button[type="submit"]:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.result-box {
+  padding: 20px;
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  font-size: 15px;
+  text-align: center;
+  font-weight: 500;
+  animation: fadeIn 0.5s ease;
+  display: none;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.home-link {
+  text-decoration: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  text-align: center;
+  display: block;
+  margin-top: 10px;
+  transition: 0.2s;
+}
+
+.home-link:hover {
+  color: var(--primary);
+}
