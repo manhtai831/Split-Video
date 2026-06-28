@@ -153,6 +153,11 @@ func parseListOptions(r *http.Request) JobService.ListJobsOptions {
 		}
 	}
 
+	if jobType := q.Get("type"); jobType != "" {
+		t := enums.JobType(jobType)
+		opts.Type = &t
+	}
+
 	return opts
 }
 

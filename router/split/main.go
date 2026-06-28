@@ -104,7 +104,7 @@ func Bootstrap() {
 				}
 			}
 
-			http.Redirect(w, r, "/#historyHeading", http.StatusSeeOther)
+			http.Redirect(w, r, "/video/split", http.StatusSeeOther)
 		}
 
 		if err := templates.Render(w, "templates/pages/split.html", data); err != nil {

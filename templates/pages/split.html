@@ -1,4 +1,5 @@
 {{define "content"}}
+<link href="/static/css/jobs-ui.css" rel="stylesheet" />
 <div class="container">
   <h2>Split Video</h2>
   <form
@@ -119,8 +120,52 @@
   </form>
 
   <div style="height: 32px;"></div>
+
+  <section class="home-section" aria-labelledby="splitJobsHeading">
+    <h2 id="splitJobsHeading" class="home-section__title">Lịch sử chia video</h2>
+
+    <div id="splitJobsEmpty" class="job-empty" hidden>
+      <p>Chưa có job chia video nào.</p>
+    </div>
+
+    <div id="splitJobsTableWrap" class="history-table-wrap">
+      <table class="history-table" aria-label="Lịch sử job chia video">
+        <thead>
+          <tr>
+            <th>File</th>
+            <th>Trạng thái</th>
+            <th>Tiến độ</th>
+            <th>Tạo lúc</th>
+            <th>Hoàn thành</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="splitJobsTableBody"></tbody>
+      </table>
+      <div id="splitJobsCardList" class="history-card-list"></div>
+    </div>
+
+    <div id="splitJobsSkeleton" class="history-skeleton" hidden>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+    </div>
+
+    <div id="splitJobsPagination" class="history-pagination" hidden>
+      <span id="splitJobsRange" class="history-pagination__range"></span>
+      <div class="history-pagination__controls">
+        <button type="button" id="splitJobsPagePrev" class="btn btn--secondary btn--sm" disabled>« Trước</button>
+        <span id="splitJobsPageInfo" class="history-pagination__info"></span>
+        <button type="button" id="splitJobsPageNext" class="btn btn--secondary btn--sm">Sau »</button>
+      </div>
+    </div>
+  </section>
 </div>
 
+{{template "jobModals" .}}
+
+<script src="/static/js/job-ui.js"></script>
+<script src="/static/js/split-jobs-panel.js"></script>
 <script src="/static/js/split-estimate.js"></script>
 <script>
   document.addEventListener("DOMContentLoaded", function () {
@@ -134,6 +179,10 @@
 
     if (typeof initSplitEstimate === "function") {
       initSplitEstimate();
+    }
+
+    if (typeof initSplitJobsPanel === "function") {
+      initSplitJobsPanel();
     }
   });
 </script>

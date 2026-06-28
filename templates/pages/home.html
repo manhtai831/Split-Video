@@ -1,5 +1,6 @@
 {{define "content"}}
 <link href="/static/css/home.css" rel="stylesheet" />
+<link href="/static/css/jobs-ui.css" rel="stylesheet" />
 
 <div class="container home-dashboard">
   <!-- 1. Welcome compact -->
@@ -131,32 +132,9 @@
   </section>
 </div>
 
-<!-- Failed job error modal -->
-<dialog id="errorModal" class="home-modal">
-  <div class="home-modal__content">
-    <h3 class="home-modal__title">Chi tiết lỗi</h3>
-    <p id="errorModalMessage" class="home-modal__message"></p>
-    <button type="button" id="errorModalClose" class="btn btn--primary btn--sm">Đóng</button>
-  </div>
-</dialog>
+{{template "jobModals" .}}
 
-<!-- Multi-file download picker -->
-<dialog id="downloadModal" class="home-modal home-modal--download">
-  <div class="home-modal__content">
-    <h3 class="home-modal__title home-modal__title--neutral">Chọn file tải về</h3>
-    <p id="downloadModalJobName" class="download-modal__job-name"></p>
-    <label class="download-modal__select-all">
-      <input type="checkbox" id="downloadSelectAll" />
-      <span>Chọn tất cả</span>
-    </label>
-    <ul id="downloadFileList" class="download-modal__list"></ul>
-    <div class="download-modal__actions">
-      <button type="button" id="downloadModalCancel" class="btn btn--secondary btn--sm">Hủy</button>
-      <button type="button" id="downloadModalConfirm" class="btn btn--primary btn--sm">Tải xuống đã chọn</button>
-    </div>
-  </div>
-</dialog>
-
+<script src="/static/js/job-ui.js"></script>
 <script src="/static/js/home-dashboard.js"></script>
 <script>
   document.addEventListener("DOMContentLoaded", function () {

@@ -12,6 +12,7 @@ import (
 
 type ListJobsOptions struct {
 	Statuses   []enums.Status
+	Type       *enums.JobType
 	From       *time.Time
 	To         *time.Time
 	ActiveOnly bool
@@ -72,6 +73,9 @@ func applyListFilters(query *gorm.DB, opts ListJobsOptions) *gorm.DB {
 	}
 	if opts.To != nil {
 		query = query.Where("created_at <= ?", *opts.To)
+	}
+	if opts.Type != nil {
+		query = query.Where("type = ?", *opts.Type)
 	}
 	return query
 }

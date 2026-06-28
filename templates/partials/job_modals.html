@@ -1,0 +1,27 @@
+{{define "jobModals"}}
+<!-- Failed job error modal -->
+<dialog id="errorModal" class="job-modal home-modal">
+  <div class="job-modal__content home-modal__content">
+    <h3 class="job-modal__title home-modal__title">Chi tiết lỗi</h3>
+    <p id="errorModalMessage" class="job-modal__message home-modal__message"></p>
+    <button type="button" id="errorModalClose" class="btn btn--primary btn--sm">Đóng</button>
+  </div>
+</dialog>
+
+<!-- Multi-file download picker -->
+<dialog id="downloadModal" class="job-modal home-modal job-modal--download home-modal--download">
+  <div class="job-modal__content home-modal__content">
+    <h3 class="job-modal__title home-modal__title job-modal__title--neutral home-modal__title--neutral">Chọn file tải về</h3>
+    <p id="downloadModalJobName" class="download-modal__job-name"></p>
+    <label class="download-modal__select-all">
+      <input type="checkbox" id="downloadSelectAll" />
+      <span>Chọn tất cả</span>
+    </label>
+    <ul id="downloadFileList" class="download-modal__list"></ul>
+    <div class="download-modal__actions">
+      <button type="button" id="downloadModalCancel" class="btn btn--secondary btn--sm">Hủy</button>
+      <button type="button" id="downloadModalConfirm" class="btn btn--primary btn--sm">Tải xuống đã chọn</button>
+    </div>
+  </div>
+</dialog>
+{{end}}

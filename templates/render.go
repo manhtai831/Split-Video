@@ -10,6 +10,7 @@ var layoutFiles = []string{
 	"templates/partials/navbar.html",
 	"templates/partials/sidebar.html",
 	"templates/partials/rightbar.html",
+	"templates/partials/job_modals.html",
 }
 
 func Render(w http.ResponseWriter, page string, data any) error {
