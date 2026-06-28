@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func CreateJob(videoPath string, name string) (entities.Job, error) {
+func CreateJob(videoPath string, name string, extras string) (entities.Job, error) {
 	fileStat, err := os.Stat(videoPath)
 	if err != nil {
 		return entities.Job{}, err
@@ -19,6 +19,7 @@ func CreateJob(videoPath string, name string) (entities.Job, error) {
 		Identifier: uuid.New().String(),
 		Status:     enums.StatusPending,
 		Type:       enums.JobTypeSplit,
+		Extras:     extras,
 	}
 
 	result := Global.DB.Create(&job)

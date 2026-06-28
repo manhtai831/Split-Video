@@ -48,3 +48,30 @@ func TestFfmpegEncodeOptionsDto_BuildArgsEmpty(t *testing.T) {
 		t.Fatalf("expected no args, got %v", args)
 	}
 }
+
+func TestFfmpegEncodeOptionsDto_BuildArgsMute(t *testing.T) {
+	opts := FfmpegEncodeOptionsDto{
+		VideoCodec: "libx264",
+		Mute:       true,
+		CRF:        23,
+	}
+
+	args := opts.BuildArgs()
+
+	hasAn := false
+	hasAudioCodec := false
+	for _, arg := range args {
+		if arg == "-an" {
+			hasAn = true
+		}
+		if arg == "-c:a" {
+			hasAudioCodec = true
+		}
+	}
+	if !hasAn {
+		t.Fatalf("expected -an in args, got %v", args)
+	}
+	if hasAudioCodec {
+		t.Fatalf("did not expect -c:a in args, got %v", args)
+	}
+}

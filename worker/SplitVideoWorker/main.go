@@ -49,17 +49,14 @@ func Process(job entities.Job, context context.Context) error {
 	os.RemoveAll(outputDir)
 
 	baseFileName := filepath.Base(jobFileDataInput.Path)
+	encodeOpts := resolveEncodeOptions(job)
 	segments, err := FfmpegService.SplitBySize(context, structs.SplitBySizeOptionsDto{
 		InputPath:  jobFileDataInput.Path,
 		OutputDir:  outputDir,
 		SizeLimit:  defaultSizeLimit,
 		OutputExt:  "mp4",
 		NamePrefix: baseFileName,
-		Encode: structs.FfmpegEncodeOptionsDto{
-			VideoCodec:  "libx264",
-			AudioCodec:  "aac",
-			PixelFormat: "yuv420p",
-		},
+		Encode:     encodeOpts,
 		OnProgress: func(done structs.SegmentResultDto, totalDuration, encodedDuration float64) {
 			JobService.UpdateJob(job.ID, entities.Job{
 				Progress: encodedDuration / totalDuration,
@@ -86,6 +83,17 @@ func Process(job entities.Job, context context.Context) error {
 	}
 
 	return nil
+}
+
+func resolveEncodeOptions(job entities.Job) structs.FfmpegEncodeOptionsDto {
+	if job.Extras == "" {
+		return structs.DefaultSplitEncodeOptions()
+	}
+	extras, err := structs.ParseSplitJobExtrasJSON(job.Extras)
+	if err != nil {
+		return structs.DefaultSplitEncodeOptions()
+	}
+	return extras.Encode
 }
 
 func updateJobFailed(jobID int, message string) {

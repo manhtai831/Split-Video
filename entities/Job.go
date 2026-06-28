@@ -14,6 +14,8 @@ type Job struct {
 	Progress   float64
 	Error      string
 
+	Extras string
+
 	StartedAt  time.Time
 	FinishedAt time.Time
 

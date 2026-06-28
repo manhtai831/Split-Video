@@ -1,15 +1,22 @@
 {{define "content"}}
 <div class="container" style="height: 100%;">
-    <h2>Split Video</h2>
-    <form
-      action="/video/split"
-      enctype="multipart/form-data"
-      method="post"
-      onsubmit="this.querySelector('button').disabled = true; this.querySelector('button').innerText = 'Processing...'"
-    >
-      <input type="file" name="file" accept="video/*" required />
+  <h2>Split Video</h2>
+  <form
+    id="splitForm"
+    action="/video/split"
+    enctype="multipart/form-data"
+    method="post"
+    onsubmit="this.querySelector('button[type=submit]').disabled = true; this.querySelector('button[type=submit]').innerText = 'Processing...'"
+  >
+    <div class="form-field">
+      <label for="file">Video file</label>
+      <input id="file" type="file" name="file" accept="video/*" required />
+      <p class="field-hint">Chọn file video cần chia. Hỗ trợ MP4, MOV, MKV, …</p>
+    </div>
 
-      <select name="size">
+    <div class="form-field">
+      <label for="size">Độ phân giải đầu ra</label>
+      <select id="size" name="size">
         <option value="1080" selected>1080P Full HD</option>
         <option value="keep">Original Size (Split Only)</option>
         <option value="3840">4K Ultra HD</option>
@@ -21,21 +28,94 @@
         <option value="360">360P</option>
         <option value="240">240P</option>
       </select>
+      <p class="field-hint">Chiều rộng đích (px), chiều cao tự giữ tỷ lệ. Chọn <strong>Original Size</strong> để chỉ cắt file, không nén lại — nhanh nhất.</p>
+    </div>
 
-      <button type="submit" name="myButton">Zip & Download</button>
-    </form>
+    <div id="encodeSettings" class="gap-col-16">
+      <div class="form-field">
+        <label for="crf">Chất lượng (CRF)</label>
+        <input id="crf" name="crf" type="number" min="18" max="28" step="1" value="23" />
+        <p class="field-hint">CRF càng thấp = chất lượng càng cao, file càng nặng, encode càng lâu. Khuyến nghị: 23.</p>
+      </div>
+
+      <div class="form-field">
+        <label for="fps">Khung hình/giây (FPS)</label>
+        <select id="fps" name="fps">
+          <option value="default" selected>Default — giữ FPS gốc</option>
+          <option value="15">15 fps</option>
+          <option value="24">24 fps — Phim</option>
+          <option value="25">25 fps — PAL</option>
+          <option value="30">30 fps — Web / TV</option>
+          <option value="60">60 fps — Mượt</option>
+        </select>
+        <p class="field-hint"><strong>Default</strong> giữ nguyên FPS video nguồn. FPS cao hơn = nhiều khung hình cần xử lý → thời gian encode tăng.</p>
+      </div>
+
+      <div class="form-field">
+        <label for="preset">Preset x264</label>
+        <select id="preset" name="preset">
+          <option value="ultrafast">Ultrafast — nhanh nhất, file lớn hơn</option>
+          <option value="superfast">Superfast</option>
+          <option value="veryfast">Veryfast</option>
+          <option value="faster">Faster</option>
+          <option value="fast">Fast</option>
+          <option value="medium" selected>Medium — cân bằng</option>
+          <option value="slow">Slow</option>
+          <option value="slower">Slower</option>
+          <option value="veryslow">Veryslow — chậm nhất</option>
+        </select>
+        <p class="field-hint">Preset ảnh hưởng tốc độ encode nhiều nhất. <strong>Medium</strong> cho hầu hết trường hợp.</p>
+      </div>
+    </div>
+
+    <div id="audioSettings" class="gap-col-16">
+      <div class="form-field">
+        <label for="audio_codec">Âm thanh</label>
+        <select id="audio_codec" name="audio_codec">
+          <option value="aac" selected>AAC — nén lại</option>
+          <option value="copy">Copy — giữ nguyên track gốc</option>
+          <option value="mute">Mute — tắt âm thanh</option>
+        </select>
+        <p class="field-hint"><strong>Mute</strong> xuất output không có âm thanh. <strong>Copy</strong> giữ audio gốc; <strong>AAC</strong> tương thích rộng.</p>
+      </div>
+
+      <div class="form-field" id="audioBitrateField">
+        <label for="audio_bitrate">Audio bitrate</label>
+        <select id="audio_bitrate" name="audio_bitrate">
+          <option value="64k">64 kbps — tiết kiệm</option>
+          <option value="96k">96 kbps</option>
+          <option value="128k" selected>128 kbps — mặc định</option>
+          <option value="192k">192 kbps — chất lượng tốt</option>
+          <option value="256k">256 kbps — cao nhất</option>
+        </select>
+        <p class="field-hint">Bitrate cao hơn = âm thanh rõ hơn. Ảnh hưởng thời gian encode rất nhỏ.</p>
+      </div>
+    </div>
+
+    <div id="estimateBox" class="estimate-box" hidden>
+      <span>Ước tính thời gian xử lý: <strong id="estimateTime">—</strong></span>
+      <p class="estimate-disclaimer">Ước tính tham khảo. Thời gian thực tế phụ thuộc CPU, codec nguồn và nội dung video.</p>
+    </div>
+
+    <button type="submit" name="myButton">Zip &amp; Download</button>
+  </form>
 
   <div id="resultBox" class="result-box">{{.Result}}</div>
 </div>
 
+<script src="/static/js/split-estimate.js"></script>
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     const resultBox = document.getElementById("resultBox");
-    if (!resultBox) return;
-    const content = resultBox.innerHTML.trim();
+    if (resultBox) {
+      const content = resultBox.innerHTML.trim();
+      if (content !== "{{.Result}}" && content !== "") {
+        resultBox.style.display = "block";
+      }
+    }
 
-    if (content !== "{{.Result}}" && content !== "") {
-      resultBox.style.display = "block";
+    if (typeof initSplitEstimate === "function") {
+      initSplitEstimate();
     }
   });
 </script>
