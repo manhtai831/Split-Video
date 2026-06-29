@@ -18,6 +18,7 @@ type Job struct {
 
 	StartedAt  time.Time
 	FinishedAt time.Time
+	DownloadAt time.Time
 
 	CreatedAt time.Time
 	UpdatedAt time.Time

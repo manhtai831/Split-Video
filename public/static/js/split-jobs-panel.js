@@ -125,6 +125,7 @@
 
   function buildTableRow(job) {
     var tr = document.createElement("tr");
+    tr.dataset.identifier = job.identifier;
     var pct =
       job.status === "completed" || job.status === "failed" || job.status === "cancelled"
         ? "—"
@@ -143,12 +144,14 @@
       "</div></td>";
 
     JobUI.bindRowActions(tr, job);
+    JobUI.applyDownloadHighlight(tr, job);
     return tr;
   }
 
   function buildCard(job) {
     var card = document.createElement("div");
     card.className = "history-card";
+    card.dataset.identifier = job.identifier;
 
     var pct =
       job.status === "completed" || job.status === "failed" || job.status === "cancelled"
@@ -177,6 +180,7 @@
       "</div>";
 
     JobUI.bindRowActions(card, job);
+    JobUI.applyDownloadHighlight(card, job);
     return card;
   }
 

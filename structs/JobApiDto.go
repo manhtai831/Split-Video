@@ -22,6 +22,7 @@ type JobItemDto struct {
 	CreatedAt     *time.Time         `json:"created_at"`
 	StartedAt     *time.Time         `json:"started_at"`
 	FinishedAt    *time.Time         `json:"finished_at"`
+	DownloadAt    *time.Time         `json:"download_at"`
 	OutputFiles   []JobOutputFileDto `json:"output_files"`
 	DownloadURL   *string            `json:"download_url"`
 }

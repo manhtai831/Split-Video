@@ -199,6 +199,18 @@
   background: #fafafa;
 }
 
+.history-table tbody tr.history-row--undownloaded {
+  background: #eef2ff;
+}
+
+.history-table tbody tr.history-row--undownloaded:hover {
+  background: #e0e7ff;
+}
+
+.history-table tbody tr.history-row--undownloaded td:first-child {
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
 .history-table .cell-filename {
   max-width: 200px;
   overflow: hidden;
@@ -247,6 +259,12 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.history-card.history-row--undownloaded {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  box-shadow: inset 3px 0 0 var(--primary);
 }
 
 .history-card__row {

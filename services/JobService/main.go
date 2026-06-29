@@ -62,6 +62,21 @@ func UpdateJob(id int, job entities.Job) error {
 	return result.Error
 }
 
+func MarkJobDownloaded(jobID int) error {
+	var job entities.Job
+	if err := Global.DB.Where("id = ?", jobID).First(&job).Error; err != nil {
+		return err
+	}
+	if !job.DownloadAt.IsZero() {
+		return nil
+	}
+	now := time.Now()
+	return Global.DB.Model(&entities.Job{}).Where("id = ?", jobID).Updates(map[string]interface{}{
+		"download_at": now,
+		"updated_at":  now,
+	}).Error
+}
+
 func applyListFilters(query *gorm.DB, opts ListJobsOptions) *gorm.DB {
 	if opts.ActiveOnly {
 		query = query.Where("status IN ?", []enums.Status{enums.StatusPending, enums.StatusProcessing})

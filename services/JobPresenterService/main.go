@@ -39,6 +39,7 @@ func ToJobItemDto(job entities.Job) (structs.JobItemDto, error) {
 		CreatedAt:     timePtr(job.CreatedAt),
 		StartedAt:     timePtr(job.StartedAt),
 		FinishedAt:    timePtr(job.FinishedAt),
+		DownloadAt:    timePtr(job.DownloadAt),
 		OutputFiles:   make([]structs.JobOutputFileDto, 0, len(outputFiles)),
 	}
 

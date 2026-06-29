@@ -3,6 +3,7 @@
 
   var FILENAME_MAX_LEN = 32;
   var STORAGE_KEY = "vt_download_selections";
+  var UNDOWNLOADED_CLASS = "history-row--undownloaded";
 
   var STATUS_LABELS = {
     pending: "Pending",
@@ -19,6 +20,7 @@
 
   var modals = {};
   var onCancelSuccess = function () {};
+  var onDownloadSuccess = function () {};
   var downloadJob = null;
 
   function periodToDateRange(period) {
@@ -41,6 +43,7 @@
   function init(options) {
     modals = options.modals || {};
     onCancelSuccess = options.onCancelSuccess || function () {};
+    onDownloadSuccess = options.onDownloadSuccess || function () {};
 
     if (modals.errorModalClose) {
       modals.errorModalClose.addEventListener("click", function () {
@@ -78,7 +81,9 @@
           return;
         }
         downloadFiles(files);
+        clearDownloadHighlight(findHistoryRowByJobId(downloadJob.identifier));
         modals.downloadModal.close();
+        onDownloadSuccess();
       });
     }
   }
@@ -194,6 +199,14 @@
   }
 
   function bindRowActions(container, job) {
+    var downloadLink = container.querySelector("a[download]");
+    if (downloadLink) {
+      downloadLink.addEventListener("click", function () {
+        clearDownloadHighlight(findHistoryRow(container));
+        onDownloadSuccess();
+      });
+    }
+
     var pickBtn = container.querySelector(".btn-pick-download");
     if (pickBtn) {
       pickBtn.addEventListener("click", function () {
@@ -266,6 +279,33 @@
       }
       if (onPageChange) onPageChange(page);
     }
+  }
+
+  function needsDownloadHighlight(job) {
+    if (!job || job.status !== "completed") return false;
+    return getOutputFiles(job).length > 0 && !job.download_at;
+  }
+
+  function findHistoryRow(container) {
+    if (!container) return null;
+    return container.closest("tr") || container.closest(".history-card") || null;
+  }
+
+  function findHistoryRowByJobId(jobId) {
+    if (!jobId) return null;
+    var selector =
+      'tr[data-identifier="' + jobId + '"], .history-card[data-identifier="' + jobId + '"]';
+    return document.querySelector(selector);
+  }
+
+  function applyDownloadHighlight(el, job) {
+    if (!el || !needsDownloadHighlight(job)) return;
+    el.classList.add(UNDOWNLOADED_CLASS);
+  }
+
+  function clearDownloadHighlight(el) {
+    if (!el) return;
+    el.classList.remove(UNDOWNLOADED_CLASS);
   }
 
   function loadSelections() {
@@ -459,6 +499,8 @@
     cancelJob: cancelJob,
     actionButtonsHtml: actionButtonsHtml,
     bindRowActions: bindRowActions,
+    applyDownloadHighlight: applyDownloadHighlight,
+    needsDownloadHighlight: needsDownloadHighlight,
     showError: showError,
     openDownloadModal: openDownloadModal,
     badgeHtml: badgeHtml,

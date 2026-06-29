@@ -120,6 +120,8 @@ func handleDownload(w http.ResponseWriter, r *http.Request, identifier, fileIDRa
 		return
 	}
 
+	_ = JobService.MarkJobDownloaded(job.ID)
+
 	w.Header().Set("Content-Disposition", "attachment; filename=\""+filepath.Base(fileData.Name)+"\"")
 	http.ServeFile(w, r, fileData.Path)
 }
