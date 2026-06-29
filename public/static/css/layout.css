@@ -100,7 +100,6 @@ body.sidebar-open .hamburger-line:nth-child(3) {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.4);
 }
 
 .sidebar-part--nav {
@@ -109,7 +108,6 @@ body.sidebar-open .hamburger-line:nth-child(3) {
   justify-content: center;
   align-items: center;
   padding: 24px 12px;
-  border-right: 1px solid var(--border);
 }
 
 .sidebar-part--content {
@@ -165,7 +163,8 @@ body.sidebar-open .hamburger-line:nth-child(3) {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  background: var(--card-bg);
+  /* background: var(--card-bg); */
+  padding: 32px 0;
 }
 
 .rightbar {
@@ -176,7 +175,6 @@ body.sidebar-open .hamburger-line:nth-child(3) {
   min-height: 0;
   overflow: hidden;
   padding: 24px;
-  background: rgba(255, 255, 255, 0.3);
 }
 
 .logo-placeholder {
@@ -236,7 +234,6 @@ body.sidebar-open .hamburger-line:nth-child(3) {
     justify-content: flex-start;
     padding-top: 24px;
     border-right: none;
-    border-bottom: 1px solid var(--border);
   }
 
   .sidebar-part--content {
@@ -250,7 +247,8 @@ body.sidebar-open .hamburger-line:nth-child(3) {
 
   .main {
     border-right: none;
-    background: var(--card-bg);
+    /* background: var(--card-bg); */
+    padding: 0;
   }
 
   .rightbar {

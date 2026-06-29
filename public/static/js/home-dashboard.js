@@ -170,6 +170,7 @@
         errorModal: els.errorModal,
         errorModalMessage: els.errorModalMessage,
         errorModalClose: els.errorModalClose,
+        errorModalRetry: $("errorModalRetry"),
         downloadModal: els.downloadModal,
         downloadModalJobName: els.downloadModalJobName,
         downloadSelectAll: els.downloadSelectAll,
@@ -178,6 +179,7 @@
         downloadModalConfirm: els.downloadModalConfirm,
       },
       onCancelSuccess: loadDashboard,
+      onRetrySuccess: loadDashboard,
     });
     readFiltersFromURL();
     bindEvents();

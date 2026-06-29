@@ -21,7 +21,9 @@
   var modals = {};
   var onCancelSuccess = function () {};
   var onDownloadSuccess = function () {};
+  var onRetrySuccess = function () {};
   var downloadJob = null;
+  var errorJob = null;
 
   function periodToDateRange(period) {
     var now = new Date();
@@ -44,10 +46,29 @@
     modals = options.modals || {};
     onCancelSuccess = options.onCancelSuccess || function () {};
     onDownloadSuccess = options.onDownloadSuccess || function () {};
+    onRetrySuccess = options.onRetrySuccess || function () {};
 
     if (modals.errorModalClose) {
       modals.errorModalClose.addEventListener("click", function () {
         modals.errorModal.close();
+      });
+    }
+
+    if (modals.errorModalRetry) {
+      modals.errorModalRetry.addEventListener("click", function () {
+        if (!errorJob) return;
+        modals.errorModalRetry.disabled = true;
+        retryJob(errorJob.identifier)
+          .then(function () {
+            modals.errorModal.close();
+            onRetrySuccess();
+          })
+          .catch(function (err) {
+            alert(err.message || "Không thể thử lại job.");
+          })
+          .finally(function () {
+            modals.errorModalRetry.disabled = false;
+          });
       });
     }
 
@@ -111,6 +132,15 @@
       credentials: "same-origin",
     }).then(function (res) {
       if (!res.ok) throw new Error("Không thể hủy job (" + res.status + ")");
+    });
+  }
+
+  function retryJob(identifier) {
+    return fetch("/job/retry?jobIdentifier=" + encodeURIComponent(identifier), {
+      method: "POST",
+      credentials: "same-origin",
+    }).then(function (res) {
+      if (!res.ok) throw new Error("Không thể thử lại job (" + res.status + ")");
     });
   }
 
@@ -216,7 +246,7 @@
     var errorBtn = container.querySelector(".btn-view-error");
     if (errorBtn) {
       errorBtn.addEventListener("click", function () {
-        showError(job.error);
+        showError(job);
       });
     }
     var cancelBtn = container.querySelector(".btn-cancel-job");
@@ -234,8 +264,18 @@
     }
   }
 
-  function showError(message) {
-    modals.errorModalMessage.textContent = message || "Không có thông tin lỗi.";
+  function showError(jobOrMessage) {
+    if (typeof jobOrMessage === "string") {
+      errorJob = null;
+      modals.errorModalMessage.textContent = jobOrMessage || "Không có thông tin lỗi.";
+      if (modals.errorModalRetry) modals.errorModalRetry.hidden = true;
+    } else {
+      errorJob = jobOrMessage;
+      modals.errorModalMessage.textContent = errorJob.error || "Không có thông tin lỗi.";
+      if (modals.errorModalRetry) {
+        modals.errorModalRetry.hidden = errorJob.status !== "failed";
+      }
+    }
     modals.errorModal.showModal();
   }
 
@@ -497,6 +537,7 @@
     init: init,
     fetchJobs: fetchJobs,
     cancelJob: cancelJob,
+    retryJob: retryJob,
     actionButtonsHtml: actionButtonsHtml,
     bindRowActions: bindRowActions,
     applyDownloadHighlight: applyDownloadHighlight,

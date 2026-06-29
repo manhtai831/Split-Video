@@ -20,6 +20,7 @@
         errorModal: $("errorModal"),
         errorModalMessage: $("errorModalMessage"),
         errorModalClose: $("errorModalClose"),
+        errorModalRetry: $("errorModalRetry"),
         downloadModal: $("downloadModal"),
         downloadModalJobName: $("downloadModalJobName"),
         downloadSelectAll: $("downloadSelectAll"),
@@ -28,6 +29,7 @@
         downloadModalConfirm: $("downloadModalConfirm"),
       },
       onCancelSuccess: loadJobs,
+      onRetrySuccess: loadJobs,
     });
     bindEvents();
     loadJobs();

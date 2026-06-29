@@ -62,6 +62,19 @@ func UpdateJob(id int, job entities.Job) error {
 	return result.Error
 }
 
+func ResetJobForRetry(jobID int) error {
+	now := time.Now()
+	return Global.DB.Model(&entities.Job{}).Where("id = ?", jobID).Updates(map[string]interface{}{
+		"status":      enums.StatusPending,
+		"progress":    0,
+		"error":       "",
+		"started_at":  time.Time{},
+		"finished_at": time.Time{},
+		"download_at": time.Time{},
+		"updated_at":  now,
+	}).Error
+}
+
 func MarkJobDownloaded(jobID int) error {
 	var job entities.Job
 	if err := Global.DB.Where("id = ?", jobID).First(&job).Error; err != nil {

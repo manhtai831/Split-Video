@@ -18,6 +18,8 @@
   flex-direction: column;
   gap: 32px;
   box-sizing: border-box;
+  background-color: var(--card-bg);
+  border-radius: 12px;
 }
 
 .welcome-box {
@@ -290,4 +292,18 @@ label {
   font-size: 14px;
   font-weight: 500;
   color: var(--text-main);
+}
+
+
+@media (max-width: 767px) {
+  .container {
+    width: 100%;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    box-sizing: border-box;
+    background-color: var(--card-bg);
+    border-radius: 0;
+  }
 }

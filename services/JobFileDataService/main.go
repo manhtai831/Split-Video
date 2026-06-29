@@ -27,3 +27,8 @@ func UpdateJobFileData(jobFileData *entities.JobFileData) error {
 	result := Global.DB.Save(&jobFileData)
 	return result.Error
 }
+
+func DeleteOutputFilesByJobId(jobId int) error {
+	result := Global.DB.Where("job_id = ? AND type = ?", jobId, enums.JobFileDataTypeOutput).Delete(&entities.JobFileData{})
+	return result.Error
+}
