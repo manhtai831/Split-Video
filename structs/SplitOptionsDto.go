@@ -1,9 +1,11 @@
 package structs
 
-type SplitBySizeOptionsDto struct {
+type SplitOptionsDto struct {
 	InputPath  string
 	OutputDir  string
+	SplitMode  string
 	SizeLimit  int64
+	TimeLimit  float64
 	OutputExt  string
 	Encode     FfmpegEncodeOptionsDto
 	NamePrefix string

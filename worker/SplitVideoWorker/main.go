@@ -55,12 +55,7 @@ func Process(job entities.Job, ctx context.Context) error {
 		splitMode = "size"
 	}
 
-	var segments []structs.SegmentResultDto
-	if splitMode == "time" {
-		segments, err = processSplitByTime(ctx, job, jobFileDataInput, outputDir, baseFileName, encodeOpts, extras.TimeLimit)
-	} else {
-		segments, err = processSplitBySize(ctx, job, jobFileDataInput, outputDir, baseFileName, encodeOpts, extras.SizeLimit)
-	}
+	segments, err := processSplit(ctx, job, jobFileDataInput, outputDir, baseFileName, encodeOpts, splitMode, extras.SizeLimit, extras.TimeLimit)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			return err
@@ -106,57 +101,41 @@ func processSingleFile(
 	return []structs.SegmentResultDto{seg}, nil
 }
 
-func processSplitBySize(
+func processSplit(
 	ctx context.Context,
 	job entities.Job,
 	jobFileDataInput entities.JobFileData,
 	outputDir string,
 	baseFileName string,
 	encodeOpts structs.FfmpegEncodeOptionsDto,
+	splitMode string,
 	sizeLimit int64,
-) ([]structs.SegmentResultDto, error) {
-	if sizeLimit <= 0 {
-		return processSingleFile(ctx, job, jobFileDataInput.Path, outputDir, baseFileName, encodeOpts)
-	}
-	return FfmpegService.SplitBySize(ctx, structs.SplitBySizeOptionsDto{
-		InputPath:  jobFileDataInput.Path,
-		OutputDir:  outputDir,
-		SizeLimit:  sizeLimit,
-		OutputExt:  "mp4",
-		NamePrefix: baseFileName,
-		Encode:     encodeOpts,
-		OnProgress: func(done structs.SegmentResultDto, totalDuration, encodedDuration float64) {
-			JobService.UpdateJob(job.ID, entities.Job{
-				Progress: encodedDuration / totalDuration,
-			})
-		},
-	})
-}
-
-func processSplitByTime(
-	ctx context.Context,
-	job entities.Job,
-	jobFileDataInput entities.JobFileData,
-	outputDir string,
-	baseFileName string,
-	encodeOpts structs.FfmpegEncodeOptionsDto,
 	timeLimit float64,
 ) ([]structs.SegmentResultDto, error) {
-	if timeLimit <= 0 {
-		return processSingleFile(ctx, job, jobFileDataInput.Path, outputDir, baseFileName, encodeOpts)
+	inputPath := jobFileDataInput.Path
+	onProgress := func(done structs.SegmentResultDto, totalDuration, encodedDuration float64) {
+		JobService.UpdateJob(job.ID, entities.Job{
+			Progress: encodedDuration / totalDuration,
+		})
 	}
-	return FfmpegService.SplitByTime(ctx, structs.SplitByTimeOptionsDto{
-		InputPath:  jobFileDataInput.Path,
+
+	if splitMode == "time" && timeLimit <= 0 {
+		return processSingleFile(ctx, job, inputPath, outputDir, baseFileName, encodeOpts)
+	}
+	if splitMode != "time" && sizeLimit <= 0 {
+		return processSingleFile(ctx, job, inputPath, outputDir, baseFileName, encodeOpts)
+	}
+
+	return FfmpegService.Split(ctx, structs.SplitOptionsDto{
+		InputPath:  inputPath,
 		OutputDir:  outputDir,
+		SplitMode:  splitMode,
+		SizeLimit:  sizeLimit,
 		TimeLimit:  timeLimit,
 		OutputExt:  "mp4",
 		NamePrefix: baseFileName,
 		Encode:     encodeOpts,
-		OnProgress: func(done structs.SegmentResultDto, totalDuration, encodedDuration float64) {
-			JobService.UpdateJob(job.ID, entities.Job{
-				Progress: encodedDuration / totalDuration,
-			})
-		},
+		OnProgress: onProgress,
 	})
 }
 

@@ -13,6 +13,10 @@
       <label for="file">Video file</label>
       <input id="file" type="file" name="file" accept="video/*" required multiple/>
       <p class="field-hint">Chọn file video cần chia. Hỗ trợ MP4, MOV, MKV, …</p>
+      <div id="filePreviewSection" class="file-preview-section" hidden>
+        <span class="file-preview-section__label">File đã chọn</span>
+        <div id="filePreviewList" class="file-preview-list" role="list"></div>
+      </div>
     </div>
 
     <div class="form-field">
@@ -191,9 +195,21 @@
 
 {{template "jobModals" .}}
 
+<dialog id="videoPreviewModal" class="video-preview-modal" aria-labelledby="videoPreviewTitle">
+  <div class="video-preview-modal__header">
+    <div class="video-preview-modal__info">
+      <h3 id="videoPreviewTitle" class="video-preview-modal__title"></h3>
+      <p id="videoPreviewMeta" class="video-preview-modal__meta"></p>
+    </div>
+    <button type="button" id="videoPreviewClose" class="video-preview-modal__close" aria-label="Đóng">×</button>
+  </div>
+  <video id="videoPreviewPlayer" class="video-preview-modal__player" controls playsinline></video>
+</dialog>
+
 <script src="/static/js/job-ui.js"></script>
 <script src="/static/js/split-jobs-panel.js"></script>
 <script src="/static/js/split-estimate.js"></script>
+<script src="/static/js/split-file-preview.js"></script>
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     const resultBox = document.getElementById("resultBox");
@@ -210,6 +226,10 @@
 
     if (typeof initSplitJobsPanel === "function") {
       initSplitJobsPanel();
+    }
+
+    if (typeof initSplitFilePreview === "function") {
+      initSplitFilePreview();
     }
   });
 </script>
