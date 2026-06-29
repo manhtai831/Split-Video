@@ -1,9 +1,9 @@
 local:
-	ln -s .docker/local/Dockerfile Dockerfile | true
-	ln -s .docker/local/docker-compose.yml docker-compose.yml | true
+	ln -sf .docker/local/Dockerfile Dockerfile
+	ln -sf .docker/local/docker-compose.yml docker-compose.yml
 	docker compose up -d --build
 
 prod:
-	ln -s .docker/prod/Dockerfile Dockerfile | true
-	ln -s .docker/prod/docker-compose.yml docker-compose.yml | true
+	ln -sf .docker/prod/Dockerfile Dockerfile
+	ln -sf .docker/prod/docker-compose.yml docker-compose.yml
 	docker compose up -d --build

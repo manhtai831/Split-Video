@@ -260,6 +260,107 @@ func TestParseSplitForm_SplitSizeNegative(t *testing.T) {
 	}
 }
 
+func TestParseSplitForm_SplitTimeMinutes(t *testing.T) {
+	extras, err := ParseSplitForm(map[string]string{
+		"size":             "1080",
+		"split_mode":       "time",
+		"split_time":       "5",
+		"split_time_unit":  "min",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if extras.SplitMode != "time" {
+		t.Fatalf("expected split_mode time, got %q", extras.SplitMode)
+	}
+	if extras.TimeLimit != 300 {
+		t.Fatalf("expected time limit 300, got %v", extras.TimeLimit)
+	}
+	if extras.SizeLimit != 0 {
+		t.Fatalf("expected size limit 0, got %d", extras.SizeLimit)
+	}
+}
+
+func TestParseSplitForm_SplitTimeZero(t *testing.T) {
+	extras, err := ParseSplitForm(map[string]string{
+		"size":       "1080",
+		"split_mode": "time",
+		"split_time": "0",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if extras.TimeLimit != 0 {
+		t.Fatalf("expected time limit 0, got %v", extras.TimeLimit)
+	}
+}
+
+func TestParseSplitForm_SplitTimeInvalidUnit(t *testing.T) {
+	_, err := ParseSplitForm(map[string]string{
+		"size":            "1080",
+		"split_mode":      "time",
+		"split_time":      "10",
+		"split_time_unit": "day",
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid split_time_unit")
+	}
+}
+
+func TestParseSplitForm_SplitTimeNegative(t *testing.T) {
+	_, err := ParseSplitForm(map[string]string{
+		"size":       "1080",
+		"split_mode": "time",
+		"split_time": "-1",
+	})
+	if err == nil {
+		t.Fatal("expected error for negative split_time")
+	}
+}
+
+func TestParseSplitForm_SplitTimeJSONRoundTrip(t *testing.T) {
+	original, err := ParseSplitForm(map[string]string{
+		"size":            "1080",
+		"split_mode":      "time",
+		"split_time":      "2",
+		"split_time_unit": "hour",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	raw, err := original.ToJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	parsed, err := ParseSplitJobExtrasJSON(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parsed.SplitMode != "time" || parsed.TimeLimit != 7200 {
+		t.Fatalf("round trip failed: %+v", parsed)
+	}
+}
+
+func TestParseSplitForm_DefaultSizeMode(t *testing.T) {
+	extras, err := ParseSplitForm(map[string]string{
+		"size":       "1080",
+		"split_size": "8",
+		"split_unit": "mb",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if extras.SplitMode != "size" {
+		t.Fatalf("expected split_mode size, got %q", extras.SplitMode)
+	}
+	want := int64(8 * 1024 * 1024)
+	if extras.SizeLimit != want {
+		t.Fatalf("expected size limit %d, got %d", want, extras.SizeLimit)
+	}
+}
+
 func containsArgPair(args []string, key string) bool {
 	for i, arg := range args {
 		if arg == key {

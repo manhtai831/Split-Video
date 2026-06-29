@@ -107,6 +107,7 @@ func EncodeSegment(
 	output string,
 	startAt float64,
 	sizeLimit int64,
+	timeLimit float64,
 	opts structs.FfmpegEncodeOptionsDto,
 ) (structs.SegmentResultDto, error) {
 	if err := validateInputFile(input); err != nil {
@@ -125,6 +126,9 @@ func EncodeSegment(
 	args = append(args, "-i", input)
 	if sizeLimit > 0 {
 		args = append(args, "-fs", strconv.FormatInt(sizeLimit, 10))
+	}
+	if timeLimit > 0 {
+		args = append(args, "-t", formatSeconds(timeLimit))
 	}
 	args = append(args, BuildEncodeArgs(opts)...)
 	args = append(args, output)
@@ -193,7 +197,7 @@ func SplitBySize(ctx context.Context, opts structs.SplitBySizeOptionsDto) ([]str
 	for i := 1; int(curDuration) < int(totalDuration) && i <= maxIterations; i++ {
 		output := filepath.Join(opts.OutputDir, fmt.Sprintf("%s-%d.%s", namePrefix, i, outputExt))
 
-		seg, err := EncodeSegment(ctx, opts.InputPath, output, curDuration, opts.SizeLimit, opts.Encode)
+		seg, err := EncodeSegment(ctx, opts.InputPath, output, curDuration, opts.SizeLimit, 0, opts.Encode)
 		if err != nil {
 			return nil, fmt.Errorf("encode part %d: %w", i, err)
 		}
@@ -217,6 +221,79 @@ func SplitBySize(ctx context.Context, opts structs.SplitBySizeOptionsDto) ([]str
 	}
 
 	if int(curDuration) < int(totalDuration) {
+		return nil, fmt.Errorf("split incomplete: encoded %.2fs of %.2fs", curDuration, totalDuration)
+	}
+
+	return results, nil
+}
+
+func SplitByTime(ctx context.Context, opts structs.SplitByTimeOptionsDto) ([]structs.SegmentResultDto, error) {
+	if err := validateInputFile(opts.InputPath); err != nil {
+		return nil, err
+	}
+	if opts.TimeLimit <= 0 {
+		return nil, fmt.Errorf("time limit must be greater than 0")
+	}
+	if opts.OutputDir == "" {
+		return nil, fmt.Errorf("output dir is required")
+	}
+
+	outputExt := opts.OutputExt
+	if outputExt == "" {
+		outputExt = "mp4"
+	}
+	namePrefix := opts.NamePrefix
+	if namePrefix == "" {
+		namePrefix = "video"
+	}
+
+	if err := os.MkdirAll(opts.OutputDir, 0o755); err != nil {
+		return nil, fmt.Errorf("create output dir: %w", err)
+	}
+
+	totalDuration, err := GetDuration(ctx, opts.InputPath)
+	if err != nil {
+		return nil, fmt.Errorf("get input duration: %w", err)
+	}
+	if totalDuration <= 0 {
+		return nil, fmt.Errorf("input video has zero duration: %s", opts.InputPath)
+	}
+
+	var results []structs.SegmentResultDto
+	curDuration := 0.0
+	maxIterations := int(math.Ceil(totalDuration/opts.TimeLimit)) + 1
+
+	for i := 1; curDuration < totalDuration && i <= maxIterations; i++ {
+		segDuration := opts.TimeLimit
+		remaining := totalDuration - curDuration
+		if segDuration > remaining {
+			segDuration = remaining
+		}
+
+		output := filepath.Join(opts.OutputDir, fmt.Sprintf("%s-%d.%s", namePrefix, i, outputExt))
+		seg, err := EncodeSegment(ctx, opts.InputPath, output, curDuration, 0, segDuration, opts.Encode)
+		if err != nil {
+			return nil, fmt.Errorf("encode part %d: %w", i, err)
+		}
+
+		seg.Index = i
+		results = append(results, seg)
+
+		nextDuration := curDuration + seg.Duration
+		if opts.OnProgress != nil {
+			opts.OnProgress(seg, totalDuration, nextDuration)
+		}
+
+		if nextDuration >= totalDuration {
+			break
+		}
+		if nextDuration <= curDuration {
+			return nil, fmt.Errorf("split stalled at part %d", i)
+		}
+		curDuration = nextDuration
+	}
+
+	if curDuration < totalDuration {
 		return nil, fmt.Errorf("split incomplete: encoded %.2fs of %.2fs", curDuration, totalDuration)
 	}
 

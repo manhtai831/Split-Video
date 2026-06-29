@@ -33,6 +33,20 @@
     </div>
 
     <div class="form-field">
+      <label>Chế độ chia</label>
+      <div class="input-row" style="display: flex; gap: 16px;">
+        <label style="display: flex; align-items: center; gap: 6px; font-weight: normal;">
+          <input type="radio" name="split_mode" value="size" checked />
+          Theo dung lượng
+        </label>
+        <label style="display: flex; align-items: center; gap: 6px; font-weight: normal;">
+          <input type="radio" name="split_mode" value="time" />
+          Theo thời gian
+        </label>
+      </div>
+    </div>
+
+    <div id="splitBySizePanel" class="form-field">
       <label for="split_size">Kích thước mỗi file split</label>
       <div class="input-row" style="display: flex; gap: 12px;">
         <input id="split_size" name="split_size" type="number" min="0" step="1" value="0" />
@@ -40,6 +54,19 @@
           <option value="kb">KB</option>
           <option value="mb" selected>MB</option>
           <option value="gb">GB</option>
+        </select>
+      </div>
+      <p class="field-hint">Nhập <strong>0</strong> để xuất <strong>một file duy nhất</strong>, không chia nhỏ.</p>
+    </div>
+
+    <div id="splitByTimePanel" class="form-field" hidden>
+      <label for="split_time">Thời lượng mỗi file split</label>
+      <div class="input-row" style="display: flex; gap: 12px;">
+        <input id="split_time" name="split_time" type="number" min="0" step="1" value="0" disabled />
+        <select id="split_time_unit" name="split_time_unit" style="size: 92px;" disabled>
+          <option value="sec">Giây</option>
+          <option value="min" selected>Phút</option>
+          <option value="hour">Giờ</option>
         </select>
       </div>
       <p class="field-hint">Nhập <strong>0</strong> để xuất <strong>một file duy nhất</strong>, không chia nhỏ.</p>

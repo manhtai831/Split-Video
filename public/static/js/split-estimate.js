@@ -7,6 +7,12 @@
     gb: 1024 * 1024 * 1024,
   };
 
+  const TIME_UNIT_MULTIPLIERS = {
+    sec: 1,
+    min: 60,
+    hour: 3600,
+  };
+
   const PRESET_FACTORS = {
     ultrafast: 0.25,
     superfast: 0.35,
@@ -46,6 +52,28 @@
     return "~" + minutes + " phút " + seconds + " giây";
   }
 
+  function getSplitMode() {
+    const checked = document.querySelector('input[name="split_mode"]:checked');
+    return checked ? checked.value : "size";
+  }
+
+  function getTimeLimitSeconds() {
+    const amountEl = document.getElementById("split_time");
+    const unitEl = document.getElementById("split_time_unit");
+    if (!amountEl) {
+      return 0;
+    }
+
+    const amount = parseFloat(amountEl.value);
+    if (!amount || amount <= 0) {
+      return 0;
+    }
+
+    const unit = unitEl ? unitEl.value : "min";
+    const multiplier = TIME_UNIT_MULTIPLIERS[unit] || TIME_UNIT_MULTIPLIERS.min;
+    return amount * multiplier;
+  }
+
   function getSizeLimitBytes() {
     const amountEl = document.getElementById("split_size");
     const unitEl = document.getElementById("split_unit");
@@ -64,6 +92,14 @@
   }
 
   function getSegmentCount() {
+    if (getSplitMode() === "time") {
+      const timeLimit = getTimeLimitSeconds();
+      if (timeLimit <= 0 || !videoDuration) {
+        return 1;
+      }
+      return Math.ceil(videoDuration / timeLimit);
+    }
+
     const sizeLimit = getSizeLimitBytes();
     if (sizeLimit <= 0) {
       return 1;
@@ -160,6 +196,26 @@
     field.querySelector("select").disabled = !show;
   }
 
+  function updateSplitModePanels() {
+    const mode = getSplitMode();
+    const sizePanel = document.getElementById("splitBySizePanel");
+    const timePanel = document.getElementById("splitByTimePanel");
+    if (!sizePanel || !timePanel) {
+      return;
+    }
+
+    const isTime = mode === "time";
+    sizePanel.style.display = isTime ? "none" : "flex";
+    timePanel.style.display = isTime ? "flex" : "none";
+
+    sizePanel.querySelectorAll("input, select").forEach(function (el) {
+      el.disabled = isTime;
+    });
+    timePanel.querySelectorAll("input, select").forEach(function (el) {
+      el.disabled = !isTime;
+    });
+  }
+
   function updateEncodeSettingsVisibility() {
     const size = document.getElementById("size");
     const encodeSettings = document.getElementById("encodeSettings");
@@ -219,7 +275,14 @@
       });
     }
 
-    ["size", "crf", "fps", "preset", "audio_codec", "audio_bitrate", "split_size", "split_unit"].forEach(function (id) {
+    document.querySelectorAll('input[name="split_mode"]').forEach(function (el) {
+      el.addEventListener("change", function () {
+        updateSplitModePanels();
+        updateEstimate();
+      });
+    });
+
+    ["size", "crf", "fps", "preset", "audio_codec", "audio_bitrate", "split_size", "split_unit", "split_time", "split_time_unit"].forEach(function (id) {
       const el = document.getElementById(id);
       if (!el) {
         return;
@@ -238,6 +301,7 @@
       }
     });
 
+    updateSplitModePanels();
     updateEncodeSettingsVisibility();
     updateEstimate();
   }

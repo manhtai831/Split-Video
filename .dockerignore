@@ -1,2 +1,9 @@
 /data
 /node_modules
+
+/.cursor
+/.git
+/.docker
+/dist
+/data
+/tmp

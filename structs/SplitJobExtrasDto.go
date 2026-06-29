@@ -8,7 +8,9 @@ import (
 
 type SplitJobExtrasDto struct {
 	Encode    FfmpegEncodeOptionsDto `json:"encode"`
+	SplitMode string                 `json:"split_mode,omitempty"`
 	SizeLimit int64                  `json:"size_limit,omitempty"`
+	TimeLimit float64                `json:"time_limit,omitempty"`
 }
 
 var allowedSizes = map[string]bool{
@@ -105,12 +107,64 @@ func ParseSplitForm(fields map[string]string) (SplitJobExtrasDto, error) {
 		encode.AudioBitrate = bitrate
 	}
 
-	sizeLimit, err := parseSplitSize(fields["split_size"], fields["split_unit"])
-	if err != nil {
-		return SplitJobExtrasDto{}, err
+	splitMode := fields["split_mode"]
+	if splitMode == "" {
+		splitMode = "size"
+	}
+	if splitMode != "size" && splitMode != "time" {
+		return SplitJobExtrasDto{}, fmt.Errorf("invalid split_mode: %q", splitMode)
 	}
 
-	return SplitJobExtrasDto{Encode: encode, SizeLimit: sizeLimit}, nil
+	var sizeLimit int64
+	var timeLimit float64
+	switch splitMode {
+	case "time":
+		var err error
+		timeLimit, err = parseSplitTime(fields["split_time"], fields["split_time_unit"])
+		if err != nil {
+			return SplitJobExtrasDto{}, err
+		}
+	default:
+		var err error
+		sizeLimit, err = parseSplitSize(fields["split_size"], fields["split_unit"])
+		if err != nil {
+			return SplitJobExtrasDto{}, err
+		}
+	}
+
+	return SplitJobExtrasDto{
+		Encode:    encode,
+		SplitMode: splitMode,
+		SizeLimit: sizeLimit,
+		TimeLimit: timeLimit,
+	}, nil
+}
+
+func parseSplitTime(amount, unit string) (float64, error) {
+	if amount == "" || amount == "0" {
+		return 0, nil
+	}
+	n, err := strconv.ParseFloat(amount, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid split_time: %q", amount)
+	}
+	if n < 0 {
+		return 0, fmt.Errorf("split_time must be non-negative, got %v", n)
+	}
+	if n == 0 {
+		return 0, nil
+	}
+
+	switch unit {
+	case "sec", "":
+		return n, nil
+	case "min":
+		return n * 60, nil
+	case "hour":
+		return n * 3600, nil
+	default:
+		return 0, fmt.Errorf("invalid split_time_unit: %q", unit)
+	}
 }
 
 func parseSplitSize(amount, unit string) (int64, error) {
