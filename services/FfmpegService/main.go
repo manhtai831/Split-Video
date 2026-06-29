@@ -229,6 +229,10 @@ func Split(ctx context.Context, opts structs.SplitOptionsDto) ([]structs.Segment
 		output := filepath.Join(opts.OutputDir, fmt.Sprintf("%s-%d.%s", namePrefix, i, outputExt))
 		seg, err := EncodeSegment(ctx, opts.InputPath, output, curDuration, sizeLimit, timeLimit, opts.Encode)
 		if err != nil {
+			if strings.Contains(err.Error(), "encoded segment has zero duration") {
+				curDuration = totalDuration
+				break
+			}
 			return nil, fmt.Errorf("encode part %d: %w", i, err)
 		}
 

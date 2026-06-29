@@ -122,9 +122,6 @@ func processSplit(
 	if splitMode == "time" && timeLimit <= 0 {
 		return processSingleFile(ctx, job, inputPath, outputDir, baseFileName, encodeOpts)
 	}
-	if splitMode != "time" && sizeLimit <= 0 {
-		return processSingleFile(ctx, job, inputPath, outputDir, baseFileName, encodeOpts)
-	}
 
 	return FfmpegService.Split(ctx, structs.SplitOptionsDto{
 		InputPath:  inputPath,

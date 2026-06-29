@@ -36,9 +36,90 @@
     { value: "mute", label: "Mute — tắt âm thanh" },
   ];
 
+  const FORM_STORAGE_KEY = "splitForm.options";
+
+  const PERSISTED_FIELD_IDS = [
+    "size",
+    "split_size",
+    "split_unit",
+    "split_time",
+    "split_time_unit",
+    "crf",
+    "fps",
+    "preset",
+    "audio_codec",
+    "audio_bitrate",
+  ];
+
   let videoDuration = 0;
   let fileSize = 0;
   let objectUrl = null;
+
+  function readFormStateFromStorage() {
+    try {
+      const raw = localStorage.getItem(FORM_STORAGE_KEY);
+      if (raw) {
+        return JSON.parse(raw);
+      }
+    } catch (e) {
+      /* ignore corrupt storage */
+    }
+    return null;
+  }
+
+  function writeFormStateToStorage(state) {
+    try {
+      localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      /* ignore quota / private mode */
+    }
+  }
+
+  function collectFormState() {
+    const state = { split_mode: getSplitMode() };
+    PERSISTED_FIELD_IDS.forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) {
+        state[id] = el.value;
+      }
+    });
+    return state;
+  }
+
+  function applySavedFormState() {
+    const saved = readFormStateFromStorage();
+    if (!saved) {
+      return;
+    }
+
+    if (saved.split_mode === "size" || saved.split_mode === "time") {
+      const radio = document.querySelector(
+        'input[name="split_mode"][value="' + saved.split_mode + '"]'
+      );
+      if (radio) {
+        radio.checked = true;
+      }
+    }
+
+    PERSISTED_FIELD_IDS.forEach(function (id) {
+      const el = document.getElementById(id);
+      const value = saved[id];
+      if (!el || value === undefined || value === null) {
+        return;
+      }
+      if (el.tagName === "SELECT") {
+        if (el.querySelector('option[value="' + value + '"]')) {
+          el.value = value;
+        }
+        return;
+      }
+      el.value = value;
+    });
+  }
+
+  function persistFormState() {
+    writeFormStateToStorage(collectFormState());
+  }
 
   function formatTime(totalSeconds) {
     if (totalSeconds < 60) {
@@ -278,11 +359,12 @@
     document.querySelectorAll('input[name="split_mode"]').forEach(function (el) {
       el.addEventListener("change", function () {
         updateSplitModePanels();
+        persistFormState();
         updateEstimate();
       });
     });
 
-    ["size", "crf", "fps", "preset", "audio_codec", "audio_bitrate", "split_size", "split_unit", "split_time", "split_time_unit"].forEach(function (id) {
+    PERSISTED_FIELD_IDS.forEach(function (id) {
       const el = document.getElementById(id);
       if (!el) {
         return;
@@ -294,13 +376,18 @@
         if (id === "audio_codec") {
           updateAudioBitrateVisibility();
         }
+        persistFormState();
         updateEstimate();
       });
       if (el.type === "number") {
-        el.addEventListener("input", updateEstimate);
+        el.addEventListener("input", function () {
+          persistFormState();
+          updateEstimate();
+        });
       }
     });
 
+    applySavedFormState();
     updateSplitModePanels();
     updateEncodeSettingsVisibility();
     updateEstimate();
