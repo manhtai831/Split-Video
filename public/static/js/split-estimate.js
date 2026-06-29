@@ -51,9 +51,8 @@
     "audio_bitrate",
   ];
 
-  let videoDuration = 0;
-  let fileSize = 0;
-  let objectUrl = null;
+  let fileStats = [];
+  let probeGeneration = 0;
 
   function readFormStateFromStorage() {
     try {
@@ -172,7 +171,7 @@
     return amount * multiplier;
   }
 
-  function getSegmentCount() {
+  function getSegmentCountForFile(videoDuration, fileSize) {
     if (getSplitMode() === "time") {
       const timeLimit = getTimeLimitSeconds();
       if (timeLimit <= 0 || !videoDuration) {
@@ -188,13 +187,13 @@
     return Math.ceil(fileSize / sizeLimit);
   }
 
-  function estimateSeconds() {
+  function estimateSecondsForFile(videoDuration, fileSize) {
     if (!videoDuration || !fileSize) {
       return 0;
     }
 
     const size = document.getElementById("size").value;
-    const segmentCount = getSegmentCount();
+    const segmentCount = getSegmentCountForFile(videoDuration, fileSize);
     const splitOverhead = segmentCount * 2;
 
     if (size === "keep") {
@@ -226,6 +225,24 @@
     return Math.max(encodeSeconds, 5);
   }
 
+  function estimateSeconds() {
+    if (!fileStats.length) {
+      return 0;
+    }
+
+    let total = 0;
+    fileStats.forEach(function (stat) {
+      total += estimateSecondsForFile(stat.duration, stat.size);
+    });
+    return total;
+  }
+
+  function countEstimableFiles() {
+    return fileStats.filter(function (stat) {
+      return stat.duration > 0 && stat.size > 0;
+    }).length;
+  }
+
   function updateEstimate() {
     const estimateBox = document.getElementById("estimateBox");
     const estimateTime = document.getElementById("estimateTime");
@@ -233,12 +250,15 @@
       return;
     }
 
-    if (!videoDuration || !fileSize) {
+    if (!countEstimableFiles()) {
       estimateBox.hidden = true;
       return;
     }
 
-    estimateTime.textContent = formatTime(estimateSeconds());
+    const timeText = formatTime(estimateSeconds());
+    const fileCount = countEstimableFiles();
+    estimateTime.textContent =
+      fileCount > 1 ? timeText + " (" + fileCount + " file)" : timeText;
     estimateBox.hidden = false;
   }
 
@@ -312,35 +332,59 @@
     updateAudioBitrateVisibility();
   }
 
-  function probeFile(file) {
-    if (objectUrl) {
-      URL.revokeObjectURL(objectUrl);
-      objectUrl = null;
-    }
+  function probeDuration(url) {
+    return new Promise(function (resolve) {
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.muted = true;
+      video.playsInline = true;
 
-    videoDuration = 0;
-    fileSize = file.size || 0;
+      function cleanup() {
+        video.removeAttribute("src");
+        video.load();
+      }
 
-    if (!file) {
+      video.onloadedmetadata = function () {
+        const duration = video.duration || 0;
+        cleanup();
+        resolve(duration);
+      };
+      video.onerror = function () {
+        cleanup();
+        resolve(0);
+      };
+      video.src = url;
+    });
+  }
+
+  async function probeFiles(files) {
+    const gen = ++probeGeneration;
+
+    if (!files || files.length === 0) {
+      fileStats = [];
       updateEstimate();
       return;
     }
 
-    objectUrl = URL.createObjectURL(file);
-    const video = document.createElement("video");
-    video.preload = "metadata";
-    video.onloadedmetadata = function () {
-      videoDuration = video.duration || 0;
-      URL.revokeObjectURL(objectUrl);
-      objectUrl = null;
-      updateEstimate();
-    };
-    video.onerror = function () {
-      URL.revokeObjectURL(objectUrl);
-      objectUrl = null;
-      updateEstimate();
-    };
-    video.src = objectUrl;
+    const items = Array.from(files);
+    const results = await Promise.all(
+      items.map(async function (file) {
+        const url = URL.createObjectURL(file);
+        try {
+          const duration = await probeDuration(url);
+          return { duration: duration, size: file.size || 0 };
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      })
+    );
+
+    if (gen !== probeGeneration) {
+      return;
+    }
+
+    fileStats = results;
+    updateEstimate();
   }
 
   function bindFormEvents() {
@@ -352,7 +396,7 @@
     const fileInput = document.getElementById("file");
     if (fileInput) {
       fileInput.addEventListener("change", function () {
-        probeFile(fileInput.files && fileInput.files[0]);
+        probeFiles(fileInput.files);
       });
     }
 

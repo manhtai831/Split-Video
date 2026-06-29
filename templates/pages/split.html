@@ -12,9 +12,13 @@
     <div class="form-field">
       <label for="file">Video file</label>
       <input id="file" type="file" name="file" accept="video/*" required multiple/>
+      <input id="fileAddMore" type="file" accept="video/*" multiple hidden aria-hidden="true" tabindex="-1" />
       <p class="field-hint">Chọn file video cần chia. Hỗ trợ MP4, MOV, MKV, …</p>
       <div id="filePreviewSection" class="file-preview-section" hidden>
-        <span class="file-preview-section__label">File đã chọn</span>
+        <div class="file-preview-section__header">
+          <span id="filePreviewLabel" class="file-preview-section__label">File đã chọn</span>
+          <button type="button" id="filePreviewClearAll" class="btn btn--ghost btn--sm file-preview-section__clear">Xóa tất cả</button>
+        </div>
         <div id="filePreviewList" class="file-preview-list" role="list"></div>
       </div>
     </div>
