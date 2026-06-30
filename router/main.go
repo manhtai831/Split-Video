@@ -25,6 +25,7 @@ func Bootstrap() {
 		data := structs.PageData{
 			Title:      "Home",
 			ActivePage: "home",
+			UserID:     middleware.GetUserID(w, r),
 		}
 		if err := templates.Render(w, "templates/pages/home.html", data); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

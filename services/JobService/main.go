@@ -29,7 +29,7 @@ type JobStats struct {
 }
 
 func userScopeQuery(userID string) *gorm.DB {
-	return Global.DB.Where("user_id = ? OR user_id = ''", userID)
+	return Global.DB.Where("user_id = ?", userID)
 }
 
 func GetAllJobs() ([]entities.Job, error) {

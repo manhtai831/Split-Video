@@ -4,4 +4,5 @@ type PageData struct {
 	Title      string
 	ActivePage string
 	Result     string
+	UserID     string
 }

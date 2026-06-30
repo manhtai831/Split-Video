@@ -18,6 +18,7 @@
     {{template "rightbar" .}}
   </div>
   <div class="sidebar-backdrop" aria-hidden="true"></div>
+  {{if .UserID}}<div class="user-id-badge" aria-hidden="true">{{.UserID}}</div>{{end}}
   <script src="/static/js/favicon-alert.js"></script>
   <script src="/static/js/layout.js"></script>
 </body>

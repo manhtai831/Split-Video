@@ -19,10 +19,12 @@ import (
 
 func Bootstrap() {
 	http.HandleFunc("/video/split", middleware.WithUserID(func(w http.ResponseWriter, r *http.Request) {
+		userID := middleware.GetUserID(w, r)
 		data := structs.PageData{
 			Title:      "Split Video",
 			ActivePage: "split",
 			Result:     "",
+			UserID:     userID,
 		}
 
 		if r.Method == "POST" {
@@ -92,7 +94,6 @@ func Bootstrap() {
 			}
 
 			for _, uploaded := range uploadedFiles {
-				userID := middleware.GetUserID(w, r)
 				job, err := SplitService.CreateJob(uploaded.path, uploaded.name, extrasJSON, userID)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
