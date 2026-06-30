@@ -5,8 +5,6 @@ services:
     volumes:
       - ./data/database:/app/database
       - ./data/uploads:/app/uploads
-    ports:
-      - 3000:3000
     networks:
       card:
         ipv4_address: 172.21.0.72
