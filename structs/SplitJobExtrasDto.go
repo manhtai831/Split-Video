@@ -1,6 +1,7 @@
 package structs
 
 import (
+	"app/enums"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -8,7 +9,7 @@ import (
 
 type SplitJobExtrasDto struct {
 	Encode    FfmpegEncodeOptionsDto `json:"encode"`
-	SplitMode string                 `json:"split_mode,omitempty"`
+	SplitMode enums.SplitMode          `json:"split_mode,omitempty"`
 	SizeLimit int64                  `json:"size_limit,omitempty"`
 	TimeLimit float64                `json:"time_limit,omitempty"`
 }
@@ -107,18 +108,15 @@ func ParseSplitForm(fields map[string]string) (SplitJobExtrasDto, error) {
 		encode.AudioBitrate = bitrate
 	}
 
-	splitMode := fields["split_mode"]
-	if splitMode == "" {
-		splitMode = "size"
-	}
-	if splitMode != "size" && splitMode != "time" {
-		return SplitJobExtrasDto{}, fmt.Errorf("invalid split_mode: %q", splitMode)
+	splitMode, err := enums.ParseSplitMode(fields["split_mode"])
+	if err != nil {
+		return SplitJobExtrasDto{}, err
 	}
 
 	var sizeLimit int64
 	var timeLimit float64
 	switch splitMode {
-	case "time":
+	case enums.SplitModeTime:
 		var err error
 		timeLimit, err = parseSplitTime(fields["split_time"], fields["split_time_unit"])
 		if err != nil {
@@ -238,6 +236,7 @@ func ParseSplitJobExtrasJSON(raw string) (SplitJobExtrasDto, error) {
 	if err := json.Unmarshal([]byte(raw), &extras); err != nil {
 		return SplitJobExtrasDto{}, err
 	}
+	extras.SplitMode = extras.SplitMode.OrDefault()
 	return extras, nil
 }
 

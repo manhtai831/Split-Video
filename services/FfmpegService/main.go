@@ -1,6 +1,7 @@
 package FfmpegService
 
 import (
+	"app/enums"
 	"app/structs"
 	"context"
 	"encoding/json"
@@ -163,15 +164,12 @@ func Split(ctx context.Context, opts structs.SplitOptionsDto) ([]structs.Segment
 		return nil, err
 	}
 
-	splitMode := opts.SplitMode
-	if splitMode == "" {
-		splitMode = "size"
-	}
-	if splitMode == "time" {
-		if opts.TimeLimit <= 0 {
+	splitMode := opts.SplitMode.OrDefault()
+	if splitMode == enums.SplitModeTime {
+		if opts.TimeLimit < 0 {
 			return nil, fmt.Errorf("time limit must be greater than 0")
 		}
-	} else if opts.SizeLimit <= 0 {
+	} else if opts.SizeLimit < 0 {
 		return nil, fmt.Errorf("size limit must be greater than 0")
 	}
 	if opts.OutputDir == "" {
@@ -199,13 +197,8 @@ func Split(ctx context.Context, opts structs.SplitOptionsDto) ([]structs.Segment
 		return nil, fmt.Errorf("input video has zero duration: %s", opts.InputPath)
 	}
 
-	byTime := splitMode == "time"
-	var maxIterations int
-	if byTime {
-		maxIterations = int(math.Ceil(totalDuration/opts.TimeLimit)) + 1
-	} else {
-		maxIterations = int(math.Ceil(totalDuration)) + 1000
-	}
+	byTime := splitMode == enums.SplitModeTime
+	var maxIterations int = int(math.Ceil(totalDuration)) + 1000
 
 	var results []structs.SegmentResultDto
 	curDuration := 0.0

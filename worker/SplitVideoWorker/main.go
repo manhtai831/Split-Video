@@ -50,12 +50,7 @@ func Process(job entities.Job, ctx context.Context) error {
 	baseFileName := strings.TrimSuffix(filepath.Base(jobFileDataInput.Path), filepath.Ext(jobFileDataInput.Path))
 	extras := resolveExtras(job)
 	encodeOpts := extras.Encode
-	splitMode := extras.SplitMode
-	if splitMode == "" {
-		splitMode = "size"
-	}
-
-	segments, err := processSplit(ctx, job, jobFileDataInput, outputDir, baseFileName, encodeOpts, splitMode, extras.SizeLimit, extras.TimeLimit)
+	segments, err := processSplit(ctx, job, jobFileDataInput, outputDir, baseFileName, encodeOpts, extras.SplitMode.OrDefault(), extras.SizeLimit, extras.TimeLimit)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			return err
@@ -108,7 +103,7 @@ func processSplit(
 	outputDir string,
 	baseFileName string,
 	encodeOpts structs.FfmpegEncodeOptionsDto,
-	splitMode string,
+	splitMode enums.SplitMode,
 	sizeLimit int64,
 	timeLimit float64,
 ) ([]structs.SegmentResultDto, error) {
@@ -119,9 +114,9 @@ func processSplit(
 		})
 	}
 
-	if splitMode == "time" && timeLimit <= 0 {
-		return processSingleFile(ctx, job, inputPath, outputDir, baseFileName, encodeOpts)
-	}
+	// if splitMode == enums.SplitModeTime && timeLimit <= 0 {
+	// 	return processSingleFile(ctx, job, inputPath, outputDir, baseFileName, encodeOpts)
+	// }
 
 	return FfmpegService.Split(ctx, structs.SplitOptionsDto{
 		InputPath:  inputPath,

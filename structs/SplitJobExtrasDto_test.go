@@ -1,6 +1,7 @@
 package structs
 
 import (
+	"app/enums"
 	"strings"
 	"testing"
 )
@@ -270,7 +271,7 @@ func TestParseSplitForm_SplitTimeMinutes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if extras.SplitMode != "time" {
+	if extras.SplitMode != enums.SplitModeTime {
 		t.Fatalf("expected split_mode time, got %q", extras.SplitMode)
 	}
 	if extras.TimeLimit != 300 {
@@ -338,7 +339,7 @@ func TestParseSplitForm_SplitTimeJSONRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if parsed.SplitMode != "time" || parsed.TimeLimit != 7200 {
+	if parsed.SplitMode != enums.SplitModeTime || parsed.TimeLimit != 7200 {
 		t.Fatalf("round trip failed: %+v", parsed)
 	}
 }
@@ -352,7 +353,7 @@ func TestParseSplitForm_DefaultSizeMode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if extras.SplitMode != "size" {
+	if extras.SplitMode != enums.SplitModeSize {
 		t.Fatalf("expected split_mode size, got %q", extras.SplitMode)
 	}
 	want := int64(8 * 1024 * 1024)

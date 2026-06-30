@@ -1,9 +1,11 @@
 package structs
 
+import "app/enums"
+
 type SplitOptionsDto struct {
 	InputPath  string
 	OutputDir  string
-	SplitMode  string
+	SplitMode  enums.SplitMode
 	SizeLimit  int64
 	TimeLimit  float64
 	OutputExt  string
