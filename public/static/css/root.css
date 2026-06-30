@@ -22,6 +22,39 @@
   border-radius: 12px;
 }
 
+.page-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 22px;
+  color: var(--text-main);
+}
+
+.page-header__subtitle {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.page-description {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.page-description--en {
+  margin-top: 6px;
+  font-size: 14px;
+  font-style: italic;
+  opacity: 0.9;
+}
+
+.welcome-box__text .page-description--en {
+  margin-top: 6px;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-muted);
+}
+
 .welcome-box {
   background: #e0e7ff;
   padding: 24px;

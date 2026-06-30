@@ -7,3 +7,13 @@ services:
       - ./data/uploads:/app/uploads
     ports:
       - 3000:3000
+    networks:
+      card:
+        ipv4_address: 172.21.0.72
+
+networks:
+  card:
+    name: card
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16

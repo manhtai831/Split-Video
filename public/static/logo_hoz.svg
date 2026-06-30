@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 50">
+  <g transform="translate(10, 10) scale(0.9)">
+    <path d="M5 4V32L28 18L5 4Z" fill="#4f46e5"/>
+    <path d="M22 4H24V32H22V4Z" fill="#4f46e5" opacity="0.5"/>
+  </g>
+  <text x="55" y="34" font-family="sans-serif" font-weight="700" font-size="24" fill="#4f46e5">Video Tool</text>
+</svg>

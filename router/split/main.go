@@ -21,10 +21,12 @@ func Bootstrap() {
 	http.HandleFunc("/video/split", middleware.WithUserID(func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.GetUserID(w, r)
 		data := structs.PageData{
-			Title:      "Split Video",
-			ActivePage: "split",
-			Result:     "",
-			UserID:     userID,
+			Title:         "Chia Video Online — Cắt Theo Dung Lượng & Thời Gian",
+			Description:   "Chia nhỏ video lớn theo dung lượng (MB/GB) hoặc thời gian (giây, phút, giờ). Hỗ trợ MP4, MKV, MOV — chọn 4K, 1080P, 720P hoặc giữ nguyên chất lượng gốc. Tải ZIP một lần.",
+			DescriptionEN: "Split large videos by file size (MB/GB) or duration (seconds, minutes, hours). Supports MP4, MKV, MOV — choose 4K, 1080P, 720P or keep original quality. One-click ZIP download.",
+			ActivePage:    "split",
+			Result:        "",
+			UserID:        userID,
 		}
 
 		if r.Method == "POST" {

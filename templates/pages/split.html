@@ -1,7 +1,10 @@
 {{define "content"}}
 <link href="/static/css/jobs-ui.css" rel="stylesheet" />
 <div class="container">
-  <h2>Split Video</h2>
+  <div class="page-header">
+    <h2>Chia Video Online <span class="page-header__subtitle" lang="en">/ Split Video Online</span></h2>
+    <p class="page-description--en">{{.Description}}</p>
+  </div>
   <form
     id="splitForm"
     action="/video/split"
