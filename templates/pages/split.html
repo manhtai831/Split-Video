@@ -83,6 +83,33 @@
     <details class="advanced-options">
       <summary>Tùy chọn nâng cao</summary>
       <div class="gap-col-16">
+        <div class="form-field">
+          <label for="output_format">Định dạng video đầu ra</label>
+          <select id="output_format" name="output_format">
+            <optgroup label="Đa nền tảng">
+              <option value="mp4" selected>MP4 — H.264 + AAC (khuyến nghị)</option>
+            </optgroup>
+            <optgroup label="Windows">
+              <option value="avi">AVI — trình phát Windows cũ</option>
+            </optgroup>
+            <optgroup label="macOS">
+              <option value="mov">MOV — QuickTime / macOS</option>
+            </optgroup>
+            <optgroup label="Linux">
+              <option value="mkv">MKV — Matroska / mã nguồn mở</option>
+            </optgroup>
+            <optgroup label="Khác">
+              <option value="m4v">M4V — MPEG-4 Video (Apple TV, iTunes)</option>
+              <option value="webm">WebM — HTML5 / trình duyệt</option>
+              <option value="flv">FLV — Flash / streaming cũ</option>
+              <option value="ts">TS — MPEG Transport Stream</option>
+              <option value="m2ts">M2TS — Blu-ray Transport Stream</option>
+              <option value="3gp">3GP — điện thoại di động cũ</option>
+            </optgroup>
+          </select>
+          <p class="field-hint"><strong>MP4</strong> chạy tốt trên mọi hệ điều hành. <strong>MOV</strong> tối ưu cho macOS, <strong>MKV</strong> phổ biến trên Linux. Mục <strong>Khác</strong>: <strong>WebM</strong> dùng VP9 + Opus khi nén lại; các định dạng còn lại dùng H.264 + AAC.</p>
+        </div>
+
         <div id="encodeSettings" class="gap-col-16">
           <div class="form-field">
             <label for="crf">Chất lượng (CRF)</label>

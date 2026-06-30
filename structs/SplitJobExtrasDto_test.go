@@ -362,6 +362,75 @@ func TestParseSplitForm_DefaultSizeMode(t *testing.T) {
 	}
 }
 
+func TestParseSplitForm_OutputFormatDefault(t *testing.T) {
+	extras, err := ParseSplitForm(map[string]string{
+		"size": "1080",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if extras.OutputExt != "mp4" {
+		t.Fatalf("expected output_ext mp4, got %q", extras.OutputExt)
+	}
+}
+
+func TestParseSplitForm_OutputFormatExplicit(t *testing.T) {
+	cases := []struct {
+		input string
+		want  string
+	}{
+		{"mov", "mov"},
+		{"mkv", "mkv"},
+		{"avi", "avi"},
+		{"webm", "webm"},
+		{"m4v", "m4v"},
+		{"flv", "flv"},
+		{"ts", "ts"},
+	}
+	for _, tc := range cases {
+		extras, err := ParseSplitForm(map[string]string{
+			"size":          "1080",
+			"output_format": tc.input,
+		})
+		if err != nil {
+			t.Fatalf("output_format %q: %v", tc.input, err)
+		}
+		if extras.OutputExt != tc.want {
+			t.Fatalf("output_format %q: got %q, want %q", tc.input, extras.OutputExt, tc.want)
+		}
+	}
+}
+
+func TestParseSplitForm_InvalidOutputFormat(t *testing.T) {
+	_, err := ParseSplitForm(map[string]string{
+		"size":          "1080",
+		"output_format": "wmv",
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid output_format")
+	}
+}
+
+func TestParseSplitForm_WebmUsesVP9Opus(t *testing.T) {
+	extras, err := ParseSplitForm(map[string]string{
+		"size":          "1080",
+		"output_format": "webm",
+		"audio_codec":   "aac",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if extras.Encode.VideoCodec != "libvpx-vp9" {
+		t.Fatalf("expected libvpx-vp9, got %q", extras.Encode.VideoCodec)
+	}
+	if extras.Encode.AudioCodec != "libopus" {
+		t.Fatalf("expected libopus, got %q", extras.Encode.AudioCodec)
+	}
+	if extras.Encode.Preset != "" {
+		t.Fatalf("expected empty preset for webm, got %q", extras.Encode.Preset)
+	}
+}
+
 func containsArgPair(args []string, key string) bool {
 	for i, arg := range args {
 		if arg == key {

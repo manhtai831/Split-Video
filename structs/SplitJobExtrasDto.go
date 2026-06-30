@@ -12,6 +12,7 @@ type SplitJobExtrasDto struct {
 	SplitMode enums.SplitMode          `json:"split_mode,omitempty"`
 	SizeLimit int64                  `json:"size_limit,omitempty"`
 	TimeLimit float64                `json:"time_limit,omitempty"`
+	OutputExt string                 `json:"output_ext,omitempty"`
 }
 
 var allowedSizes = map[string]bool{
@@ -34,6 +35,11 @@ var allowedAudioCodecs = map[string]bool{
 
 var allowedAudioBitrates = map[string]bool{
 	"64k": true, "96k": true, "128k": true, "192k": true, "256k": true,
+}
+
+var allowedOutputFormats = map[string]bool{
+	"mp4": true, "mov": true, "mkv": true, "avi": true,
+	"m4v": true, "webm": true, "flv": true, "ts": true, "m2ts": true, "3gp": true,
 }
 
 func ParseSplitForm(fields map[string]string) (SplitJobExtrasDto, error) {
@@ -130,11 +136,21 @@ func ParseSplitForm(fields map[string]string) (SplitJobExtrasDto, error) {
 		}
 	}
 
+	outputExt := fields["output_format"]
+	if outputExt == "" {
+		outputExt = "mp4"
+	}
+	if !allowedOutputFormats[outputExt] {
+		return SplitJobExtrasDto{}, fmt.Errorf("invalid output_format: %q", outputExt)
+	}
+	applyOutputFormatToEncode(&encode, outputExt)
+
 	return SplitJobExtrasDto{
 		Encode:    encode,
 		SplitMode: splitMode,
 		SizeLimit: sizeLimit,
 		TimeLimit: timeLimit,
+		OutputExt: outputExt,
 	}, nil
 }
 
@@ -218,6 +234,20 @@ func parseFPS(raw string) (int, error) {
 		return 0, fmt.Errorf("invalid fps: %d", fps)
 	}
 	return fps, nil
+}
+
+func applyOutputFormatToEncode(encode *FfmpegEncodeOptionsDto, outputExt string) {
+	if encode.VideoCodec == "copy" {
+		return
+	}
+	switch outputExt {
+	case "webm":
+		encode.VideoCodec = "libvpx-vp9"
+		encode.Preset = ""
+		if encode.AudioCodec == "aac" {
+			encode.AudioCodec = "libopus"
+		}
+	}
 }
 
 func (d SplitJobExtrasDto) ToJSON() (string, error) {

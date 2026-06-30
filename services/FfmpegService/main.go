@@ -197,7 +197,6 @@ func Split(ctx context.Context, opts structs.SplitOptionsDto) ([]structs.Segment
 		return nil, fmt.Errorf("input video has zero duration: %s", opts.InputPath)
 	}
 
-	byTime := splitMode == enums.SplitModeTime
 	var maxIterations int = int(math.Ceil(totalDuration)) + 1000
 
 	var results []structs.SegmentResultDto
@@ -210,7 +209,8 @@ func Split(ctx context.Context, opts structs.SplitOptionsDto) ([]structs.Segment
 
 		var sizeLimit int64
 		var timeLimit float64
-		if byTime {
+
+		if splitMode == enums.SplitModeTime {
 			timeLimit = opts.TimeLimit
 			if remaining := totalDuration - curDuration; timeLimit > remaining {
 				timeLimit = remaining
@@ -220,7 +220,9 @@ func Split(ctx context.Context, opts structs.SplitOptionsDto) ([]structs.Segment
 		}
 
 		output := filepath.Join(opts.OutputDir, fmt.Sprintf("%s-%d.%s", namePrefix, i, outputExt))
+
 		seg, err := EncodeSegment(ctx, opts.InputPath, output, curDuration, sizeLimit, timeLimit, opts.Encode)
+
 		if err != nil {
 			if strings.Contains(err.Error(), "encoded segment has zero duration") {
 				curDuration = totalDuration

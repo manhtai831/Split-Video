@@ -44,6 +44,7 @@
     "split_unit",
     "split_time",
     "split_time_unit",
+    "output_format",
     "crf",
     "fps",
     "preset",
