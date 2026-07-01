@@ -21,6 +21,17 @@
       <span>Chọn tất cả</span>
     </label>
     <ul id="downloadFileList" class="download-modal__list"></ul>
+    <fieldset class="download-modal__mode">
+      <legend class="download-modal__mode-label">Cách tải về</legend>
+      <label class="download-modal__mode-option">
+        <input type="radio" name="downloadMode" id="downloadModeIndividual" value="individual" checked />
+        <span>Tải từng file</span>
+      </label>
+      <label class="download-modal__mode-option">
+        <input type="radio" name="downloadMode" id="downloadModeZip" value="zip" />
+        <span>Tải file ZIP</span>
+      </label>
+    </fieldset>
     <div class="download-modal__actions">
       <button type="button" id="downloadModalCancel" class="btn btn--secondary btn--sm">Hủy</button>
       <button type="button" id="downloadModalConfirm" class="btn btn--primary btn--sm">Tải xuống đã chọn</button>

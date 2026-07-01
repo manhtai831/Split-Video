@@ -1,12 +1,17 @@
 package jobs
 
 import (
+	"app/entities"
+	"app/enums"
 	"app/middleware"
 	"app/services/JobFileDataService"
 	"app/services/JobPresenterService"
 	"app/services/JobService"
 	"app/structs"
+	"archive/zip"
 	"encoding/json"
+	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"os"
@@ -14,8 +19,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"app/enums"
 )
 
 func Bootstrap() {
@@ -78,14 +81,20 @@ func handleListJobs(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleJobsWithPath(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/api/jobs/")
+	parts := strings.Split(path, "/")
+
+	if len(parts) == 2 && parts[1] == "download-zip" && r.Method == http.MethodPost {
+		handleDownloadZip(w, r, parts[0])
+		return
+	}
+
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	// /api/jobs/{identifier}/files/{fileId}/download
-	path := strings.TrimPrefix(r.URL.Path, "/api/jobs/")
-	parts := strings.Split(path, "/")
 	if len(parts) == 4 && parts[1] == "files" && parts[3] == "download" {
 		handleDownload(w, r, parts[0], parts[2])
 		return
@@ -97,20 +106,14 @@ func handleJobsWithPath(w http.ResponseWriter, r *http.Request) {
 func handleDownload(w http.ResponseWriter, r *http.Request, identifier, fileIDRaw string) {
 	userID := middleware.GetUserID(w, r)
 
-	job, err := JobService.GetJobByIdentifierForUser(identifier, userID)
-	if err != nil {
-		http.NotFound(w, r)
-		return
-	}
-
 	fileID, err := strconv.Atoi(fileIDRaw)
 	if err != nil {
 		http.Error(w, "Invalid file id", http.StatusBadRequest)
 		return
 	}
 
-	fileData, err := JobFileDataService.GetJobFileDataById(fileID)
-	if err != nil || fileData.JobID != job.ID || fileData.Type != enums.JobFileDataTypeOutput {
+	fileData, err := JobFileDataService.GetOutputFileByIdentifierAndUser(identifier, userID, fileID)
+	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
@@ -120,10 +123,132 @@ func handleDownload(w http.ResponseWriter, r *http.Request, identifier, fileIDRa
 		return
 	}
 
-	_ = JobService.MarkJobDownloaded(job.ID)
+	_ = JobService.MarkJobDownloaded(fileData.JobID)
 
 	w.Header().Set("Content-Disposition", "attachment; filename=\""+filepath.Base(fileData.Name)+"\"")
 	http.ServeFile(w, r, fileData.Path)
+}
+
+func handleDownloadZip(w http.ResponseWriter, r *http.Request, identifier string) {
+	userID := middleware.GetUserID(w, r)
+
+	var req structs.DownloadZipRequestDto
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	if len(req.FileIDs) == 0 {
+		http.Error(w, "No files selected", http.StatusBadRequest)
+		return
+	}
+
+	files, err := JobFileDataService.GetOutputFilesByIdentifierAndUser(identifier, userID, req.FileIDs)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	for _, fileData := range files {
+		if _, err := os.Stat(fileData.Path); os.IsNotExist(err) {
+			http.NotFound(w, r)
+			return
+		}
+	}
+
+	zipName, err := buildZipDownloadName(files[0].JobID, identifier)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", "attachment; filename=\""+zipName+"\"")
+
+	zw := zip.NewWriter(w)
+	defer zw.Close()
+
+	seen := make(map[string]int)
+	for _, fileData := range files {
+		if err := addFileToZip(zw, fileData, seen); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	_ = JobService.MarkJobDownloaded(files[0].JobID)
+}
+
+func buildZipDownloadName(jobID int, identifier string) (string, error) {
+	baseName := identifier
+	inputFiles, err := JobFileDataService.GetJobFileDataByJobId(jobID, enums.JobFileDataTypeInput)
+	if err != nil {
+		return "", err
+	}
+	if len(inputFiles) > 0 && inputFiles[0].Name != "" {
+		baseName = strings.TrimSuffix(inputFiles[0].Name, filepath.Ext(inputFiles[0].Name))
+	}
+	return sanitizeDownloadFilename(baseName) + ".zip", nil
+}
+
+func sanitizeDownloadFilename(name string) string {
+	name = filepath.Base(name)
+	if name == "" || name == "." || name == ".." {
+		return "download"
+	}
+	var b strings.Builder
+	for _, r := range name {
+		if r == '/' || r == '\\' || r == 0 {
+			continue
+		}
+		b.WriteRune(r)
+	}
+	if result := strings.TrimSpace(b.String()); result != "" {
+		return result
+	}
+	return "download"
+}
+
+func uniqueZipEntryName(name string, seen map[string]int) string {
+	base := filepath.Base(name)
+	if base == "" || base == "." || base == ".." {
+		base = "file"
+	}
+	if seen[base] == 0 {
+		seen[base] = 1
+		return base
+	}
+	seen[base]++
+	ext := filepath.Ext(base)
+	stem := strings.TrimSuffix(base, ext)
+	return fmt.Sprintf("%s_%d%s", stem, seen[base], ext)
+}
+
+func addFileToZip(zw *zip.Writer, fileData entities.JobFileData, seen map[string]int) error {
+	f, err := os.Open(fileData.Path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	info, err := f.Stat()
+	if err != nil {
+		return err
+	}
+
+	header, err := zip.FileInfoHeader(info)
+	if err != nil {
+		return err
+	}
+	header.Name = uniqueZipEntryName(fileData.Name, seen)
+	header.Method = zip.Deflate
+
+	wr, err := zw.CreateHeader(header)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(wr, f)
+	return err
 }
 
 func parseListOptions(r *http.Request) JobService.ListJobsOptions {

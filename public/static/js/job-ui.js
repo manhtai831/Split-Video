@@ -101,10 +101,24 @@
           alert("Vui lòng chọn ít nhất một file.");
           return;
         }
-        downloadFiles(files);
-        clearDownloadHighlight(findHistoryRowByJobId(downloadJob.identifier));
-        modals.downloadModal.close();
-        onDownloadSuccess();
+        var mode = getDownloadMode();
+        var downloadPromise =
+          mode === "zip"
+            ? downloadZip(downloadJob.identifier, files)
+            : Promise.resolve(downloadFiles(files));
+        modals.downloadModalConfirm.disabled = true;
+        downloadPromise
+          .then(function () {
+            clearDownloadHighlight(findHistoryRowByJobId(downloadJob.identifier));
+            modals.downloadModal.close();
+            onDownloadSuccess();
+          })
+          .catch(function (err) {
+            alert(err.message || "Không thể tải file.");
+          })
+          .finally(function () {
+            modals.downloadModalConfirm.disabled = false;
+          });
       });
     }
   }
@@ -283,6 +297,8 @@
     downloadJob = job;
     modals.downloadModalJobName.textContent = truncateFileName(job.file_name, 48);
     modals.downloadModalJobName.title = job.file_name || "";
+    var individualRadio = document.getElementById("downloadModeIndividual");
+    if (individualRadio) individualRadio.checked = true;
     renderDownloadFileList(job);
     modals.downloadModal.showModal();
   }
@@ -455,6 +471,47 @@
         a.click();
         document.body.removeChild(a);
       }, i * 300);
+    });
+  }
+
+  function getDownloadMode() {
+    var zipRadio = document.getElementById("downloadModeZip");
+    return zipRadio && zipRadio.checked ? "zip" : "individual";
+  }
+
+  function parseFilenameFromDisposition(header) {
+    if (!header) return null;
+    var match = /filename="([^"]+)"/i.exec(header);
+    return match ? match[1] : null;
+  }
+
+  function downloadZip(jobIdentifier, files) {
+    var fileIds = files.map(function (f) {
+      return f.id;
+    });
+    return fetch("/api/jobs/" + encodeURIComponent(jobIdentifier) + "/download-zip", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file_ids: fileIds }),
+    }).then(function (res) {
+      if (!res.ok) {
+        return res.text().then(function (text) {
+          throw new Error(text || "Không thể tải file ZIP (" + res.status + ")");
+        });
+      }
+      var filename = parseFilenameFromDisposition(res.headers.get("Content-Disposition"));
+      return res.blob().then(function (blob) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = filename || jobIdentifier + ".zip";
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
     });
   }
 

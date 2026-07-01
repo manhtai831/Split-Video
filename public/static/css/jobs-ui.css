@@ -484,6 +484,30 @@
   color: var(--text-muted);
 }
 
+.download-modal__mode {
+  margin: 0 0 16px 0;
+  padding: 12px 0 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.download-modal__mode-label {
+  padding: 0;
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.download-modal__mode-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 14px;
+  cursor: pointer;
+}
+
 .download-modal__actions {
   display: flex;
   justify-content: flex-end;
