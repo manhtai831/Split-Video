@@ -2,6 +2,7 @@ package router
 
 import (
 	apijobs "app/router/api/jobs"
+	"app/router/extractaudio"
 	"app/router/job"
 	"app/router/gif"
 	"app/router/merge"
@@ -24,6 +25,7 @@ func Bootstrap() {
 	split.Bootstrap()
 	merge.Bootstrap()
 	gif.Bootstrap()
+	extractaudio.Bootstrap()
 
 	http.HandleFunc("/", middleware.WithUserID(func(w http.ResponseWriter, r *http.Request) {
 		data := structs.PageData{

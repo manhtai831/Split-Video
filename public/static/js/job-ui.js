@@ -17,6 +17,7 @@
     split: "Split",
     merge: "Merge",
     gif: "GIF",
+    extract_audio: "Tách audio",
   };
 
   var modals = {};

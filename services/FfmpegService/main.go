@@ -25,6 +25,7 @@ type ffprobeOutput struct {
 		Width      int    `json:"width"`
 		Height     int    `json:"height"`
 		RFrameRate string `json:"r_frame_rate"`
+		BitRate    string `json:"bit_rate"`
 	} `json:"streams"`
 }
 
@@ -84,6 +85,12 @@ func ProbeMedia(ctx context.Context, path string) (structs.MediaProbeDto, error)
 			}
 		case "audio":
 			result.AudioCodec = stream.CodecName
+			if stream.BitRate != "" {
+				bitrate, err := strconv.ParseInt(stream.BitRate, 10, 64)
+				if err == nil && bitrate > 0 {
+					result.AudioBitrate = bitrate
+				}
+			}
 		}
 	}
 

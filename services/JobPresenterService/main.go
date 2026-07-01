@@ -108,6 +108,12 @@ func buildEncodeSummary(jobType enums.JobType, extrasJSON string) string {
 			return ""
 		}
 		return buildGifEncodeSummary(extras)
+	case enums.JobTypeExtractAudio:
+		extras, err := structs.ParseExtractAudioJobExtrasJSON(extrasJSON)
+		if err != nil {
+			return ""
+		}
+		return buildExtractAudioEncodeSummary(extras)
 	default:
 		extras, err := structs.ParseSplitJobExtrasJSON(extrasJSON)
 		if err != nil {
@@ -128,6 +134,27 @@ func buildGifEncodeSummary(extras structs.GifJobExtrasDto) string {
 	}
 	if len(extras.Segments) > 1 {
 		parts = append(parts, fmt.Sprintf("%d đoạn", len(extras.Segments)))
+	}
+	return strings.Join(parts, " · ")
+}
+
+func buildExtractAudioEncodeSummary(extras structs.ExtractAudioJobExtrasDto) string {
+	parts := []string{strings.ToUpper(extras.OutputFormat)}
+	if extras.AudioBitrate != "" {
+		if extras.AudioBitrate == "original" {
+			parts = append(parts, "Original")
+		} else {
+			parts = append(parts, extras.AudioBitrate)
+		}
+	}
+	if extras.Speed != 0 && extras.Speed != 1 {
+		parts = append(parts, fmt.Sprintf("%.2g×", extras.Speed))
+	}
+	if extras.Volume != 0 && extras.Volume != 100 {
+		parts = append(parts, fmt.Sprintf("Vol %.0f%%", extras.Volume))
+	}
+	if extras.Metadata.Artist != "" {
+		parts = append(parts, extras.Metadata.Artist)
 	}
 	return strings.Join(parts, " · ")
 }
