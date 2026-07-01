@@ -102,6 +102,12 @@ func buildEncodeSummary(jobType enums.JobType, extrasJSON string) string {
 			return ""
 		}
 		return buildEncodeSummaryFromOptions(extras.Encode)
+	case enums.JobTypeGif:
+		extras, err := structs.ParseGifJobExtrasJSON(extrasJSON)
+		if err != nil {
+			return ""
+		}
+		return buildGifEncodeSummary(extras)
 	default:
 		extras, err := structs.ParseSplitJobExtrasJSON(extrasJSON)
 		if err != nil {
@@ -109,6 +115,21 @@ func buildEncodeSummary(jobType enums.JobType, extrasJSON string) string {
 		}
 		return buildEncodeSummaryFromOptions(extras.Encode)
 	}
+}
+
+func buildGifEncodeSummary(extras structs.GifJobExtrasDto) string {
+	parts := []string{
+		strings.ToUpper(extras.OutputFmt),
+		fmt.Sprintf("%d×%d", extras.Dimension.Width, extras.Dimension.Height),
+		fmt.Sprintf("%d fps", extras.FPS),
+	}
+	if extras.Quality.Preset != "" {
+		parts = append(parts, extras.Quality.Preset)
+	}
+	if len(extras.Segments) > 1 {
+		parts = append(parts, fmt.Sprintf("%d đoạn", len(extras.Segments)))
+	}
+	return strings.Join(parts, " · ")
 }
 
 func buildEncodeSummaryFromOptions(enc structs.FfmpegEncodeOptionsDto) string {

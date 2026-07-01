@@ -3,6 +3,7 @@ package router
 import (
 	apijobs "app/router/api/jobs"
 	"app/router/job"
+	"app/router/gif"
 	"app/router/merge"
 	staticfiles "app/router/static"
 	"app/router/split"
@@ -22,6 +23,7 @@ func Bootstrap() {
 	job.Bootstrap()
 	split.Bootstrap()
 	merge.Bootstrap()
+	gif.Bootstrap()
 
 	http.HandleFunc("/", middleware.WithUserID(func(w http.ResponseWriter, r *http.Request) {
 		data := structs.PageData{

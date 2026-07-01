@@ -4,6 +4,7 @@ import (
 	"app/entities"
 	"app/enums"
 	"app/services/JobService"
+	"app/worker/GifVideoWorker"
 	"app/worker/MergeVideoWorker"
 	"app/worker/SplitVideoWorker"
 	"context"
@@ -78,6 +79,14 @@ func processJob(job entities.Job) {
 		JobManagerInstance.JobMutex.Unlock()
 
 		err = MergeVideoWorker.Process(job, context)
+	case enums.JobTypeGif:
+		context, cancel := context.WithCancel(context.Background())
+
+		JobManagerInstance.JobMutex.Lock()
+		JobManagerInstance.JobCancelMap[job.Identifier] = cancel
+		JobManagerInstance.JobMutex.Unlock()
+
+		err = GifVideoWorker.Process(job, context)
 	}
 
 	if err != nil {

@@ -16,6 +16,7 @@
   var TYPE_LABELS = {
     split: "Split",
     merge: "Merge",
+    gif: "GIF",
   };
 
   var modals = {};

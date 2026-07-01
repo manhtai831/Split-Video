@@ -1,0 +1,259 @@
+{{define "content"}}
+<link href="{{asset "css/jobs-ui.css"}}" rel="stylesheet" />
+<div class="container">
+  <div class="page-header">
+    <h2>Tạo GIF từ Video <span class="page-header__subtitle" lang="en">/ GIF from Video</span></h2>
+    <p class="page-description--en">{{.Description}}</p>
+  </div>
+  <form
+    id="gifForm"
+    action="/video/gif"
+    enctype="multipart/form-data"
+    method="post"
+    onsubmit="return handleGifSubmit(this)"
+  >
+    <input type="hidden" id="segmentsJson" name="segments_json" value="" />
+
+    <div class="form-field">
+      <label for="file">Video file</label>
+      <input id="file" type="file" name="file" accept="video/*" required />
+      <p class="field-hint">Chọn một video. Hỗ trợ MP4, MOV, MKV, …</p>
+      <div id="gifFileMeta" class="field-hint" hidden></div>
+    </div>
+
+    <div id="gifEditor" class="gif-editor" hidden>
+      <div class="gif-editor__player-wrap">
+        <video id="gifPreviewPlayer" class="gif-editor__player" playsinline muted></video>
+      </div>
+
+      <div id="gifTimeline" class="gif-timeline" hidden>
+        <div class="gif-timeline__track"></div>
+        <div id="gifTimelineRange" class="gif-timeline__range"></div>
+        <div id="gifThumbStart" class="gif-timeline__thumb" role="slider" aria-label="Start" tabindex="0"></div>
+        <div id="gifThumbEnd" class="gif-timeline__thumb gif-timeline__thumb--end" role="slider" aria-label="End" tabindex="0"></div>
+      </div>
+
+      <div class="input-row dimension-row">
+        <div class="form-field" style="margin:0">
+          <label for="startAt">Bắt đầu (giây)</label>
+          <input id="startAt" name="start_at" type="number" min="0" step="0.1" value="0" />
+        </div>
+        <div class="form-field" style="margin:0">
+          <label for="duration">Thời lượng (giây)</label>
+          <input id="duration" name="duration" type="number" min="0.1" max="30" step="0.1" value="5" />
+        </div>
+      </div>
+
+      <div class="gif-editor-actions">
+        <button type="button" id="gifAddSegment" class="btn btn--secondary btn--sm">+ Thêm đoạn</button>
+        <button type="button" id="gifUpdateSegment" class="btn btn--ghost btn--sm" hidden>Cập nhật đoạn</button>
+      </div>
+    </div>
+
+    <div id="gifSegmentsSection" class="form-field" hidden>
+      <label>Danh sách đoạn</label>
+      <ul id="gifSegmentsList" class="gif-segments-list" role="list"></ul>
+      <p class="field-hint">Click một đoạn để chỉnh sửa trong editor phía trên.</p>
+    </div>
+
+    <div class="form-field">
+      <label for="output_fmt">Định dạng đầu ra</label>
+      <select id="output_fmt" name="output_fmt">
+        <option value="gif" selected>GIF — phổ biến nhất</option>
+        <option value="webp">WebP động — nhẹ hơn, chất lượng tốt</option>
+        <option value="apng">APNG — PNG động (hỗ trợ trình duyệt hạn chế)</option>
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label>Kích thước ảnh</label>
+      <div class="dimension-mode-group">
+        <label>
+          <input type="radio" name="dimension_mode" value="aspect_lock" checked />
+          Giữ tỷ lệ
+        </label>
+        <label>
+          <input type="radio" name="dimension_mode" value="manual" />
+          Tự nhập
+        </label>
+      </div>
+      <div class="dimension-row">
+        <div class="form-field" style="margin:0">
+          <label for="sizePreset">Preset nhanh</label>
+          <select id="sizePreset">
+            <option value="original">Original (100%)</option>
+            <option value="720">720p wide</option>
+            <option value="480">480p</option>
+            <option value="360">360p</option>
+            <option value="240">240p</option>
+            <option value="custom">Tùy chỉnh</option>
+          </select>
+        </div>
+        <div class="form-field" style="margin:0">
+          <label for="width">Width (px)</label>
+          <input id="width" name="width" type="number" min="16" max="1920" step="2" value="640" required />
+        </div>
+        <div class="form-field" style="margin:0">
+          <label for="height">Height (px)</label>
+          <input id="height" name="height" type="number" min="16" max="1920" step="2" value="360" required />
+        </div>
+      </div>
+      <p id="gifAspectWarning" class="field-hint" style="color:#b45309" hidden>Tỷ lệ khác video gốc — có thể bị méo.</p>
+    </div>
+
+    <div class="form-field">
+      <label for="quality_preset">Chất lượng</label>
+      <select id="quality_preset" name="quality_preset">
+        <option value="low">Thấp — file nhỏ</option>
+        <option value="medium">Trung bình</option>
+        <option value="high" selected>Cao — khuyến nghị</option>
+        <option value="max">Tối đa</option>
+        <option value="custom">Tùy chỉnh</option>
+      </select>
+    </div>
+
+    <details id="gifCustomQuality" class="advanced-options" hidden>
+      <summary>Tùy chỉnh chất lượng</summary>
+      <div class="gap-col-16">
+        <div id="gifPaletteOptions" class="gap-col-16">
+          <div class="form-field">
+            <label for="max_colors">Số màu (GIF/APNG)</label>
+            <input id="max_colors" name="max_colors" type="number" min="2" max="256" value="256" />
+          </div>
+          <div class="form-field">
+            <label for="dither">Dither</label>
+            <select id="dither" name="dither">
+              <option value="none">None</option>
+              <option value="bayer">Bayer</option>
+              <option value="floyd_steinberg" selected>Floyd-Steinberg</option>
+            </select>
+          </div>
+        </div>
+        <div id="gifWebpOptions" class="gap-col-16" hidden>
+          <div class="form-field">
+            <label for="webp_quality">WebP quality (0–100)</label>
+            <input id="webp_quality" name="webp_quality" type="number" min="0" max="100" value="90" />
+          </div>
+          <div class="form-field">
+            <label>
+              <input type="checkbox" id="lossless" name="lossless" />
+              Lossless
+            </label>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <div class="form-field">
+      <label for="fps">Khung hình/giây (FPS)</label>
+      <select id="fps" name="fps">
+        <option value="1">1 fps</option>
+        <option value="5">5 fps</option>
+        <option value="10" selected>10 fps</option>
+        <option value="15">15 fps</option>
+        <option value="24">24 fps</option>
+        <option value="30">30 fps</option>
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label>
+        <input type="checkbox" id="loop" name="loop" checked />
+        Lặp vô hạn
+      </label>
+    </div>
+
+    <div id="gifEstimateBox" class="estimate-box" hidden>
+      <span>Ước tính dung lượng: <strong id="gifEstimateSize">—</strong></span>
+      <p class="estimate-disclaimer">Ước tính tham khảo. GIF phụ thuộc nhiều vào nội dung video.</p>
+    </div>
+
+    <button type="submit" name="gifButton">Tạo &amp; Tải xuống</button>
+  </form>
+
+  <div style="height: 32px;"></div>
+
+  <section class="home-section" aria-labelledby="gifJobsHeading">
+    <h2 id="gifJobsHeading" class="home-section__title">Lịch sử tạo GIF</h2>
+
+    <div id="gifJobsEmpty" class="job-empty" hidden>
+      <p>Chưa có job tạo GIF nào.</p>
+    </div>
+
+    <div id="gifJobsTableWrap" class="history-table-wrap">
+      <table class="history-table" aria-label="Lịch sử job tạo GIF">
+        <thead>
+          <tr>
+            <th>File</th>
+            <th>Trạng thái</th>
+            <th>Tiến độ</th>
+            <th>Tạo lúc</th>
+            <th>Hoàn thành</th>
+            <th class="cell-actions" scope="col" aria-label="Thao tác">
+              <span class="cell-actions__header-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
+                </svg>
+              </span>
+              <span class="sr-only">Thao tác</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody id="gifJobsTableBody"></tbody>
+      </table>
+      <div id="gifJobsCardList" class="history-card-list"></div>
+    </div>
+
+    <div id="gifJobsSkeleton" class="history-skeleton" hidden>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+    </div>
+
+    <div id="gifJobsPagination" class="history-pagination" hidden>
+      <span id="gifJobsRange" class="history-pagination__range"></span>
+      <div class="history-pagination__controls">
+        <button type="button" id="gifJobsPagePrev" class="btn btn--secondary btn--sm" disabled>« Trước</button>
+        <span id="gifJobsPageInfo" class="history-pagination__info"></span>
+        <button type="button" id="gifJobsPageNext" class="btn btn--secondary btn--sm">Sau »</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+{{template "jobModals" .}}
+
+<script src="{{asset "js/job-ui.js"}}"></script>
+<script src="{{asset "js/gif-jobs-panel.js"}}"></script>
+<script src="{{asset "js/gif-file-preview.js"}}"></script>
+<script src="{{asset "js/gif-timeline.js"}}"></script>
+<script src="{{asset "js/gif-segments.js"}}"></script>
+<script src="{{asset "js/gif-estimate.js"}}"></script>
+<script>
+  function handleGifSubmit(form) {
+    if (typeof window.syncGifSegmentsForSubmit === "function") {
+      var ok = window.syncGifSegmentsForSubmit();
+      if (!ok) return false;
+    }
+    var fileInput = document.getElementById("file");
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+      alert("Cần chọn một file video.");
+      return false;
+    }
+    var btn = form.querySelector('button[type=submit]');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerText = "Processing...";
+    }
+    return true;
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    if (typeof initGifFilePreview === "function") initGifFilePreview();
+    if (typeof initGifTimeline === "function") initGifTimeline();
+    if (typeof initGifSegments === "function") initGifSegments();
+    if (typeof initGifEstimate === "function") initGifEstimate();
+    if (typeof initGifJobsPanel === "function") initGifJobsPanel();
+  });
+</script>
+{{end}}

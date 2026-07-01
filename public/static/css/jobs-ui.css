@@ -1037,3 +1037,149 @@
   cursor: grabbing;
 }
 
+/* GIF editor */
+.gif-editor {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  background: #fafbfc;
+}
+
+.gif-editor__player-wrap {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.gif-editor__player {
+  width: 100%;
+  max-height: 360px;
+  border-radius: 8px;
+  background: #000;
+  display: block;
+}
+
+.gif-timeline {
+  position: relative;
+  height: 36px;
+  margin: 12px 0 8px;
+  user-select: none;
+}
+
+.gif-timeline__track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 6px;
+  margin-top: -3px;
+  background: #e2e8f0;
+  border-radius: 3px;
+}
+
+.gif-timeline__range {
+  position: absolute;
+  top: 50%;
+  height: 6px;
+  margin-top: -3px;
+  background: #6366f1;
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.gif-timeline__thumb {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  margin-left: -8px;
+  background: #6366f1;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  cursor: ew-resize;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  z-index: 2;
+}
+
+.gif-timeline__thumb--end {
+  background: #4f46e5;
+}
+
+.gif-segments-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gif-segments-list__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.gif-segments-list__item:hover {
+  border-color: #a5b4fc;
+}
+
+.gif-segments-list__item--active {
+  border-color: #6366f1;
+  background: #eef2ff;
+}
+
+.gif-segments-list__label {
+  flex: 1;
+  font-size: 14px;
+}
+
+.gif-segments-list__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.gif-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.dimension-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.dimension-row input[type="number"] {
+  width: 100px;
+}
+
+.dimension-mode-group {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.dimension-mode-group label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+#gifCustomQuality[hidden],
+#gifAspectWarning[hidden] {
+  display: none !important;
+}
+
