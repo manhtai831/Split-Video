@@ -7,3 +7,6 @@
 /dist
 /data
 /tmp
+
+/Dockerfile
+/docker-compose.yml
