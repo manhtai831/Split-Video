@@ -7,3 +7,9 @@ prod:
 	ln -sf .docker/prod/Dockerfile Dockerfile
 	ln -sf .docker/prod/docker-compose.yml docker-compose.yml
 	docker compose up -d --build
+
+build-assets:
+	go run ./cmd/assetbuild
+
+build:
+	go run ./cmd/assetbuild && go build -o dist/main .

@@ -1,5 +1,5 @@
 {{define "content"}}
-<link href="/static/css/jobs-ui.css" rel="stylesheet" />
+<link href="{{asset "css/jobs-ui.css"}}" rel="stylesheet" />
 <div class="container">
   <div class="page-header">
     <h2>Ghép Video Online <span class="page-header__subtitle" lang="en">/ Merge Video Online</span></h2>
@@ -212,10 +212,10 @@
   <video id="videoPreviewPlayer" class="video-preview-modal__player" controls playsinline></video>
 </dialog>
 
-<script src="/static/js/job-ui.js"></script>
-<script src="/static/js/merge-jobs-panel.js"></script>
-<script src="/static/js/merge-estimate.js"></script>
-<script src="/static/js/merge-file-preview.js"></script>
+<script src="{{asset "js/job-ui.js"}}"></script>
+<script src="{{asset "js/merge-jobs-panel.js"}}"></script>
+<script src="{{asset "js/merge-estimate.js"}}"></script>
+<script src="{{asset "js/merge-file-preview.js"}}"></script>
 <script>
   function handleMergeSubmit(form) {
     var fileInput = document.getElementById("file");

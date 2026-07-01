@@ -1,6 +1,7 @@
 package templates
 
 import (
+	"app/assets"
 	"html/template"
 	"net/http"
 )
@@ -15,7 +16,9 @@ var layoutFiles = []string{
 
 func Render(w http.ResponseWriter, page string, data any) error {
 	files := append(layoutFiles, page)
-	tmpl, err := template.ParseFiles(files...)
+	tmpl, err := template.New("root").Funcs(template.FuncMap{
+		"asset": assets.URL,
+	}).ParseFiles(files...)
 	if err != nil {
 		return err
 	}

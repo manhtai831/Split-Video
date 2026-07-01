@@ -1,6 +1,6 @@
 {{define "content"}}
-<link href="/static/css/home.css" rel="stylesheet" />
-<link href="/static/css/jobs-ui.css" rel="stylesheet" />
+<link href="{{asset "css/home.css"}}" rel="stylesheet" />
+<link href="{{asset "css/jobs-ui.css"}}" rel="stylesheet" />
 
 <div class="container home-dashboard">
   <!-- 1. Welcome compact -->
@@ -141,8 +141,8 @@
 
 {{template "jobModals" .}}
 
-<script src="/static/js/job-ui.js"></script>
-<script src="/static/js/home-dashboard.js"></script>
+<script src="{{asset "js/job-ui.js"}}"></script>
+<script src="{{asset "js/home-dashboard.js"}}"></script>
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     if (typeof initHomeDashboard === "function") {

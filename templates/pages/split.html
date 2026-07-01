@@ -1,5 +1,5 @@
 {{define "content"}}
-<link href="/static/css/jobs-ui.css" rel="stylesheet" />
+<link href="{{asset "css/jobs-ui.css"}}" rel="stylesheet" />
 <div class="container">
   <div class="page-header">
     <h2>Chia Video Online <span class="page-header__subtitle" lang="en">/ Split Video Online</span></h2>
@@ -247,10 +247,10 @@
   <video id="videoPreviewPlayer" class="video-preview-modal__player" controls playsinline></video>
 </dialog>
 
-<script src="/static/js/job-ui.js"></script>
-<script src="/static/js/split-jobs-panel.js"></script>
-<script src="/static/js/split-estimate.js"></script>
-<script src="/static/js/split-file-preview.js"></script>
+<script src="{{asset "js/job-ui.js"}}"></script>
+<script src="{{asset "js/split-jobs-panel.js"}}"></script>
+<script src="{{asset "js/split-estimate.js"}}"></script>
+<script src="{{asset "js/split-file-preview.js"}}"></script>
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     const resultBox = document.getElementById("resultBox");

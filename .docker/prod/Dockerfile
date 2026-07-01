@@ -12,6 +12,7 @@ ENV CGO_ENABLED=1
 # Copy the entire project
 COPY . .
 
+RUN go run ./cmd/assetbuild
 RUN mkdir -p dist && go build  -o ./dist/main .
 
 FROM alpine:3.24 AS runner
@@ -20,9 +21,9 @@ WORKDIR /app
 
 RUN apk add ffmpeg
 
-COPY --from=builder /app/dist/main /app/dist/main
+COPY --from=builder /app/dist/main ./dist/main
+COPY --from=builder /app/dist/static ./dist/static
 COPY templates ./templates
-COPY public ./public
 
 EXPOSE 3000
 

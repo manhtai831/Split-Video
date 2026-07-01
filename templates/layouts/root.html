@@ -8,8 +8,8 @@
   {{if .Description}}<meta name="description" content="{{.Description}}{{if .DescriptionEN}} | {{.DescriptionEN}}{{end}}" />{{end}}
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" id="app-favicon" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link href="/static/css/layout.css" rel="stylesheet" />
-  <link href="/static/css/root.css" rel="stylesheet" />
+  <link href="{{asset "css/layout.css"}}" rel="stylesheet" />
+  <link href="{{asset "css/root.css"}}" rel="stylesheet" />
 </head>
 <body>
   {{template "navbar" .}}
@@ -20,8 +20,8 @@
   </div>
   <div class="sidebar-backdrop" aria-hidden="true"></div>
   {{if .UserID}}<div class="user-id-badge" aria-hidden="true">{{.UserID}}</div>{{end}}
-  <script src="/static/js/favicon-alert.js"></script>
-  <script src="/static/js/layout.js"></script>
+  <script src="{{asset "js/favicon-alert.js"}}"></script>
+  <script src="{{asset "js/layout.js"}}"></script>
 </body>
 </html>
 {{end}}

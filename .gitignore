@@ -6,6 +6,9 @@ node_modules
 
 dist/
 
+assets/manifest_gen.go
+dist/static/
+
 tmp/
 
 /Dockerfile
