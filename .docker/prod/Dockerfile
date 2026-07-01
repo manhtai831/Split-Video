@@ -18,11 +18,11 @@ FROM alpine:3.24 AS runner
 
 WORKDIR /app
 
+RUN apk add ffmpeg
+
 COPY --from=builder /app/dist/main /app/dist/main
 COPY templates ./templates
 COPY public ./public
-
-RUN apk add ffmpeg
 
 EXPOSE 3000
 
