@@ -12,8 +12,8 @@ import (
 )
 
 func Bootstrap() {
-	http.HandleFunc("/job/cancel", middleware.WithUserID(handleCancel))
-	http.HandleFunc("/job/retry", middleware.WithUserID(handleRetry))
+	http.HandleFunc("/job/cancel", handleCancel)
+	http.HandleFunc("/job/retry", handleRetry)
 }
 
 func handleCancel(w http.ResponseWriter, r *http.Request) {

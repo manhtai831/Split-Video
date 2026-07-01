@@ -27,10 +27,10 @@ type uploadedFile struct {
 }
 
 func Bootstrap() {
-	http.HandleFunc("/video/merge", middleware.WithUserID(handleMerge))
-	http.HandleFunc("/merge", middleware.WithUserID(func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/video/merge", handleMerge)
+	http.HandleFunc("/merge", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/video/merge", http.StatusMovedPermanently)
-	}))
+	})
 }
 
 func handleMerge(w http.ResponseWriter, r *http.Request) {

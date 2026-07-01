@@ -22,9 +22,9 @@ import (
 )
 
 func Bootstrap() {
-	http.HandleFunc("/api/jobs/stats", middleware.WithUserID(handleStats))
-	http.HandleFunc("/api/jobs/", middleware.WithUserID(handleJobsWithPath))
-	http.HandleFunc("/api/jobs", middleware.WithUserID(handleListJobs))
+	http.HandleFunc("/api/jobs/stats", handleStats)
+	http.HandleFunc("/api/jobs/", handleJobsWithPath)
+	http.HandleFunc("/api/jobs", handleListJobs)
 }
 
 func handleStats(w http.ResponseWriter, r *http.Request) {

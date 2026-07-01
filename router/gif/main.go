@@ -18,10 +18,10 @@ import (
 )
 
 func Bootstrap() {
-	http.HandleFunc("/video/gif", middleware.WithUserID(handleGif))
-	http.HandleFunc("/gif", middleware.WithUserID(func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/video/gif", handleGif)
+	http.HandleFunc("/gif", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/video/gif", http.StatusMovedPermanently)
-	}))
+	})
 }
 
 func handleGif(w http.ResponseWriter, r *http.Request) {

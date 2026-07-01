@@ -18,10 +18,10 @@ import (
 )
 
 func Bootstrap() {
-	http.HandleFunc("/video/extract-audio", middleware.WithUserID(handleExtractAudio))
-	http.HandleFunc("/extract-audio", middleware.WithUserID(func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/video/extract-audio", handleExtractAudio)
+	http.HandleFunc("/extract-audio", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/video/extract-audio", http.StatusMovedPermanently)
-	}))
+	})
 }
 
 func handleExtractAudio(w http.ResponseWriter, r *http.Request) {

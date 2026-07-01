@@ -34,9 +34,9 @@ func refreshUserIDCookie(w http.ResponseWriter, value string) {
 	})
 }
 
-func WithUserID(handler http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func AppendUserIDMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		GetUserID(w, r)
-		handler(w, r)
-	}
+		next.ServeHTTP(w, r)
+	})
 }
