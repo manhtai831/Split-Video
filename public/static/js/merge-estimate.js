@@ -94,10 +94,30 @@
     return "~" + minutes + " phút " + seconds + " giây";
   }
 
+  function effectiveDuration(meta) {
+    if (!meta) return 0;
+    if (meta.kind === "video") return meta.duration || 0;
+    if (meta.kind === "image") return meta.holdDuration > 0 ? meta.holdDuration : 2;
+    if (meta.kind === "gif") {
+      if (meta.holdDuration > 0) return meta.holdDuration;
+      if (meta.nativeDuration > 0) return meta.nativeDuration;
+      return 2;
+    }
+    return meta.duration || 0;
+  }
+
+  function hasImageClips(metas) {
+    for (var i = 0; i < (metas || []).length; i++) {
+      if (metas[i].kind === "image" || metas[i].kind === "gif") return true;
+    }
+    return false;
+  }
+
   function isFastMergeMode() {
     var size = document.getElementById("size");
     if (!size || size.value !== "keep") return false;
     if (clipMeta.length < 2) return false;
+    if (hasImageClips(clipMeta)) return false;
     var ref = clipMeta[0];
     for (var i = 1; i < clipMeta.length; i++) {
       if (
@@ -118,8 +138,8 @@
     }
 
     var totalDuration = 0;
-    fileStats.forEach(function (stat) {
-      totalDuration += stat.duration || 0;
+    fileStats.forEach(function (stat, i) {
+      totalDuration += effectiveDuration(clipMeta[i]) || stat.duration || 0;
     });
     if (totalDuration <= 0) return 0;
 
@@ -216,7 +236,7 @@
     clipMeta = metas || [];
     fileStats = (files || []).map(function (file, i) {
       return {
-        duration: metas[i] ? metas[i].duration : 0,
+        duration: effectiveDuration(metas[i]),
         size: file.size || 0,
       };
     });

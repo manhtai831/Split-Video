@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-const maxMergeClips = 20
+const maxMergeClips = structs.MaxMergeClips
 
 type uploadedFile struct {
 	path string
@@ -103,11 +103,17 @@ func handleMergePost(w http.ResponseWriter, r *http.Request, userID string) {
 	}
 
 	if len(uploadedFiles) < 2 {
-		http.Error(w, "Cần ít nhất 2 video để ghép", http.StatusBadRequest)
+		http.Error(w, "Cần ít nhất 2 clip (video hoặc ảnh) để ghép", http.StatusBadRequest)
 		return
 	}
 	if len(uploadedFiles) > maxMergeClips {
-		http.Error(w, fmt.Sprintf("Tối đa %d clip mỗi lần ghép", maxMergeClips), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("Tối đa %d clip/ảnh mỗi lần ghép", maxMergeClips), http.StatusBadRequest)
+		return
+	}
+
+	itemsMeta, err := structs.ParseItemsMeta(formFields["items_meta"], len(uploadedFiles))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -116,6 +122,7 @@ func handleMergePost(w http.ResponseWriter, r *http.Request, userID string) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	extrasDto.ItemsMeta = itemsMeta
 	extrasJSON, err := extrasDto.ToJSON()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -125,10 +132,18 @@ func handleMergePost(w http.ResponseWriter, r *http.Request, userID string) {
 	ordered := orderUploadedFiles(uploadedFiles, formFields["file_order"])
 	inputs := make([]MergeService.InputFile, len(ordered))
 	for i, uploaded := range ordered {
+		kind := "video"
+		var holdDuration float64
+		if i < len(itemsMeta) {
+			kind = itemsMeta[i].Kind
+			holdDuration = itemsMeta[i].HoldDuration
+		}
 		inputs[i] = MergeService.InputFile{
-			Path:      uploaded.path,
-			Name:      uploaded.name,
-			SortOrder: i,
+			Path:         uploaded.path,
+			Name:         uploaded.name,
+			SortOrder:    i,
+			Kind:         kind,
+			HoldDuration: holdDuration,
 		}
 	}
 

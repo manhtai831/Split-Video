@@ -12,9 +12,11 @@ import (
 )
 
 type InputFile struct {
-	Path      string
-	Name      string
-	SortOrder int
+	Path         string
+	Name         string
+	SortOrder    int
+	Kind         string
+	HoldDuration float64
 }
 
 func CreateJob(inputs []InputFile, extras string, userID string) (entities.Job, error) {
@@ -37,7 +39,7 @@ func CreateJob(inputs []InputFile, extras string, userID string) (entities.Job, 
 			return entities.Job{}, err
 		}
 
-		duration, _ := FfmpegService.GetDuration(ctx, input.Path)
+		duration := resolveInputDuration(ctx, input)
 
 		jobFileData := entities.JobFileData{
 			JobID:     job.ID,
@@ -54,4 +56,26 @@ func CreateJob(inputs []InputFile, extras string, userID string) (entities.Job, 
 	}
 
 	return job, nil
+}
+
+func resolveInputDuration(ctx context.Context, input InputFile) float64 {
+	switch input.Kind {
+	case "image":
+		if input.HoldDuration > 0 {
+			return input.HoldDuration
+		}
+		return 2
+	case "gif":
+		if input.HoldDuration > 0 {
+			return input.HoldDuration
+		}
+		duration, err := FfmpegService.GetDuration(ctx, input.Path)
+		if err != nil || duration <= 0 {
+			return 0
+		}
+		return duration
+	default:
+		duration, _ := FfmpegService.GetDuration(ctx, input.Path)
+		return duration
+	}
 }

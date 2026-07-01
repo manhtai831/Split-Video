@@ -45,7 +45,7 @@ func ToJobItemDto(job entities.Job) (structs.JobItemDto, error) {
 
 	if len(inputFiles) > 0 {
 		if job.Type == enums.JobTypeMerge {
-			dto.FileName = buildMergeFileName(inputFiles)
+			dto.FileName = buildMergeFileName(inputFiles, job.Extras)
 			var totalSize int64
 			var totalDuration float64
 			for _, f := range inputFiles {
@@ -158,19 +158,61 @@ func buildEncodeSummaryFromOptions(enc structs.FfmpegEncodeOptionsDto) string {
 	return strings.Join(parts, " · ")
 }
 
-func buildMergeFileName(inputFiles []entities.JobFileData) string {
+func buildMergeFileName(inputFiles []entities.JobFileData, extrasJSON string) string {
 	if len(inputFiles) == 0 {
 		return ""
 	}
-	first := inputFiles[0].Name
-	if len(inputFiles) == 1 {
-		return first
+
+	itemsMeta := []structs.MergeItemMetaDto{}
+	if extrasJSON != "" {
+		if extras, err := structs.ParseMergeJobExtrasJSON(extrasJSON); err == nil {
+			itemsMeta = extras.ItemsMeta
+		}
 	}
-	last := inputFiles[len(inputFiles)-1].Name
-	if len(inputFiles) == 2 {
-		return first + " → " + last
+
+	labels := make([]string, len(inputFiles))
+	for i, f := range inputFiles {
+		labels[i] = mergeInputLabel(f, itemMetaAt(itemsMeta, i))
 	}
-	return first + " → " + last + " (" + strconv.Itoa(len(inputFiles)) + " clip)"
+
+	if len(labels) == 1 {
+		return labels[0]
+	}
+	if len(labels) == 2 {
+		return labels[0] + " → " + labels[1]
+	}
+	return labels[0] + " → " + labels[len(labels)-1] + " (" + strconv.Itoa(len(labels)) + " clip)"
+}
+
+func itemMetaAt(items []structs.MergeItemMetaDto, index int) structs.MergeItemMetaDto {
+	if index >= 0 && index < len(items) {
+		return items[index]
+	}
+	return structs.MergeItemMetaDto{Kind: "video"}
+}
+
+func mergeInputLabel(f entities.JobFileData, meta structs.MergeItemMetaDto) string {
+	switch meta.Kind {
+	case "image":
+		dur := meta.HoldDuration
+		if dur <= 0 {
+			dur = 2
+		}
+		if dur == float64(int(dur)) {
+			return fmt.Sprintf("ảnh (%.0fs)", dur)
+		}
+		return fmt.Sprintf("ảnh (%.1fs)", dur)
+	case "gif":
+		if meta.HoldDuration <= 0 {
+			if f.Duration > 0 {
+				return fmt.Sprintf("%s (gốc)", f.Name)
+			}
+			return f.Name + " (gốc)"
+		}
+		return fmt.Sprintf("%s (%.1fs)", f.Name, meta.HoldDuration)
+	default:
+		return f.Name
+	}
 }
 
 func scaleLabel(scale string) string {

@@ -13,12 +13,16 @@
     onsubmit="return handleMergeSubmit(this)"
   >
     <input type="hidden" id="fileOrder" name="file_order" value="" />
+    <input type="hidden" id="itemsMeta" name="items_meta" value="" />
 
     <div class="form-field">
-      <label for="file">Video clips</label>
-      <input id="file" type="file" name="files" accept="video/*" required multiple />
-      <input id="fileAddMore" type="file" accept="video/*" multiple hidden aria-hidden="true" tabindex="-1" />
-      <p class="field-hint">Chọn ít nhất 2 video cần ghép. Kéo-thả để sắp xếp thứ tự clip.</p>
+      <label for="file">Video clips &amp; ảnh</label>
+      <input id="file" type="file" name="files" accept="video/*,image/jpeg,image/png,image/webp,image/gif" required multiple />
+      <input id="fileAddMore" type="file" accept="video/*,image/jpeg,image/png,image/webp,image/gif" multiple hidden aria-hidden="true" tabindex="-1" />
+      <p class="field-hint">Chọn ít nhất 2 clip hoặc ảnh cần ghép. Kéo-thả để sắp xếp thứ tự. Tối đa 200 clip/ảnh mỗi lần ghép.</p>
+      <div id="timelineSummary" class="merge-timeline-summary" hidden>
+        <span id="timelineSummaryText"></span>
+      </div>
       <div id="filePreviewSection" class="file-preview-section" hidden>
         <div class="file-preview-section__header">
           <span id="filePreviewLabel" class="file-preview-section__label">Clip đã chọn</span>
@@ -210,6 +214,35 @@
     <button type="button" id="videoPreviewClose" class="video-preview-modal__close" aria-label="Đóng">×</button>
   </div>
   <video id="videoPreviewPlayer" class="video-preview-modal__player" controls playsinline></video>
+  <div id="imagePreviewViewer" class="video-preview-modal__image-viewer" hidden></div>
+</dialog>
+
+<dialog id="imageDurationModal" class="image-duration-modal" aria-labelledby="imageDurationTitle">
+  <div class="image-duration-modal__header">
+    <h3 id="imageDurationTitle" class="image-duration-modal__title"></h3>
+    <button type="button" id="imageDurationClose" class="image-duration-modal__close" aria-label="Đóng">×</button>
+  </div>
+  <div class="image-duration-modal__body">
+    <p class="image-duration-modal__label">Thời lượng hiển thị</p>
+    <div class="image-duration-modal__presets" role="group" aria-label="Preset thời lượng">
+      <button type="button" class="image-duration-modal__preset" data-duration-preset="1">1s</button>
+      <button type="button" class="image-duration-modal__preset" data-duration-preset="2">2s</button>
+      <button type="button" class="image-duration-modal__preset" data-duration-preset="5">5s</button>
+      <button type="button" class="image-duration-modal__preset" data-duration-preset="10">10s</button>
+    </div>
+    <div class="image-duration-modal__input-row">
+      <input id="imageDurationInput" class="image-duration-modal__input" type="number" min="0" max="60" step="0.1" value="2" />
+      <span class="image-duration-modal__unit">giây</span>
+    </div>
+    <p class="image-duration-modal__hint">
+      GIF: nhập 0 để dùng thời lượng gốc. Ảnh tĩnh: nhập số giây (&gt; 0).
+      <span id="imageDurationNativeHint" class="image-duration-modal__native-hint" hidden></span>
+    </p>
+    <div class="image-duration-modal__actions">
+      <button type="button" id="imageDurationCancel" class="btn btn--secondary">Hủy</button>
+      <button type="button" id="imageDurationSave" class="btn btn--primary">Lưu</button>
+    </div>
+  </div>
 </dialog>
 
 <script src="{{asset "js/job-ui.js"}}"></script>
@@ -220,11 +253,30 @@
   function handleMergeSubmit(form) {
     var fileInput = document.getElementById("file");
     if (!fileInput || !fileInput.files || fileInput.files.length < 2) {
-      alert("Cần ít nhất 2 video để ghép.");
+      alert("Cần ít nhất 2 clip (video hoặc ảnh) để ghép.");
       return false;
     }
     if (typeof window.syncMergeFileOrder === "function") {
       window.syncMergeFileOrder();
+    }
+    if (typeof window.syncMergeItemsMeta === "function") {
+      window.syncMergeItemsMeta();
+    }
+    for (var i = 0; i < fileInput.files.length; i++) {
+      var meta = null;
+      if (typeof window.getMergeClipMeta === "function") {
+        var allMeta = window.getMergeClipMeta();
+        meta = allMeta[i];
+      }
+      if (!meta) continue;
+      if (meta.kind === "image" && meta.holdDuration < 0.5) {
+        alert("Ảnh \"" + fileInput.files[i].name + "\": thời lượng tối thiểu 0.5 giây.");
+        return false;
+      }
+      if (meta.kind === "gif" && meta.holdDuration < 0) {
+        alert("GIF \"" + fileInput.files[i].name + "\": thời lượng không được âm.");
+        return false;
+      }
     }
     var btn = form.querySelector('button[type=submit]');
     if (btn) {

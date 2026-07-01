@@ -8,6 +8,7 @@ import (
 type MergeJobExtrasDto struct {
 	Encode    FfmpegEncodeOptionsDto `json:"encode"`
 	OutputExt string                 `json:"output_ext,omitempty"`
+	ItemsMeta []MergeItemMetaDto     `json:"items_meta,omitempty"`
 }
 
 func ParseMergeForm(fields map[string]string) (MergeJobExtrasDto, error) {

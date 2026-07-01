@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const maxMergeClips = 20
+const maxMergeClips = 200
 
 func CanConcatCopy(probes []structs.MediaProbeDto, encode structs.FfmpegEncodeOptionsDto) bool {
 	if encode.VideoCodec != "copy" || encode.Mute {
@@ -270,6 +270,10 @@ func parseScaleTargetWidth(scale string) int {
 		return 0
 	}
 	return w
+}
+
+func ComputeMergeCanvas(probes []structs.MediaProbeDto, scale string) (int, int) {
+	return computeMergeCanvas(probes, scale)
 }
 
 func computeMergeCanvas(probes []structs.MediaProbeDto, scale string) (int, int) {
