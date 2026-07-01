@@ -127,6 +127,7 @@
     }
 
     var file = fileInput.files[0];
+    var restoring = !!window.__gifSkipEditorReset;
     revokeUrl();
     objectUrl = URL.createObjectURL(file);
 
@@ -148,6 +149,19 @@
           meta.height;
       }
 
+      if (restoring) {
+        window.__gifSkipEditorReset = false;
+        updateAspectWarning();
+        toggleQualityPanels();
+        if (typeof window.onGifVideoLoaded === "function") {
+          window.onGifVideoLoaded(meta, player, { restore: true });
+        }
+        if (typeof window.onGifDimensionsChanged === "function") {
+          window.onGifDimensionsChanged();
+        }
+        return;
+      }
+
       applyDimensions(meta.width, meta.height);
 
       var preset = $("sizePreset");
@@ -165,6 +179,12 @@
         window.onGifDimensionsChanged();
       }
     });
+  }
+
+  function syncFromFileInput() {
+    var fileInput = $("file");
+    if (!fileInput) return;
+    fileInput.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
   function bindEvents() {
@@ -251,6 +271,16 @@
     window.getGifVideoMeta = function () {
       return videoMeta;
     };
+    window.syncGifFileInput = syncFromFileInput;
+
+    window.addEventListener("beforeunload", revokeUrl);
+
+    window.addEventListener("pageshow", function (e) {
+      if (e.persisted) {
+        window.__gifSkipEditorReset = true;
+        syncFromFileInput();
+      }
+    });
   }
 
   window.initGifFilePreview = initGifFilePreview;

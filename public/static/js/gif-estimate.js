@@ -1,6 +1,22 @@
 (function () {
   "use strict";
 
+  var FORM_STORAGE_KEY = "gifForm.options";
+
+  var PERSISTED_FIELD_IDS = [
+    "output_fmt",
+    "sizePreset",
+    "width",
+    "height",
+    "quality_preset",
+    "max_colors",
+    "dither",
+    "webp_quality",
+    "fps",
+    "startAt",
+    "duration",
+  ];
+
   var QUALITY_BYTES_PER_PIXEL = {
     gif: { low: 0.8, medium: 1.2, high: 2.0, max: 2.5, custom: 1.5 },
     webp: { low: 0.3, medium: 0.5, high: 0.8, max: 1.2, custom: 0.6 },
@@ -9,6 +25,95 @@
 
   function $(id) {
     return document.getElementById(id);
+  }
+
+  function readFormStateFromStorage() {
+    try {
+      var raw = localStorage.getItem(FORM_STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {
+      /* ignore corrupt storage */
+    }
+    return null;
+  }
+
+  function writeFormStateToStorage(state) {
+    try {
+      localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      /* ignore quota / private mode */
+    }
+  }
+
+  function collectFormState() {
+    var state = {};
+    PERSISTED_FIELD_IDS.forEach(function (id) {
+      var el = $(id);
+      if (el) state[id] = el.value;
+    });
+
+    var dimMode = document.querySelector('input[name="dimension_mode"]:checked');
+    state.dimension_mode = dimMode ? dimMode.value : "aspect_lock";
+
+    var loopEl = $("loop");
+    state.loop = loopEl ? loopEl.checked : true;
+
+    var losslessEl = $("lossless");
+    state.lossless = losslessEl ? losslessEl.checked : false;
+
+    if (typeof window.getGifSegments === "function") {
+      var segs = window.getGifSegments();
+      if (segs && segs.length > 0) {
+        state.segments = segs.map(function (s) {
+          return { start_at: s.start_at, duration: s.duration };
+        });
+      }
+    }
+
+    return state;
+  }
+
+  function applyFieldValue(el, value) {
+    if (!el || value === undefined || value === null) return;
+    if (el.tagName === "SELECT") {
+      if (el.querySelector('option[value="' + value + '"]')) {
+        el.value = value;
+      }
+      return;
+    }
+    el.value = value;
+  }
+
+  function applySavedFormState() {
+    var saved = readFormStateFromStorage();
+    if (!saved) return false;
+
+    if (saved.dimension_mode === "aspect_lock" || saved.dimension_mode === "manual") {
+      var radio = document.querySelector(
+        'input[name="dimension_mode"][value="' + saved.dimension_mode + '"]'
+      );
+      if (radio) radio.checked = true;
+    }
+
+    PERSISTED_FIELD_IDS.forEach(function (id) {
+      applyFieldValue($(id), saved[id]);
+    });
+
+    var loopEl = $("loop");
+    if (loopEl && typeof saved.loop === "boolean") {
+      loopEl.checked = saved.loop;
+    }
+
+    var losslessEl = $("lossless");
+    if (losslessEl && typeof saved.lossless === "boolean") {
+      losslessEl.checked = saved.lossless;
+    }
+
+    return true;
+  }
+
+  function persistFormState() {
+    writeFormStateToStorage(collectFormState());
   }
 
   function formatFileSize(bytes) {
@@ -70,31 +175,85 @@
   }
 
   function bindEvents() {
-    [
-      "output_fmt",
-      "quality_preset",
-      "width",
-      "height",
-      "fps",
-      "startAt",
-      "duration",
-      "max_colors",
-      "webp_quality",
-    ].forEach(function (id) {
+    PERSISTED_FIELD_IDS.forEach(function (id) {
       var el = $(id);
-      if (el) el.addEventListener("input", updateEstimate);
-      if (el) el.addEventListener("change", updateEstimate);
+      if (!el) return;
+      el.addEventListener("change", function () {
+        persistFormState();
+        updateEstimate();
+      });
+      if (el.type === "number") {
+        el.addEventListener("input", function () {
+          persistFormState();
+          updateEstimate();
+        });
+      }
     });
 
-    window.onGifDimensionsChanged = updateEstimate;
-    window.onGifTimelineChanged = updateEstimate;
-    window.onGifSegmentsChanged = updateEstimate;
+    document.querySelectorAll('input[name="dimension_mode"]').forEach(function (el) {
+      el.addEventListener("change", function () {
+        persistFormState();
+        updateEstimate();
+      });
+    });
+
+    ["loop", "lossless"].forEach(function (id) {
+      var el = $(id);
+      if (el) {
+        el.addEventListener("change", function () {
+          persistFormState();
+          updateEstimate();
+        });
+      }
+    });
+
+    var prevOnDimensionsChanged = window.onGifDimensionsChanged;
+    window.onGifDimensionsChanged = function () {
+      persistFormState();
+      updateEstimate();
+      if (typeof prevOnDimensionsChanged === "function") {
+        prevOnDimensionsChanged();
+      }
+    };
+
+    var prevOnTimelineChanged = window.onGifTimelineChanged;
+    window.onGifTimelineChanged = function () {
+      persistFormState();
+      updateEstimate();
+      if (typeof prevOnTimelineChanged === "function") {
+        prevOnTimelineChanged();
+      }
+    };
+
+    var prevOnSegmentsChanged = window.onGifSegmentsChanged;
+    window.onGifSegmentsChanged = function () {
+      persistFormState();
+      updateEstimate();
+      if (typeof prevOnSegmentsChanged === "function") {
+        prevOnSegmentsChanged();
+      }
+    };
   }
 
   function initGifEstimate() {
     bindEvents();
+
+    var hadSaved = applySavedFormState();
+    if (hadSaved) {
+      window.__gifSkipEditorReset = true;
+      if (typeof window.restoreGifSegments === "function") {
+        window.restoreGifSegments(readFormStateFromStorage());
+      }
+    }
+
+    if (typeof window.syncGifFileInput === "function") {
+      window.syncGifFileInput();
+    }
+
     updateEstimate();
   }
 
   window.initGifEstimate = initGifEstimate;
+  window.persistGifFormState = persistFormState;
+  window.readGifFormStateFromStorage = readFormStateFromStorage;
 })();

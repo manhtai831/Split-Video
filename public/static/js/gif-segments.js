@@ -245,12 +245,26 @@
     if (updateBtn) updateBtn.addEventListener("click", updateSegment);
   }
 
+  function restoreGifSegments(saved) {
+    if (!saved || !saved.segments || !saved.segments.length) return;
+    segments = saved.segments.map(function (s) {
+      return {
+        id: uuid(),
+        start_at: s.start_at,
+        duration: s.duration,
+      };
+    });
+    activeSegmentId = null;
+    renderSegmentList();
+  }
+
   function initGifSegments() {
     bindEvents();
     window.syncGifSegmentsForSubmit = syncGifSegmentsForSubmit;
     window.getGifSegments = function () {
       return segments.slice();
     };
+    window.restoreGifSegments = restoreGifSegments;
   }
 
   window.initGifSegments = initGifSegments;

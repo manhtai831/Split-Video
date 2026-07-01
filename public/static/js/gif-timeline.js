@@ -156,8 +156,22 @@
     }
   }
 
-  function onVideoLoaded(meta) {
+  function onVideoLoaded(meta, opts) {
     videoDuration = meta.duration || 0;
+    if (opts && opts.restore) {
+      var startInput = $("startAt");
+      var durationInput = $("duration");
+      startAt = parseFloat(startInput ? startInput.value : "0") || 0;
+      duration = parseFloat(durationInput ? durationInput.value : "5") || 5;
+      startAt = clamp(startAt, 0, Math.max(0, videoDuration - 0.1));
+      duration = clamp(duration, 0.1, 30);
+      if (videoDuration > 0 && startAt + duration > videoDuration) {
+        duration = Math.max(0.1, videoDuration - startAt);
+      }
+      updateUI();
+      seekPlayer();
+      return;
+    }
     startAt = 0;
     duration = Math.min(5, Math.max(0.1, videoDuration * 0.1 || 5));
     if (duration > 30) duration = 30;
@@ -168,8 +182,8 @@
     bindInputSync();
     bindThumbs();
 
-    window.onGifVideoLoaded = function (meta) {
-      onVideoLoaded(meta);
+    window.onGifVideoLoaded = function (meta, player, opts) {
+      onVideoLoaded(meta, opts);
     };
 
     window.fillGifEditor = fillEditor;
