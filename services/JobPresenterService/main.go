@@ -34,7 +34,7 @@ func ToJobItemDto(job entities.Job) (structs.JobItemDto, error) {
 		Type:          string(job.Type),
 		Status:        string(job.Status),
 		Progress:      job.Progress,
-		EncodeSummary: buildEncodeSummary(job.Extras),
+		EncodeSummary: buildEncodeSummary(job.Type, job.Extras),
 		Error:         job.Error,
 		CreatedAt:     timePtr(job.CreatedAt),
 		StartedAt:     timePtr(job.StartedAt),
@@ -44,9 +44,21 @@ func ToJobItemDto(job entities.Job) (structs.JobItemDto, error) {
 	}
 
 	if len(inputFiles) > 0 {
-		dto.FileName = inputFiles[0].Name
-		dto.FileSize = inputFiles[0].Size
-		dto.Duration = inputFiles[0].Duration
+		if job.Type == enums.JobTypeMerge {
+			dto.FileName = buildMergeFileName(inputFiles)
+			var totalSize int64
+			var totalDuration float64
+			for _, f := range inputFiles {
+				totalSize += f.Size
+				totalDuration += f.Duration
+			}
+			dto.FileSize = totalSize
+			dto.Duration = totalDuration
+		} else {
+			dto.FileName = inputFiles[0].Name
+			dto.FileSize = inputFiles[0].Size
+			dto.Duration = inputFiles[0].Duration
+		}
 	}
 
 	for _, f := range outputFiles {
@@ -78,16 +90,28 @@ func ToJobItemDtos(jobs []entities.Job) ([]structs.JobItemDto, error) {
 	return items, nil
 }
 
-func buildEncodeSummary(extrasJSON string) string {
+func buildEncodeSummary(jobType enums.JobType, extrasJSON string) string {
 	if extrasJSON == "" {
 		return ""
 	}
-	extras, err := structs.ParseSplitJobExtrasJSON(extrasJSON)
-	if err != nil {
-		return ""
-	}
-	enc := extras.Encode
 
+	switch jobType {
+	case enums.JobTypeMerge:
+		extras, err := structs.ParseMergeJobExtrasJSON(extrasJSON)
+		if err != nil {
+			return ""
+		}
+		return buildEncodeSummaryFromOptions(extras.Encode)
+	default:
+		extras, err := structs.ParseSplitJobExtrasJSON(extrasJSON)
+		if err != nil {
+			return ""
+		}
+		return buildEncodeSummaryFromOptions(extras.Encode)
+	}
+}
+
+func buildEncodeSummaryFromOptions(enc structs.FfmpegEncodeOptionsDto) string {
 	if enc.VideoCodec == "copy" {
 		audio := "Copy audio"
 		if enc.Mute {
@@ -111,6 +135,21 @@ func buildEncodeSummary(extrasJSON string) string {
 		parts = append(parts, enc.Preset)
 	}
 	return strings.Join(parts, " · ")
+}
+
+func buildMergeFileName(inputFiles []entities.JobFileData) string {
+	if len(inputFiles) == 0 {
+		return ""
+	}
+	first := inputFiles[0].Name
+	if len(inputFiles) == 1 {
+		return first
+	}
+	last := inputFiles[len(inputFiles)-1].Name
+	if len(inputFiles) == 2 {
+		return first + " → " + last
+	}
+	return first + " → " + last + " (" + strconv.Itoa(len(inputFiles)) + " clip)"
 }
 
 func scaleLabel(scale string) string {

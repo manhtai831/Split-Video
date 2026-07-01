@@ -63,10 +63,12 @@ func Process(job entities.Job, ctx context.Context) error {
 		return err
 	}
 
+	outputBaseName := strings.TrimSuffix(jobFileDataInput.Name, filepath.Ext(jobFileDataInput.Path))
+
 	for _, segment := range segments {
 		err = JobFileDataService.CreateJobFileData(entities.JobFileData{
 			JobID:    job.ID,
-			Name:     strings.TrimSuffix(jobFileDataInput.Name, filepath.Ext(jobFileDataInput.Path)) + "-" + strconv.Itoa(segment.Index) + "." + outputExt,
+			Name:     outputBaseName + "-" + strconv.Itoa(segment.Index) + "." + outputExt,
 			Size:     segment.Size,
 			Duration: segment.Duration,
 			Path:     segment.Path,
@@ -77,6 +79,43 @@ func Process(job entities.Job, ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("[SplitVideoWorker] create output job file data: %w", err)
 		}
+	}
+
+	if outputExt == "ts" {
+		if err := createHLSPlaylist(job, outputDir, baseFileName, outputBaseName, segments); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func createHLSPlaylist(job entities.Job, outputDir, baseFileName, outputBaseName string, segments []structs.SegmentResultDto) error {
+	playlistPath := filepath.Join(outputDir, baseFileName+".m3u8")
+	if err := FfmpegService.WriteHLSPlaylist(playlistPath, segments); err != nil {
+		return fmt.Errorf("[SplitVideoWorker] create HLS playlist: %w", err)
+	}
+
+	stat, err := os.Stat(playlistPath)
+	if err != nil {
+		return fmt.Errorf("[SplitVideoWorker] stat HLS playlist: %w", err)
+	}
+
+	var totalDuration float64
+	for _, seg := range segments {
+		totalDuration += seg.Duration
+	}
+
+	err = JobFileDataService.CreateJobFileData(entities.JobFileData{
+		JobID:    job.ID,
+		Name:     outputBaseName + ".m3u8",
+		Size:     stat.Size(),
+		Duration: totalDuration,
+		Path:     playlistPath,
+		Type:     enums.JobFileDataTypeOutput,
+	})
+	if err != nil {
+		return fmt.Errorf("[SplitVideoWorker] create m3u8 job file data: %w", err)
 	}
 
 	return nil

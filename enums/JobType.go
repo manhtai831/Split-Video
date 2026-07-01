@@ -4,4 +4,5 @@ type JobType string
 
 const (
 	JobTypeSplit JobType = "split"
+	JobTypeMerge JobType = "merge"
 )

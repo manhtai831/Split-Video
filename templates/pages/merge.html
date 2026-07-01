@@ -1,17 +1,242 @@
 {{define "content"}}
-<div class="container" style="height: 100%;">
-    
-    <h2>Merge Video</h2>
-    <form
-      action="/merge"
-      enctype="multipart/form-data"
-      method="post"
-      onsubmit="this.querySelector('button').disabled = true; this.querySelector('button').innerText = 'Processing...'"
-    >
-      <input type="file" name="files" multiple accept="video/*" required />
-      <button type="submit" name="mergeButton">Merge Videos</button>
-    </form>
+<link href="/static/css/jobs-ui.css" rel="stylesheet" />
+<div class="container">
+  <div class="page-header">
+    <h2>Ghép Video Online <span class="page-header__subtitle" lang="en">/ Merge Video Online</span></h2>
+    <p class="page-description--en">{{.Description}}</p>
+  </div>
+  <form
+    id="mergeForm"
+    action="/video/merge"
+    enctype="multipart/form-data"
+    method="post"
+    onsubmit="return handleMergeSubmit(this)"
+  >
+    <input type="hidden" id="fileOrder" name="file_order" value="" />
 
-  <div id="resultBox" class="result-box">{{.Result}}</div>
+    <div class="form-field">
+      <label for="file">Video clips</label>
+      <input id="file" type="file" name="files" accept="video/*" required multiple />
+      <input id="fileAddMore" type="file" accept="video/*" multiple hidden aria-hidden="true" tabindex="-1" />
+      <p class="field-hint">Chọn ít nhất 2 video cần ghép. Kéo-thả để sắp xếp thứ tự clip.</p>
+      <div id="filePreviewSection" class="file-preview-section" hidden>
+        <div class="file-preview-section__header">
+          <span id="filePreviewLabel" class="file-preview-section__label">Clip đã chọn</span>
+          <button type="button" id="filePreviewClearAll" class="btn btn--ghost btn--sm file-preview-section__clear">Xóa tất cả</button>
+        </div>
+        <div id="filePreviewList" class="file-preview-list file-preview-list--sortable" role="list"></div>
+      </div>
+    </div>
+
+    <div id="compatBanner" class="merge-tip-note" hidden role="status">
+      <span class="merge-tip-note__icon" aria-hidden="true">★</span>
+      <p id="compatBannerText" class="merge-tip-note__text">
+      </p>
+    </div>
+
+   
+
+    <div class="form-field">
+      <label for="size">Độ phân giải đầu ra</label>
+      <select id="size" name="size">
+        <option value="1080" selected>1080P Full HD</option>
+        <option value="keep">Original Size (Ghép nhanh)</option>
+        <option value="3840">4K Ultra HD</option>
+        <option value="2560">2K QHD</option>
+        <option value="1920">1920P</option>
+        <option value="1440">1440P</option>
+        <option value="720">720P HD</option>
+        <option value="480">480P</option>
+        <option value="360">360P</option>
+        <option value="240">240P</option>
+      </select>
+      <p class="field-hint">Chọn <strong>Original Size</strong> để ghép nhanh (copy stream) khi tất cả clip tương thích. Clip khác resolution sẽ được re-encode về độ phân giải đích.</p>
+    </div>
+
+    <details class="advanced-options">
+      <summary>Tùy chọn nâng cao</summary>
+      <div class="gap-col-16">
+        <div class="form-field">
+          <label for="output_format">Định dạng video đầu ra</label>
+          <select id="output_format" name="output_format">
+            <optgroup label="Đa nền tảng">
+              <option value="mp4" selected>MP4 — H.264 + AAC (khuyến nghị)</option>
+            </optgroup>
+            <optgroup label="Windows">
+              <option value="avi">AVI — trình phát Windows cũ</option>
+            </optgroup>
+            <optgroup label="macOS">
+              <option value="mov">MOV — QuickTime / macOS</option>
+            </optgroup>
+            <optgroup label="Linux">
+              <option value="mkv">MKV — Matroska / mã nguồn mở</option>
+            </optgroup>
+            <optgroup label="Khác">
+              <option value="m4v">M4V — MPEG-4 Video (Apple TV, iTunes)</option>
+              <option value="webm">WebM — HTML5 / trình duyệt</option>
+              <option value="flv">FLV — Flash / streaming cũ</option>
+              <option value="ts">TS — MPEG Transport Stream</option>
+              <option value="m2ts">M2TS — Blu-ray Transport Stream</option>
+              <option value="3gp">3GP — điện thoại di động cũ</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div id="encodeSettings" class="gap-col-16">
+          <div class="form-field">
+            <label for="crf">Chất lượng (CRF)</label>
+            <input id="crf" name="crf" type="number" min="18" max="28" step="1" value="23" />
+            <p class="field-hint">CRF càng thấp = chất lượng càng cao. Khuyến nghị: <strong>23</strong>.</p>
+          </div>
+
+          <div class="form-field">
+            <label for="fps">Khung hình/giây (FPS)</label>
+            <select id="fps" name="fps">
+              <option value="default" selected>Default — giữ FPS gốc</option>
+              <option value="15">15 fps</option>
+              <option value="24">24 fps — Phim</option>
+              <option value="25">25 fps — PAL</option>
+              <option value="30">30 fps — Web / TV</option>
+              <option value="60">60 fps — Mượt</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="preset">Preset x264</label>
+            <select id="preset" name="preset">
+              <option value="ultrafast">Ultrafast — nhanh nhất</option>
+              <option value="superfast">Superfast</option>
+              <option value="veryfast">Veryfast</option>
+              <option value="faster">Faster</option>
+              <option value="fast">Fast</option>
+              <option value="medium" selected>Medium — cân bằng</option>
+              <option value="slow">Slow</option>
+              <option value="slower">Slower</option>
+              <option value="veryslow">Veryslow — chậm nhất</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="audioSettings" class="gap-col-16">
+          <div class="form-field">
+            <label for="audio_codec">Âm thanh</label>
+            <select id="audio_codec" name="audio_codec">
+              <option value="aac" selected>AAC — nén lại</option>
+              <option value="copy">Copy — giữ nguyên track gốc</option>
+              <option value="mute">Mute — tắt âm thanh</option>
+            </select>
+          </div>
+
+          <div class="form-field" id="audioBitrateField">
+            <label for="audio_bitrate">Audio bitrate</label>
+            <select id="audio_bitrate" name="audio_bitrate">
+              <option value="64k">64 kbps</option>
+              <option value="96k">96 kbps</option>
+              <option value="128k" selected>128 kbps</option>
+              <option value="192k">192 kbps</option>
+              <option value="256k">256 kbps</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <div id="estimateBox" class="estimate-box" hidden>
+      <span>Ước tính thời gian xử lý: <strong id="estimateTime">—</strong></span>
+      <p class="estimate-disclaimer">Ước tính tham khảo. Ghép nhanh (copy stream) thường hoàn thành trong vài giây.</p>
+    </div>
+
+    <button type="submit" name="mergeButton">Ghép &amp; Tải xuống</button>
+  </form>
+
+  <div style="height: 32px;"></div>
+
+  <section class="home-section" aria-labelledby="mergeJobsHeading">
+    <h2 id="mergeJobsHeading" class="home-section__title">Lịch sử ghép video</h2>
+
+    <div id="mergeJobsEmpty" class="job-empty" hidden>
+      <p>Chưa có job ghép video nào.</p>
+    </div>
+
+    <div id="mergeJobsTableWrap" class="history-table-wrap">
+      <table class="history-table" aria-label="Lịch sử job ghép video">
+        <thead>
+          <tr>
+            <th>File</th>
+            <th>Trạng thái</th>
+            <th>Tiến độ</th>
+            <th>Tạo lúc</th>
+            <th>Hoàn thành</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="mergeJobsTableBody"></tbody>
+      </table>
+      <div id="mergeJobsCardList" class="history-card-list"></div>
+    </div>
+
+    <div id="mergeJobsSkeleton" class="history-skeleton" hidden>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+    </div>
+
+    <div id="mergeJobsPagination" class="history-pagination" hidden>
+      <span id="mergeJobsRange" class="history-pagination__range"></span>
+      <div class="history-pagination__controls">
+        <button type="button" id="mergeJobsPagePrev" class="btn btn--secondary btn--sm" disabled>« Trước</button>
+        <span id="mergeJobsPageInfo"  class="history-pagination__info"></span>
+        <button type="button" id="mergeJobsPageNext" class="btn btn--secondary btn--sm">Sau »</button>
+      </div>
+    </div>
+  </section>
 </div>
+
+{{template "jobModals" .}}
+
+<dialog id="videoPreviewModal" class="video-preview-modal" aria-labelledby="videoPreviewTitle">
+  <div class="video-preview-modal__header">
+    <div class="video-preview-modal__info">
+      <h3 id="videoPreviewTitle" class="video-preview-modal__title"></h3>
+      <p id="videoPreviewMeta" class="video-preview-modal__meta"></p>
+    </div>
+    <button type="button" id="videoPreviewClose" class="video-preview-modal__close" aria-label="Đóng">×</button>
+  </div>
+  <video id="videoPreviewPlayer" class="video-preview-modal__player" controls playsinline></video>
+</dialog>
+
+<script src="/static/js/job-ui.js"></script>
+<script src="/static/js/merge-jobs-panel.js"></script>
+<script src="/static/js/merge-estimate.js"></script>
+<script src="/static/js/merge-file-preview.js"></script>
+<script>
+  function handleMergeSubmit(form) {
+    var fileInput = document.getElementById("file");
+    if (!fileInput || !fileInput.files || fileInput.files.length < 2) {
+      alert("Cần ít nhất 2 video để ghép.");
+      return false;
+    }
+    if (typeof window.syncMergeFileOrder === "function") {
+      window.syncMergeFileOrder();
+    }
+    var btn = form.querySelector('button[type=submit]');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerText = "Processing...";
+    }
+    return true;
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    if (typeof initMergeEstimate === "function") {
+      initMergeEstimate();
+    }
+    if (typeof initMergeJobsPanel === "function") {
+      initMergeJobsPanel();
+    }
+    if (typeof initMergeFilePreview === "function") {
+      initMergeFilePreview();
+    }
+  });
+</script>
 {{end}}

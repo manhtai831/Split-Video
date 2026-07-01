@@ -15,6 +15,7 @@ type JobFileData struct {
 	To        float64
 	Path      string
 	Type      enums.JobFileDataType
+	SortOrder int
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

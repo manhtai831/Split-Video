@@ -8,7 +8,11 @@ import (
 
 func GetJobFileDataByJobId(jobId int, jobFileDataType enums.JobFileDataType) ([]entities.JobFileData, error) {
 	var jobFileDatas []entities.JobFileData
-	result := Global.DB.Where("job_id = ? AND type = ?", jobId, jobFileDataType).Find(&jobFileDatas)
+	query := Global.DB.Where("job_id = ? AND type = ?", jobId, jobFileDataType)
+	if jobFileDataType == enums.JobFileDataTypeInput {
+		query = query.Order("sort_order ASC, id ASC")
+	}
+	result := query.Find(&jobFileDatas)
 	return jobFileDatas, result.Error
 }
 
