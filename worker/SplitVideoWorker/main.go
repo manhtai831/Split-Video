@@ -65,10 +65,12 @@ func Process(job entities.Job, ctx context.Context) error {
 
 	outputBaseName := strings.TrimSuffix(jobFileDataInput.Name, filepath.Ext(jobFileDataInput.Path))
 
-	for _, segment := range segments {
+	for i, segment := range segments {
+		segmentName := outputBaseName + "-" + strconv.Itoa(segment.Index) + "." + outputExt
+		segments[i].Name = segmentName
 		err = JobFileDataService.CreateJobFileData(entities.JobFileData{
 			JobID:    job.ID,
-			Name:     outputBaseName + "-" + strconv.Itoa(segment.Index) + "." + outputExt,
+			Name:     segmentName,
 			Size:     segment.Size,
 			Duration: segment.Duration,
 			Path:     segment.Path,

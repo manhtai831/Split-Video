@@ -29,7 +29,12 @@ func WriteHLSPlaylist(path string, segments []structs.SegmentResultDto) error {
 
 	for _, seg := range segments {
 		b.WriteString(fmt.Sprintf("#EXTINF:%.6f,\n", seg.Duration))
-		b.WriteString(filepath.Base(seg.Path) + "\n")
+		name := seg.Name
+		if name == "" {
+			name = filepath.Base(seg.Path)
+		}
+		b.WriteString(name)
+		b.WriteString("\n")
 	}
 
 	b.WriteString("#EXT-X-ENDLIST\n")

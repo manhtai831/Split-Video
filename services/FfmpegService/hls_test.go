@@ -43,6 +43,32 @@ func TestWriteHLSPlaylist(t *testing.T) {
 	}
 }
 
+func TestWriteHLSPlaylist_usesSegmentName(t *testing.T) {
+	dir := t.TempDir()
+	playlistPath := filepath.Join(dir, "video.m3u8")
+	segments := []structs.SegmentResultDto{
+		{Index: 1, Name: "My Upload-1.ts", Path: filepath.Join(dir, "stored-1.ts"), Duration: 6.5},
+		{Index: 2, Name: "My Upload-2.ts", Path: filepath.Join(dir, "stored-2.ts"), Duration: 4.2},
+	}
+
+	if err := WriteHLSPlaylist(playlistPath, segments); err != nil {
+		t.Fatalf("WriteHLSPlaylist: %v", err)
+	}
+
+	content, err := os.ReadFile(playlistPath)
+	if err != nil {
+		t.Fatalf("read playlist: %v", err)
+	}
+
+	text := string(content)
+	if !strings.Contains(text, "#EXTINF:6.500000,\nMy Upload-1.ts\n") {
+		t.Fatalf("expected upload name for first segment in:\n%s", text)
+	}
+	if !strings.Contains(text, "#EXTINF:4.200000,\nMy Upload-2.ts\n") {
+		t.Fatalf("expected upload name for second segment in:\n%s", text)
+	}
+}
+
 func TestWriteHLSPlaylist_emptySegments(t *testing.T) {
 	err := WriteHLSPlaylist(filepath.Join(t.TempDir(), "empty.m3u8"), nil)
 	if err == nil {
