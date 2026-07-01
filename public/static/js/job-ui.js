@@ -239,7 +239,7 @@
         iconButtonHtml("button", "btn--danger btn-cancel-job", "Hủy", ICON_CANCEL, 'type="button"')
       );
     }
-    return parts.length > 0 ? parts.join(" ") : "—";
+    return parts.join(" ");
   }
 
   function bindRowActions(container, job) {

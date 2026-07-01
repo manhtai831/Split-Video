@@ -167,13 +167,26 @@
   color: #374151;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* History table */
 .history-table-wrap {
   overflow-x: auto;
 }
 
 .history-table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
   font-size: 14px;
 }
@@ -184,6 +197,7 @@
   text-align: left;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
+  white-space: nowrap;
 }
 
 .history-table th {
@@ -211,22 +225,63 @@
   box-shadow: inset 3px 0 0 var(--primary);
 }
 
-.history-table .cell-filename {
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 500;
+.history-table th.cell-actions,
+.history-table td.cell-actions {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  background: #f9fafb;
+  width: 1%;
+  padding-left: 8px;
+  padding-right: 8px;
+  text-align: center;
 }
 
-.history-table .cell-actions {
-  white-space: nowrap;
-  width: 1%;
+.history-table th.cell-actions {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.history-table .cell-actions__header-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.history-table .cell-actions__header-icon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.history-table td.cell-actions {
+  z-index: 1;
+  background: #fff;
+  box-shadow: -6px 0 8px -4px rgba(0, 0, 0, 0.08);
+}
+
+.history-table tbody tr:hover td.cell-actions {
+  background: #fafafa;
+}
+
+.history-table tbody tr.history-row--undownloaded td.cell-actions {
+  background: #eef2ff;
+}
+
+.history-table tbody tr.history-row--undownloaded:hover td.cell-actions {
+  background: #e0e7ff;
+}
+
+.history-table .cell-filename {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
 }
 
 .history-table .cell-actions__inner {
   display: inline-flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
   align-items: center;
   vertical-align: middle;
