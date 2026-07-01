@@ -896,8 +896,8 @@
   border-style: dashed;
   border-color: #a5b4fc;
   box-shadow: none;
-  pointer-events: none;
   transition: opacity 0.15s, transform 0.15s, border-color 0.15s;
+  cursor: grabbing !important;
 }
 
 .file-preview-item--drop-placeholder {

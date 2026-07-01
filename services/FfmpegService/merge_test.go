@@ -49,6 +49,65 @@ func TestCanConcatCopy_resolutionMismatch(t *testing.T) {
 	}
 }
 
+func TestComputeMergeCanvas_sameAspectRatio(t *testing.T) {
+	probes := []structs.MediaProbeDto{
+		{Width: 1920, Height: 1080},
+		{Width: 1280, Height: 720},
+	}
+	w, h := computeMergeCanvas(probes, "1080:-2")
+	if w != 1080 || h != 608 {
+		t.Fatalf("expected 1080x608 canvas, got %dx%d", w, h)
+	}
+}
+
+func TestComputeMergeCanvas_mixedAspectRatio(t *testing.T) {
+	probes := []structs.MediaProbeDto{
+		{Width: 1920, Height: 1080},
+		{Width: 1080, Height: 1920},
+	}
+	w, h := computeMergeCanvas(probes, "1080:-2")
+	if w != 1080 || h != 1920 {
+		t.Fatalf("expected 1080x1920 canvas, got %dx%d", w, h)
+	}
+}
+
+func TestComputeMergeCanvas_originalSizeMaxWidth(t *testing.T) {
+	probes := []structs.MediaProbeDto{
+		{Width: 1280, Height: 720},
+		{Width: 1920, Height: 1080},
+	}
+	w, h := computeMergeCanvas(probes, "")
+	if w != 1920 || h != 1080 {
+		t.Fatalf("expected 1920x1080 canvas, got %dx%d", w, h)
+	}
+}
+
+func TestParseScaleTargetWidth(t *testing.T) {
+	if got := parseScaleTargetWidth("1080:-2"); got != 1080 {
+		t.Fatalf("expected 1080, got %d", got)
+	}
+	if got := parseScaleTargetWidth("1280:720"); got != 1280 {
+		t.Fatalf("expected 1280, got %d", got)
+	}
+	if got := parseScaleTargetWidth(""); got != 0 {
+		t.Fatalf("expected 0, got %d", got)
+	}
+}
+
+func TestMergeVideoFilter_withCanvas(t *testing.T) {
+	got := mergeVideoFilter(1080, 1920)
+	want := "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1"
+	if got != want {
+		t.Fatalf("unexpected filter:\n%s", got)
+	}
+}
+
+func TestMergeVideoFilter_noCanvas(t *testing.T) {
+	if got := mergeVideoFilter(0, 0); got != "setsar=1" {
+		t.Fatalf("expected setsar=1 fallback, got %q", got)
+	}
+}
+
 func TestMergeVideos_integration(t *testing.T) {
 	if os.Getenv("FFMPEG_INTEGRATION") == "" {
 		t.Skip("set FFMPEG_INTEGRATION=1 to run ffmpeg merge integration test")

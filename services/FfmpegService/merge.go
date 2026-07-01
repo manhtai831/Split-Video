@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -164,16 +165,13 @@ func mergeReencode(
 		args = append(args, "-i", input)
 	}
 
-	scaleVF := "setsar=1"
-	if encode.Scale != "" {
-		scaleVF = "scale=" + encode.Scale + ",setsar=1"
-	}
+	canvasW, canvasH := computeMergeCanvas(probes, encode.Scale)
 
 	var filterParts []string
 	var concatInputs []string
 
 	for i := range inputs {
-		filterParts = append(filterParts, fmt.Sprintf("[%d:v]%s[v%d]", i, scaleVF, i))
+		filterParts = append(filterParts, fmt.Sprintf("[%d:v]%s[v%d]", i, mergeVideoFilter(canvasW, canvasH), i))
 		concatInputs = append(concatInputs, fmt.Sprintf("[v%d]", i))
 
 		if !encode.Mute {
@@ -207,7 +205,6 @@ func mergeReencode(
 	if onProgress != nil && totalDuration > 0 {
 		onProgress(0.1)
 	}
-
 	if _, err := runCommand(ctx, "ffmpeg", args...); err != nil {
 		return fmt.Errorf("re-encode merge: %w", err)
 	}
@@ -243,4 +240,75 @@ func fpsCompatible(a, b float64) bool {
 		return true
 	}
 	return math.Abs(a-b) < 0.5
+}
+
+func even(n int) int {
+	if n%2 != 0 {
+		return n + 1
+	}
+	return n
+}
+
+func scaledHeight(targetW, srcW, srcH int) int {
+	if srcW <= 0 || srcH <= 0 {
+		return even(targetW)
+	}
+	return even(int(math.Round(float64(targetW) * float64(srcH) / float64(srcW))))
+}
+
+func parseScaleTargetWidth(scale string) int {
+	if scale == "" {
+		return 0
+	}
+	idx := strings.Index(scale, ":")
+	part := scale
+	if idx >= 0 {
+		part = scale[:idx]
+	}
+	w, err := strconv.Atoi(part)
+	if err != nil || w <= 0 {
+		return 0
+	}
+	return w
+}
+
+func computeMergeCanvas(probes []structs.MediaProbeDto, scale string) (int, int) {
+	if len(probes) == 0 {
+		return 0, 0
+	}
+
+	targetW := parseScaleTargetWidth(scale)
+	if targetW <= 0 {
+		for _, p := range probes {
+			if p.Width > targetW {
+				targetW = p.Width
+			}
+		}
+	}
+	if targetW <= 0 {
+		return 0, 0
+	}
+
+	canvasW := even(targetW)
+	maxH := 0
+	for _, p := range probes {
+		h := scaledHeight(targetW, p.Width, p.Height)
+		if h > maxH {
+			maxH = h
+		}
+	}
+	if maxH <= 0 {
+		return 0, 0
+	}
+	return canvasW, even(maxH)
+}
+
+func mergeVideoFilter(canvasW, canvasH int) string {
+	if canvasW <= 0 || canvasH <= 0 {
+		return "setsar=1"
+	}
+	return fmt.Sprintf(
+		"scale=%d:%d:force_original_aspect_ratio=decrease,pad=%d:%d:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1",
+		canvasW, canvasH, canvasW, canvasH,
+	)
 }

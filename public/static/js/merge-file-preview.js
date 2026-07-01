@@ -423,6 +423,7 @@
     var displayIndex = index + 1;
     var item = document.createElement("article");
     item.className = "file-preview-item";
+    item.style.cursor = "grab";
     item.setAttribute("role", "listitem");
     item.tabIndex = 0;
     item.setAttribute("aria-label", "Clip #" + displayIndex + ": " + file.name);
