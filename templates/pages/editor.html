@@ -7,51 +7,51 @@
       <a href="/" class="editor-overlay__back" title="Thoát editor">←</a>
       <h1 class="editor-overlay__title">Video Editor <span lang="en">/ Mock UI</span></h1>
     </div>
-    <div id="editorVideoMeta" class="editor-overlay__meta" hidden></div>
+    <div id="editorFrameMeta" class="editor-overlay__meta"></div>
   </header>
 
-  <div id="editorUploadGate" class="editor-upload-gate editor-drop-zone">
-    <div class="editor-upload-gate__card">
-      <h2>Upload video</h2>
-      <p class="editor-upload-gate__hint">Chọn hoặc kéo thả video vào đây. <strong>Không upload lên server</strong> — mọi thao tác chỉ trên client.</p>
-      <label class="editor-upload-gate__btn btn btn--primary" for="editorVideoInput">Chọn video</label>
-      <input id="editorVideoInput" type="file" accept="video/*" hidden />
-    </div>
-  </div>
-
-  <div id="editorWorkspace" class="editor-workspace" hidden>
+  <div id="editorWorkspace" class="editor-workspace">
     <div class="editor-toolbar">
-      <div class="editor-toolbar__actions">
-        <button type="button" id="editorAddText" class="btn btn--secondary btn--sm">+ Text</button>
-        <button type="button" id="editorAddImage" class="btn btn--secondary btn--sm">+ Logo</button>
-        <button type="button" id="editorAddVideo" class="btn btn--secondary btn--sm">+ Video</button>
-        <div class="editor-toolbar__draw-tools">
-          <div class="editor-toolbar__shapes">
-            <button type="button" id="editorShapesToggle" class="btn btn--secondary btn--sm" aria-haspopup="true">Shapes ▾</button>
-            <div id="editorShapesMenu" class="editor-shapes-menu" hidden>
-              <button type="button" data-shape="rect"><span class="editor-shapes-menu__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="6" width="16" height="12" rx="1"/></svg></span><span>Hình chữ nhật</span></button>
-              <button type="button" data-shape="circle"><span class="editor-shapes-menu__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg></span><span>Tròn</span></button>
-              <button type="button" data-shape="line"><span class="editor-shapes-menu__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="19" x2="19" y2="5"/></svg></span><span>Đường thẳng</span></button>
-              <button type="button" data-shape="arrow"><span class="editor-shapes-menu__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="12" x2="18" y2="12"/><polyline points="14,8 18,12 14,16" fill="currentColor" stroke="none"/></svg></span><span>Mũi tên</span></button>
+      <nav class="editor-menubar" aria-label="Editor menu">
+        <div class="editor-menu">
+          <button type="button" class="editor-menu__trigger" aria-haspopup="true" aria-expanded="false">File</button>
+          <div class="editor-menu__dropdown" hidden>
+            <button type="button" id="editorExport" class="editor-menu__item">Export JSON</button>
+          </div>
+        </div>
+        <div class="editor-menu">
+          <button type="button" class="editor-menu__trigger" aria-haspopup="true" aria-expanded="false">Insert</button>
+          <div class="editor-menu__dropdown" hidden>
+            <button type="button" id="editorInsertFile" class="editor-menu__item">File</button>
+            <button type="button" id="editorAddText" class="editor-menu__item">Text</button>
+            <div class="editor-menu__submenu-wrap">
+              <button type="button" class="editor-menu__item editor-menu__item--submenu" aria-haspopup="true">
+                Shape
+                <span class="editor-menu__arrow" aria-hidden="true">›</span>
+              </button>
+              <div class="editor-menu__submenu" hidden>
+                <button type="button" id="editorBrushTool" class="editor-menu__item" data-tool="brush">Brush</button>
+                <button type="button" class="editor-menu__item" data-shape="rect">Hình chữ nhật</button>
+                <button type="button" class="editor-menu__item" data-shape="circle">Tròn</button>
+                <button type="button" class="editor-menu__item" data-shape="triangle">Tam giác</button>
+                <button type="button" class="editor-menu__item" data-shape="arrow">Mũi tên</button>
+              </div>
             </div>
           </div>
-          <div class="editor-toolbar__draw-colors">
-            <label title="Màu viền / nét"><span>Viền</span><input type="color" id="editorDrawStroke" value="#ffffff" /></label>
-            <label class="editor-toolbar__fill-toggle" title="Bật màu nền shape"><input type="checkbox" id="editorDrawFillOn" /><span>Nền</span><input type="color" id="editorDrawFill" value="#6366f1" /></label>
-          </div>
-          <button type="button" id="editorBrushTool" class="btn btn--secondary btn--sm" title="Vẽ tự do">Brush</button>
-          <button type="button" id="editorSelectTool" class="btn btn--ghost btn--sm" title="Chọn layer">Select</button>
         </div>
-        <input id="editorImageInput" type="file" accept="image/*" hidden aria-hidden="true" tabindex="-1" />
-        <input id="editorVideoLayerInput" type="file" accept="video/*" hidden aria-hidden="true" tabindex="-1" />
-        <button type="button" id="editorChangeVideo" class="btn btn--ghost btn--sm">Đổi video</button>
+      </nav>
+      <div class="editor-toolbar__draw-tools">
+        <div class="editor-toolbar__draw-colors">
+          <label title="Màu viền / nét"><span>Viền</span><input type="color" id="editorDrawStroke" value="#ffffff" /></label>
+          <label title="Độ dày nét"><span>Nét</span><input type="number" id="editorDrawStrokeWidth" min="1" max="40" value="6" /></label>
+          <label class="editor-toolbar__fill-toggle" title="Bật màu nền shape"><input type="checkbox" id="editorDrawFillOn" /><span>Nền</span><input type="color" id="editorDrawFill" value="#6366f1" /></label>
+        </div>
+        <button type="button" id="editorSelectTool" class="btn btn--ghost btn--sm" title="Chọn layer">Select</button>
       </div>
+      <input id="editorMediaInput" type="file" accept="image/*,video/*" hidden aria-hidden="true" tabindex="-1" />
       <div class="editor-toolbar__playback">
         <button type="button" id="editorPlayPause" class="btn btn--ghost btn--sm" title="Play" aria-pressed="false">▶ Play</button>
         <span id="editorTimeDisplay" class="editor-time-display">0:00 / 0:00</span>
-      </div>
-      <div class="editor-toolbar__export">
-        <button type="button" id="editorExport" class="btn btn--primary btn--sm">Export JSON</button>
       </div>
     </div>
 
@@ -59,14 +59,11 @@
       <aside class="editor-panel editor-panel--layers">
         <h3 class="editor-panel__title">Layers</h3>
         <ul id="editorLayersList" class="editor-layers-list" role="list"></ul>
-        <p id="editorLayersEmpty" class="editor-panel__empty">Chưa có layer. Dùng toolbar phía trên.</p>
+        <p id="editorLayersEmpty" class="editor-panel__empty">Thêm ảnh, video, text hoặc kéo thả vào khung.</p>
       </aside>
 
       <div class="editor-preview-wrap">
-        <div id="editorFrame" class="editor-frame editor-drop-zone" title="Kéo thả ảnh hoặc video overlay vào khung">
-          <div id="editorVideoLayer" class="editor-video-layer">
-            <video id="editorVideo" class="editor-frame__video" playsinline></video>
-          </div>
+        <div id="editorFrame" class="editor-frame editor-drop-zone" title="Kéo thả ảnh hoặc video vào khung canvas">
           <div id="editorOverlay" class="editor-frame__overlay"></div>
           <svg id="editorDrawPreview" class="editor-draw-preview" hidden></svg>
           <div id="editorTransformBox" class="editor-transform-box" hidden>

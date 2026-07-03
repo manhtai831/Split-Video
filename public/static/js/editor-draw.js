@@ -12,7 +12,7 @@
 
   var activeTool = null;
   var drawStroke = "#ffffff";
-  var drawStrokeWidth = 4;
+  var drawStrokeWidth = 6;
   var shapeFill = "transparent";
   var shapeFillHasColor = false;
 
@@ -109,51 +109,244 @@
     );
   }
 
-  function shapeSvgMarkup(layer) {
-    var h = layer.height || 0.1;
-    var sw = normStrokeWidth(layer.strokeWidth || 4, h);
-    var stroke = layer.stroke || "#ffffff";
+  function clearSvg(svg) {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+  }
+
+  function shapeStyle(layer) {
+    return {
+      sw: Math.max(1, layer.strokeWidth != null ? layer.strokeWidth : drawStrokeWidth),
+      stroke: layer.stroke != null ? layer.stroke : drawStroke,
+      fill: layer.fill != null ? layer.fill : "transparent",
+    };
+  }
+
+  function paintShapeLayer(svg, layer, pxW, pxH) {
+    clearSvg(svg);
+    var w = Math.max(1, pxW || 100);
+    var h = Math.max(1, pxH || 100);
+    var style = shapeStyle(layer);
+    var sw = style.sw;
+    var stroke = style.stroke;
+    var fill = style.fill;
+    var shape = layer.shape || "rect";
+    var inset = sw / 2;
+    var NS = "http://www.w3.org/2000/svg";
+    var node;
+
+    if (shape === "rect") {
+      node = document.createElementNS(NS, "rect");
+      node.setAttribute("x", String(inset));
+      node.setAttribute("y", String(inset));
+      node.setAttribute("width", String(Math.max(0, w - sw)));
+      node.setAttribute("height", String(Math.max(0, h - sw)));
+      node.setAttribute("fill", fill);
+      node.setAttribute("stroke", stroke);
+      node.setAttribute("stroke-width", String(sw));
+      svg.appendChild(node);
+      return;
+    }
+    if (shape === "circle") {
+      node = document.createElementNS(NS, "ellipse");
+      node.setAttribute("cx", String(w / 2));
+      node.setAttribute("cy", String(h / 2));
+      node.setAttribute("rx", String(Math.max(0, w / 2 - inset)));
+      node.setAttribute("ry", String(Math.max(0, h / 2 - inset)));
+      node.setAttribute("fill", fill);
+      node.setAttribute("stroke", stroke);
+      node.setAttribute("stroke-width", String(sw));
+      svg.appendChild(node);
+      return;
+    }
+    if (shape === "line") {
+      node = document.createElementNS(NS, "line");
+      node.setAttribute("x1", String(inset));
+      node.setAttribute("y1", String(inset));
+      node.setAttribute("x2", String(w - inset));
+      node.setAttribute("y2", String(h - inset));
+      node.setAttribute("fill", "none");
+      node.setAttribute("stroke", stroke);
+      node.setAttribute("stroke-width", String(sw));
+      node.setAttribute("stroke-linecap", "round");
+      svg.appendChild(node);
+      return;
+    }
+    if (shape === "triangle") {
+      node = document.createElementNS(NS, "polygon");
+      node.setAttribute(
+        "points",
+        w / 2 + "," + inset + " " + (w - inset) + "," + (h - inset) + " " + inset + "," + (h - inset)
+      );
+      node.setAttribute("fill", fill);
+      node.setAttribute("stroke", stroke);
+      node.setAttribute("stroke-width", String(sw));
+      node.setAttribute("stroke-linejoin", "round");
+      svg.appendChild(node);
+      return;
+    }
+    if (shape === "arrow") {
+      var head = Math.min(w, h) * 0.2;
+      var line = document.createElementNS(NS, "line");
+      line.setAttribute("x1", String(inset));
+      line.setAttribute("y1", String(h / 2));
+      line.setAttribute("x2", String(w - inset - head));
+      line.setAttribute("y2", String(h / 2));
+      line.setAttribute("fill", "none");
+      line.setAttribute("stroke", stroke);
+      line.setAttribute("stroke-width", String(sw));
+      line.setAttribute("stroke-linecap", "round");
+      svg.appendChild(line);
+      var arrowHead = document.createElementNS(NS, "polygon");
+      arrowHead.setAttribute(
+        "points",
+        w - inset - head + "," + (h / 2 - head) +
+          " " + (w - inset) + "," + h / 2 +
+          " " + (w - inset - head) + "," + (h / 2 + head)
+      );
+      arrowHead.setAttribute("fill", stroke);
+      svg.appendChild(arrowHead);
+    }
+  }
+
+  function paintDrawLayer(svg, layer, pxW, pxH) {
+    clearSvg(svg);
+    if (!layer.paths || !layer.paths.length) return;
+    var w = Math.max(1, pxW || 100);
+    var h = Math.max(1, pxH || 100);
+    var NS = "http://www.w3.org/2000/svg";
+    layer.paths.forEach(function (path) {
+      if (!path.points || path.points.length < 2) return;
+      var d = "M " + path.points[0][0] * w + " " + path.points[0][1] * h;
+      for (var i = 1; i < path.points.length; i++) {
+        d += " L " + path.points[i][0] * w + " " + path.points[i][1] * h;
+      }
+      var node = document.createElementNS(NS, "path");
+      node.setAttribute("d", d);
+      node.setAttribute("fill", "none");
+      node.setAttribute("stroke", path.stroke || drawStroke);
+      node.setAttribute("stroke-width", String(Math.max(1, path.width || drawStrokeWidth)));
+      node.setAttribute("stroke-linecap", "round");
+      node.setAttribute("stroke-linejoin", "round");
+      svg.appendChild(node);
+    });
+  }
+
+  function shapeSvgMarkup(layer, pxW, pxH) {
+    var w = Math.max(1, pxW || 100);
+    var h = Math.max(1, pxH || 100);
+    var sw = Math.max(1, layer.strokeWidth || drawStrokeWidth || 6);
+    var stroke = layer.stroke || drawStroke || "#ffffff";
     var fill = layer.fill || "transparent";
     var shape = layer.shape || "rect";
+    var inset = sw / 2;
+
     if (shape === "rect") {
       return (
-        '<rect x="0" y="0" width="1" height="1" fill="' +
+        '<rect x="' +
+        inset +
+        '" y="' +
+        inset +
+        '" width="' +
+        Math.max(0, w - sw) +
+        '" height="' +
+        Math.max(0, h - sw) +
+        '" fill="' +
         fill +
         '" stroke="' +
         stroke +
         '" stroke-width="' +
         sw +
-        '" vector-effect="non-scaling-stroke" />'
+        '" />'
       );
     }
     if (shape === "circle") {
       return (
-        '<ellipse cx="0.5" cy="0.5" rx="0.5" ry="0.5" fill="' +
+        '<ellipse cx="' +
+        w / 2 +
+        '" cy="' +
+        h / 2 +
+        '" rx="' +
+        Math.max(0, w / 2 - inset) +
+        '" ry="' +
+        Math.max(0, h / 2 - inset) +
+        '" fill="' +
         fill +
         '" stroke="' +
         stroke +
         '" stroke-width="' +
         sw +
-        '" vector-effect="non-scaling-stroke" />'
+        '" />'
       );
     }
     if (shape === "line") {
       return (
-        '<line x1="0" y1="0" x2="1" y2="1" stroke="' +
+        '<line x1="' +
+        inset +
+        '" y1="' +
+        inset +
+        '" x2="' +
+        (w - inset) +
+        '" y2="' +
+        (h - inset) +
+        '" stroke="' +
         stroke +
         '" stroke-width="' +
         sw +
-        '" vector-effect="non-scaling-stroke" />'
+        '" stroke-linecap="round" />'
+      );
+    }
+    if (shape === "triangle") {
+      return (
+        '<polygon points="' +
+        w / 2 +
+        "," +
+        inset +
+        " " +
+        (w - inset) +
+        "," +
+        (h - inset) +
+        " " +
+        inset +
+        "," +
+        (h - inset) +
+        '" fill="' +
+        fill +
+        '" stroke="' +
+        stroke +
+        '" stroke-width="' +
+        sw +
+        '" stroke-linejoin="round" />'
       );
     }
     if (shape === "arrow") {
+      var head = Math.min(w, h) * 0.2;
       return (
-        '<line x1="0" y1="0.5" x2="0.85" y2="0.5" stroke="' +
+        '<line x1="' +
+        inset +
+        '" y1="' +
+        h / 2 +
+        '" x2="' +
+        (w - inset - head) +
+        '" y2="' +
+        h / 2 +
+        '" stroke="' +
         stroke +
         '" stroke-width="' +
         sw +
-        '" vector-effect="non-scaling-stroke" />' +
-        '<polygon points="0.85,0.35 1,0.5 0.85,0.65" fill="' +
+        '" stroke-linecap="round" />' +
+        '<polygon points="' +
+        (w - inset - head) +
+        "," +
+        (h / 2 - head) +
+        " " +
+        (w - inset) +
+        "," +
+        h / 2 +
+        " " +
+        (w - inset - head) +
+        "," +
+        (h / 2 + head) +
+        '" fill="' +
         stroke +
         '" />'
       );
@@ -161,25 +354,30 @@
     return "";
   }
 
-  function drawPathsMarkup(layer) {
+  function drawPathsMarkup(layer, pxW, pxH) {
     if (!layer.paths || !layer.paths.length) return "";
-    var h = layer.height || 0.1;
+    var w = Math.max(1, pxW || 100);
+    var h = Math.max(1, pxH || 100);
     return layer.paths
       .map(function (path) {
         if (!path.points || path.points.length < 2) return "";
-        var d = "M " + path.points[0][0] + " " + path.points[0][1];
+        var d =
+          "M " +
+          path.points[0][0] * w +
+          " " +
+          path.points[0][1] * h;
         for (var i = 1; i < path.points.length; i++) {
-          d += " L " + path.points[i][0] + " " + path.points[i][1];
+          d += " L " + path.points[i][0] * w + " " + path.points[i][1] * h;
         }
-        var sw = normStrokeWidth(path.width || 4, h);
+        var sw = Math.max(1, path.width || drawStrokeWidth || 6);
         return (
           '<path d="' +
           d +
           '" fill="none" stroke="' +
-          (path.stroke || "#ffffff") +
+          (path.stroke || drawStroke || "#ffffff") +
           '" stroke-width="' +
           sw +
-          '" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" />'
+          '" stroke-linecap="round" stroke-linejoin="round" />'
         );
       })
       .join("");
@@ -190,18 +388,25 @@
     var y = Math.min(y1, y2);
     var w = Math.max(0.02, Math.abs(x2 - x1));
     var h = Math.max(0.02, Math.abs(y2 - y1));
+    var frameRect =
+      window.EditorFrame && window.EditorFrame.getFrameRect
+        ? window.EditorFrame.getFrameRect()
+        : { width: 1, height: 1 };
+    var pxW = Math.max(1, w * frameRect.width);
+    var pxH = Math.max(1, h * frameRect.height);
     var layer = {
       shape: shape,
       stroke: drawStroke,
       fill: shapeFillHasColor ? shapeFill : "transparent",
       strokeWidth: drawStrokeWidth,
-      height: h,
     };
     previewSvg.style.left = x * 100 + "%";
     previewSvg.style.top = y * 100 + "%";
     previewSvg.style.width = w * 100 + "%";
     previewSvg.style.height = h * 100 + "%";
-    previewSvg.innerHTML = shapeSvgMarkup(layer);
+    previewSvg.setAttribute("viewBox", "0 0 " + pxW + " " + pxH);
+    previewSvg.setAttribute("preserveAspectRatio", "none");
+    previewSvg.innerHTML = shapeSvgMarkup(layer, pxW, pxH);
   }
 
   function renderBrushPreview(points) {
@@ -230,10 +435,21 @@
     previewSvg.style.top = minY * 100 + "%";
     previewSvg.style.width = w * 100 + "%";
     previewSvg.style.height = h * 100 + "%";
-    previewSvg.innerHTML = drawPathsMarkup({
-      paths: [{ points: normPts, stroke: drawStroke, width: drawStrokeWidth }],
-      height: h,
-    });
+    var frameRect =
+      window.EditorFrame && window.EditorFrame.getFrameRect
+        ? window.EditorFrame.getFrameRect()
+        : { width: 1, height: 1 };
+    var pxW = Math.max(1, w * frameRect.width);
+    var pxH = Math.max(1, h * frameRect.height);
+    previewSvg.setAttribute("viewBox", "0 0 " + pxW + " " + pxH);
+    previewSvg.setAttribute("preserveAspectRatio", "none");
+    previewSvg.innerHTML = drawPathsMarkup(
+      {
+        paths: [{ points: normPts, stroke: drawStroke, width: drawStrokeWidth }],
+      },
+      pxW,
+      pxH
+    );
   }
 
   function commitBrush(points) {
@@ -382,6 +598,8 @@
     onFramePointerDown: onFramePointerDown,
     shapeSvgMarkup: shapeSvgMarkup,
     drawPathsMarkup: drawPathsMarkup,
+    paintShapeLayer: paintShapeLayer,
+    paintDrawLayer: paintDrawLayer,
     setDrawStroke: function (c) {
       drawStroke = c;
     },
@@ -394,6 +612,9 @@
     },
     getDrawStroke: function () {
       return drawStroke;
+    },
+    getDrawStrokeWidth: function () {
+      return drawStrokeWidth;
     },
     getShapeFill: function () {
       return shapeFillHasColor ? shapeFill : "transparent";

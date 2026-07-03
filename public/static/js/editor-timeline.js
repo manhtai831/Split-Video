@@ -5,15 +5,17 @@
   var playheadEl = null;
   var timeDisplayEl = null;
   var playPauseBtn = null;
-  var videoEl = null;
   var getDuration = null;
   var getCurrentTime = null;
   var setCurrentTime = null;
   var onTimeUpdate = null;
+  var onPlayStateChange = null;
 
   var dragging = false;
   var rafId = null;
   var lastDisplayedSecond = -1;
+  var isPlaying = false;
+  var lastTickTime = 0;
 
   function clamp(v, min, max) {
     return Math.min(max, Math.max(min, v));
@@ -58,21 +60,33 @@
     updateTimeDisplay(t);
   }
 
-  function tick() {
-    if (!videoEl || videoEl.paused || videoEl.ended) {
+  function tick(now) {
+    if (!isPlaying) {
       stopRaf();
       return;
     }
-    var t = videoEl.currentTime;
+    if (!lastTickTime) lastTickTime = now;
+    var dt = (now - lastTickTime) / 1000;
+    lastTickTime = now;
+    var t = (getCurrentTime ? getCurrentTime() : 0) + dt;
+    var dur = getDuration ? getDuration() : 0;
+    if (t >= dur) {
+      t = dur;
+      isPlaying = false;
+      updatePlayPauseButton();
+      stopRaf();
+      if (onPlayStateChange) onPlayStateChange(false);
+    }
     if (setCurrentTime) setCurrentTime(t, { silent: true });
     updatePlayheadPosition(t);
     updateTimeDisplay(t);
     if (onTimeUpdate) onTimeUpdate(t);
-    rafId = requestAnimationFrame(tick);
+    if (isPlaying) rafId = requestAnimationFrame(tick);
   }
 
   function startRaf() {
     stopRaf();
+    lastTickTime = 0;
     rafId = requestAnimationFrame(tick);
   }
 
@@ -81,6 +95,7 @@
       cancelAnimationFrame(rafId);
       rafId = null;
     }
+    lastTickTime = 0;
   }
 
   function seekFromEvent(e) {
@@ -112,60 +127,42 @@
     if (!dragging) return;
     dragging = false;
     timelineEl.releasePointerCapture(e.pointerId);
-    if (videoEl && !videoEl.paused && !videoEl.ended) startRaf();
+    if (isPlaying) startRaf();
   }
 
   function updatePlayPauseButton() {
-    if (!playPauseBtn || !videoEl) return;
-    var playing = !videoEl.paused && !videoEl.ended;
-    playPauseBtn.textContent = playing ? "⏸ Pause" : "▶ Play";
-    playPauseBtn.title = playing ? "Pause" : "Play";
-    playPauseBtn.setAttribute("aria-pressed", playing ? "true" : "false");
-  }
-
-  function bindVideo() {
-    if (!videoEl) return;
-    videoEl.addEventListener("timeupdate", function () {
-      if (rafId != null) return;
-      updatePlayhead();
-      if (onTimeUpdate) onTimeUpdate(videoEl.currentTime);
-    });
-    videoEl.addEventListener("loadedmetadata", function () {
-      lastDisplayedSecond = -1;
-      updateTimeDisplay();
-    });
-    videoEl.addEventListener("play", function () {
-      updatePlayPauseButton();
-      startRaf();
-    });
-    videoEl.addEventListener("pause", function () {
-      updatePlayPauseButton();
-      stopRaf();
-      updatePlayhead();
-    });
-    videoEl.addEventListener("ended", function () {
-      updatePlayPauseButton();
-      stopRaf();
-      updatePlayhead();
-    });
+    if (!playPauseBtn) return;
+    playPauseBtn.textContent = isPlaying ? "⏸ Pause" : "▶ Play";
+    playPauseBtn.title = isPlaying ? "Pause" : "Play";
+    playPauseBtn.setAttribute("aria-pressed", isPlaying ? "true" : "false");
   }
 
   function play() {
-    if (videoEl) videoEl.play();
+    var dur = getDuration ? getDuration() : 0;
+    if (!dur) return;
+    var t = getCurrentTime ? getCurrentTime() : 0;
+    if (t >= dur) {
+      if (setCurrentTime) setCurrentTime(0, { silent: true });
+      updatePlayhead();
+      if (onTimeUpdate) onTimeUpdate(0);
+    }
+    isPlaying = true;
+    updatePlayPauseButton();
+    if (onPlayStateChange) onPlayStateChange(true);
+    startRaf();
   }
 
   function pause() {
-    if (videoEl) videoEl.pause();
+    isPlaying = false;
+    stopRaf();
+    updatePlayPauseButton();
+    updatePlayhead();
+    if (onPlayStateChange) onPlayStateChange(false);
   }
 
   function togglePlayPause() {
-    if (!videoEl) return;
-    if (videoEl.paused || videoEl.ended) {
-      if (videoEl.ended) videoEl.currentTime = 0;
-      play();
-    } else {
-      pause();
-    }
+    if (isPlaying) pause();
+    else play();
   }
 
   function init(opts) {
@@ -173,11 +170,11 @@
     playheadEl = opts.playheadEl;
     timeDisplayEl = opts.timeDisplayEl;
     playPauseBtn = opts.playPauseBtn;
-    videoEl = opts.videoEl;
     getDuration = opts.getDuration;
     getCurrentTime = opts.getCurrentTime;
     setCurrentTime = opts.setCurrentTime;
     onTimeUpdate = opts.onTimeUpdate;
+    onPlayStateChange = opts.onPlayStateChange;
 
     if (timelineEl) {
       timelineEl.addEventListener("pointerdown", onPointerDown);
@@ -185,7 +182,7 @@
       timelineEl.addEventListener("pointerup", onPointerUp);
       timelineEl.addEventListener("pointercancel", onPointerUp);
     }
-    bindVideo();
+    updatePlayPauseButton();
   }
 
   window.EditorTimeline = {
@@ -196,6 +193,9 @@
     pause: pause,
     togglePlayPause: togglePlayPause,
     updatePlayPauseButton: updatePlayPauseButton,
+    isPlaying: function () {
+      return isPlaying;
+    },
     timeToPct: timeToPct,
     pctToTime: pctToTime,
     formatTime: formatTime,

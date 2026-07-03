@@ -60,33 +60,21 @@
 
   function applyResize(layer, dx, dy, h, shiftKey) {
     var min = window.EditorFrame.MIN_LAYER_SIZE;
+    var max = window.EditorFrame.MAX_LAYER_OVERFLOW;
     var sl = startLayer;
     var anchorR = sl.x + sl.width;
     var anchorB = sl.y + sl.height;
-    var overflow = layer.id === "__video__";
     var x;
     var y;
     var w;
     var hgt;
 
-    function clampW(val, left) {
-      if (overflow) return Math.max(min, val);
-      return Math.max(min, Math.min(val, 1 - left));
+    function clampW(val) {
+      return Math.max(min, Math.min(val, max));
     }
 
-    function clampH(val, top) {
-      if (overflow) return Math.max(min, val);
-      return Math.max(min, Math.min(val, 1 - top));
-    }
-
-    function clampX(val, maxX) {
-      if (overflow) return val;
-      return Math.max(0, Math.min(val, maxX));
-    }
-
-    function clampY(val, maxY) {
-      if (overflow) return val;
-      return Math.max(0, Math.min(val, maxY));
+    function clampH(val) {
+      return Math.max(min, Math.min(val, max));
     }
 
     if (CORNER_HANDLES[h]) {
@@ -96,31 +84,23 @@
       if (h === "se") {
         x = sl.x;
         y = sl.y;
-        w = sl.width + dx;
-        hgt = sl.height + dy;
-        w = clampW(w, x);
-        hgt = clampH(hgt, y);
+        w = clampW(sl.width + dx);
+        hgt = clampH(sl.height + dy);
       } else if (h === "nw") {
         x = sl.x + dx;
         y = sl.y + dy;
-        x = clampX(x, anchorR - min);
-        y = clampY(y, anchorB - min);
-        w = anchorR - x;
-        hgt = anchorB - y;
+        w = clampW(anchorR - x);
+        hgt = clampH(anchorB - y);
       } else if (h === "ne") {
         x = sl.x;
         y = sl.y + dy;
-        w = sl.width + dx;
-        y = clampY(y, anchorB - min);
-        w = clampW(w, x);
-        hgt = anchorB - y;
+        w = clampW(sl.width + dx);
+        hgt = clampH(anchorB - y);
       } else if (h === "sw") {
         x = sl.x + dx;
         y = sl.y;
-        x = clampX(x, anchorR - min);
-        w = anchorR - x;
-        hgt = sl.height + dy;
-        hgt = clampH(hgt, y);
+        w = clampW(anchorR - x);
+        hgt = clampH(sl.height + dy);
       }
 
       if (shiftKey) {
@@ -134,23 +114,19 @@
           if (h.indexOf("w") >= 0) x = anchorX - w;
           else x = sl.x;
         }
-        w = Math.max(min, w);
-        hgt = Math.max(min, hgt);
+        w = clampW(w);
+        hgt = clampH(hgt);
         if (h.indexOf("w") >= 0) {
           x = anchorR - w;
-          if (!overflow) x = Math.max(0, x);
           w = anchorR - x;
         } else {
           x = sl.x;
-          if (!overflow) w = Math.min(w, 1 - x);
         }
         if (h.indexOf("n") >= 0) {
           y = anchorB - hgt;
-          if (!overflow) y = Math.max(0, y);
           hgt = anchorB - y;
         } else {
           y = sl.y;
-          if (!overflow) hgt = Math.min(hgt, 1 - y);
         }
       }
     } else if (EDGE_HANDLES[h]) {
@@ -160,27 +136,21 @@
       hgt = sl.height;
 
       if (h === "e") {
-        w = clampW(sl.width + dx, sl.x);
+        w = clampW(sl.width + dx);
       } else if (h === "w") {
         x = sl.x + dx;
-        x = clampX(x, anchorR - min);
-        w = anchorR - x;
+        w = clampW(anchorR - x);
       } else if (h === "s") {
-        hgt = clampH(sl.height + dy, sl.y);
+        hgt = clampH(sl.height + dy);
       } else if (h === "n") {
         y = sl.y + dy;
-        y = clampY(y, anchorB - min);
-        hgt = anchorB - y;
+        hgt = clampH(anchorB - y);
       }
     } else {
       return layer;
     }
 
-    var clampFn =
-      layer.id === "__video__"
-        ? window.EditorFrame.clampVideoTransform
-        : window.EditorFrame.clampLayer;
-    return clampFn(
+    return window.EditorFrame.clampLayer(
       Object.assign({}, layer, { x: x, y: y, width: w, height: hgt })
     );
   }
@@ -196,15 +166,6 @@
     transformBox.style.width = layer.width * 100 + "%";
     transformBox.style.height = layer.height * 100 + "%";
     transformBox.style.transform = "rotate(" + (layer.rotation || 0) + "deg)";
-  }
-
-  function syncTransformBoxForVideo() {
-    var layer = getSelectedLayer ? getSelectedLayer() : null;
-    if (layer && layer.id === "__video__") {
-      syncTransformBox(layer);
-    } else {
-      syncTransformBox(null);
-    }
   }
 
   function onPointerDown(e) {
@@ -253,27 +214,15 @@
     var rect = frameEl.getBoundingClientRect();
     var dx = (e.clientX - startPointer.x) / rect.width;
     var dy = (e.clientY - startPointer.y) / rect.height;
-    var clampFn =
-      layer.id === "__video__"
-        ? window.EditorFrame.clampVideoTransform
-        : window.EditorFrame.clampLayer;
 
     if (mode === "drag") {
       var nx = startLayer.x + dx;
       var ny = startLayer.y + dy;
-      if (layer.id === "__video__") {
-        updateLayer(
-          layer.id,
-          window.EditorFrame.moveVideoTransform(layer, nx, ny),
-          { live: true }
-        );
-      } else {
-        updateLayer(
-          layer.id,
-          clampFn(Object.assign({}, layer, { x: nx, y: ny })),
-          { live: true }
-        );
-      }
+      updateLayer(
+        layer.id,
+        window.EditorFrame.moveLayer(layer, nx, ny),
+        { live: true }
+      );
     } else if (mode === "resize") {
       var resized = applyResize(layer, dx, dy, handle, e.shiftKey);
       updateLayer(layer.id, resized, { live: true });
@@ -323,24 +272,13 @@
     var rect = frameEl.getBoundingClientRect();
     var dx = (e.clientX - startPointer.x) / rect.width;
     var dy = (e.clientY - startPointer.y) / rect.height;
-    var clampFn =
-      layer.id === "__video__"
-        ? window.EditorFrame.clampVideoTransform
-        : window.EditorFrame.clampLayer;
     updateLayer(
       layer.id,
-      layer.id === "__video__"
-        ? window.EditorFrame.moveVideoTransform(
-            layer,
-            startLayer.x + dx,
-            startLayer.y + dy
-          )
-        : clampFn(
-            Object.assign({}, layer, {
-              x: startLayer.x + dx,
-              y: startLayer.y + dy,
-            })
-          ),
+      window.EditorFrame.moveLayer(
+        layer,
+        startLayer.x + dx,
+        startLayer.y + dy
+      ),
       { live: true }
     );
     syncTransformBox(getSelectedLayer());
@@ -360,11 +298,6 @@
     }
     if (e.target.closest(".editor-layer")) return;
     if (e.target.closest("#editorTransformBox")) return;
-    if (e.target.closest("#editorVideoLayer")) {
-      if (onSelect) onSelect("__video__", { silent: true });
-      syncTransformBox(getSelectedLayer());
-      return;
-    }
     if (onDeselect) onDeselect();
     syncTransformBox(null);
   }
@@ -389,7 +322,6 @@
   window.EditorTransform = {
     init: init,
     syncTransformBox: syncTransformBox,
-    syncTransformBoxForVideo: syncTransformBoxForVideo,
     onLayerPointerDown: onLayerPointerDown,
   };
 })();

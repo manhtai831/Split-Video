@@ -2,9 +2,8 @@
   "use strict";
 
   var MIN_LAYER_SIZE = 0.02;
-  var MAX_VIDEO_OVERFLOW = 4;
+  var MAX_LAYER_OVERFLOW = 4;
   var frameEl = null;
-  var videoLayerEl = null;
   var frameWidth = 1920;
   var frameHeight = 1080;
 
@@ -37,24 +36,13 @@
   }
 
   function clampLayer(layer) {
-    var w = clamp(layer.width, MIN_LAYER_SIZE, 1);
-    var h = clamp(layer.height, MIN_LAYER_SIZE, 1);
-    var x = clamp(layer.x, 0, 1 - w);
-    var y = clamp(layer.y, 0, 1 - h);
-    return Object.assign({}, layer, { x: x, y: y, width: w, height: h });
+    var w = clamp(layer.width, MIN_LAYER_SIZE, MAX_LAYER_OVERFLOW);
+    var h = clamp(layer.height, MIN_LAYER_SIZE, MAX_LAYER_OVERFLOW);
+    return Object.assign({}, layer, { x: layer.x, y: layer.y, width: w, height: h });
   }
 
-  function clampVideoTransform(transform) {
-    var w = clamp(transform.width, MIN_LAYER_SIZE, MAX_VIDEO_OVERFLOW);
-    var h = clamp(transform.height, MIN_LAYER_SIZE, MAX_VIDEO_OVERFLOW);
-    return Object.assign({ rotation: 0, opacity: 1 }, transform, {
-      width: w,
-      height: h,
-    });
-  }
-
-  function moveVideoTransform(transform, x, y) {
-    return clampVideoTransform(Object.assign({}, transform, { x: x, y: y }));
+  function moveLayer(layer, x, y) {
+    return clampLayer(Object.assign({}, layer, { x: x, y: y }));
   }
 
   function fitFrameToPreview() {
@@ -85,17 +73,6 @@
     return { width: frameWidth, height: frameHeight };
   }
 
-  function applyVideoTransform(transform) {
-    if (!videoLayerEl || !transform) return;
-    videoLayerEl.style.left = transform.x * 100 + "%";
-    videoLayerEl.style.top = transform.y * 100 + "%";
-    videoLayerEl.style.width = transform.width * 100 + "%";
-    videoLayerEl.style.height = transform.height * 100 + "%";
-    videoLayerEl.style.transform = "rotate(" + (transform.rotation || 0) + "deg)";
-    videoLayerEl.style.opacity =
-      transform.opacity != null ? transform.opacity : 1;
-  }
-
   function frameSizeForPreset(preset, sourceW, sourceH) {
     var sw = sourceW || 1920;
     var sh = sourceH || 1080;
@@ -115,9 +92,8 @@
     return { width: Math.round(longEdge * ratio), height: longEdge };
   }
 
-  function init(el, opts) {
+  function init(el) {
     frameEl = el;
-    videoLayerEl = opts && opts.videoLayerEl;
     if (frameEl) {
       frameEl.style.aspectRatio = frameWidth + " / " + frameHeight;
       fitFrameToPreview();
@@ -138,11 +114,10 @@
     normToPx: normToPx,
     pxToNorm: pxToNorm,
     clampLayer: clampLayer,
-    clampVideoTransform: clampVideoTransform,
-    moveVideoTransform: moveVideoTransform,
-    applyVideoTransform: applyVideoTransform,
+    moveLayer: moveLayer,
     frameSizeForPreset: frameSizeForPreset,
     fitFrameToPreview: fitFrameToPreview,
     MIN_LAYER_SIZE: MIN_LAYER_SIZE,
+    MAX_LAYER_OVERFLOW: MAX_LAYER_OVERFLOW,
   };
 })();

@@ -12,7 +12,7 @@
   var reorderLayers = null;
   var isLayerVisibleOnFrame = null;
   var getCurrentTime = null;
-  var isMainVideoPlaying = null;
+  var isTimelinePlaying = null;
 
   var layerIdCounter = 0;
   var panelDrag = null;
@@ -20,6 +20,7 @@
   var DRAG_THRESHOLD_PX = 4;
 
   var TEXT_PLACEHOLDER = "Nhập nội dung...";
+  var BOUND_LAYER_ID = "__bound__";
 
   function isPlaceholderText(text) {
     return !text || text === TEXT_PLACEHOLDER;
@@ -43,6 +44,26 @@
     var start = currentTime || 0;
     var end = Math.min(start + 5, duration || 10);
     return { start: start, end: end, alwaysVisible: false };
+  }
+
+  function isBoundLayer(layer) {
+    return layer && (layer.kind === "bound" || layer.id === BOUND_LAYER_ID);
+  }
+
+  function defaultBoundLayer() {
+    return {
+      id: BOUND_LAYER_ID,
+      kind: "bound",
+      x: 0,
+      y: 0,
+      width: 1,
+      height: 1,
+      rotation: 0,
+      opacity: 1,
+      zIndex: 0,
+      visible: true,
+      alwaysVisible: true,
+    };
   }
 
   function defaultTextLayer(currentTime, duration) {
@@ -92,10 +113,10 @@
       {
         id: nextId(),
         kind: "video",
-        x: 0.15,
-        y: 0.15,
-        width: 0.35,
-        height: 0.35,
+        x: 0.1,
+        y: 0.1,
+        width: 0.8,
+        height: 0.8,
         rotation: 0,
         opacity: 1,
         zIndex: 1,
@@ -109,6 +130,7 @@
   }
 
   function layerLabel(layer) {
+    if (layer.kind === "bound") return "Frame bound";
     if (layer.kind === "text") {
       if (isPlaceholderText(layer.text)) return "Text (placeholder)";
       return layer.text;
@@ -131,7 +153,7 @@
     if (Math.abs(vid.currentTime - offset) > 0.15) {
       vid.currentTime = offset;
     }
-    if (isMainVideoPlaying && isMainVideoPlaying()) {
+    if (isTimelinePlaying && isTimelinePlaying()) {
       if (vid.paused) vid.play().catch(function () {});
     } else {
       vid.pause();
@@ -193,20 +215,41 @@
     }
   }
 
+  function layerPixelSize(layer) {
+    var frameRect =
+      window.EditorFrame && window.EditorFrame.getFrameRect
+        ? window.EditorFrame.getFrameRect()
+        : { width: 1, height: 1 };
+    return {
+      w: Math.max(1, (layer.width || 0.1) * frameRect.width),
+      h: Math.max(1, (layer.height || 0.1) * frameRect.height),
+    };
+  }
+
   function patchShapeDrawDOM(el, layer) {
     var svg = el.querySelector("svg");
     if (!svg) {
       svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      svg.setAttribute("viewBox", "0 0 1 1");
-      svg.setAttribute("preserveAspectRatio", "none");
       svg.classList.add("editor-layer__svg");
       el.appendChild(svg);
     }
-    if (layer.kind === "shape" && window.EditorDraw) {
-      svg.innerHTML = window.EditorDraw.shapeSvgMarkup(layer);
-    } else if (layer.kind === "draw" && window.EditorDraw) {
-      svg.innerHTML = window.EditorDraw.drawPathsMarkup(layer);
+    var px = layerPixelSize(layer);
+    svg.setAttribute("viewBox", "0 0 " + px.w + " " + px.h);
+    svg.setAttribute("preserveAspectRatio", "none");
+    if (layer.kind === "shape" && window.EditorDraw && window.EditorDraw.paintShapeLayer) {
+      window.EditorDraw.paintShapeLayer(svg, layer, px.w, px.h);
+    } else if (layer.kind === "draw" && window.EditorDraw && window.EditorDraw.paintDrawLayer) {
+      window.EditorDraw.paintDrawLayer(svg, layer, px.w, px.h);
     }
+  }
+
+  function repatchShapeLayers() {
+    if (!overlayEl || !getState) return;
+    getState().layers.forEach(function (layer) {
+      if (layer.kind !== "shape" && layer.kind !== "draw") return;
+      var el = overlayEl.querySelector('[data-layer-id="' + layer.id + '"]');
+      if (el) patchShapeDrawDOM(el, layer);
+    });
   }
 
   function patchLayer(id, changes, getLayerFromState) {
@@ -232,7 +275,10 @@
     el.style.opacity = layer.opacity != null ? layer.opacity : 1;
     el.style.zIndex = layer.zIndex || 1;
 
-    if (layer.kind === "text") {
+    if (layer.kind === "bound") {
+      el.classList.add("editor-layer--bound");
+      el.setAttribute("aria-label", "Frame bound");
+    } else if (layer.kind === "text") {
       applyTextLayerStyles(el, layer);
     } else if (layer.kind === "image") {
       var img = document.createElement("img");
@@ -249,16 +295,7 @@
       vid.draggable = false;
       el.appendChild(vid);
     } else if (layer.kind === "shape" || layer.kind === "draw") {
-      var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      svg.setAttribute("viewBox", "0 0 1 1");
-      svg.setAttribute("preserveAspectRatio", "none");
-      svg.classList.add("editor-layer__svg");
-      if (layer.kind === "shape" && window.EditorDraw) {
-        svg.innerHTML = window.EditorDraw.shapeSvgMarkup(layer);
-      } else if (layer.kind === "draw" && window.EditorDraw) {
-        svg.innerHTML = window.EditorDraw.drawPathsMarkup(layer);
-      }
-      el.appendChild(svg);
+      patchShapeDrawDOM(el, layer);
     }
 
     applyLayerFrameVisibility(
@@ -267,10 +304,12 @@
       getCurrentTime ? getCurrentTime() : 0
     );
 
-    el.addEventListener("pointerdown", function (e) {
-      if (window.EditorDraw && window.EditorDraw.isToolActive()) return;
-      window.EditorTransform.onLayerPointerDown(e, layer.id);
-    });
+    if (!isBoundLayer(layer)) {
+      el.addEventListener("pointerdown", function (e) {
+        if (window.EditorDraw && window.EditorDraw.isToolActive()) return;
+        window.EditorTransform.onLayerPointerDown(e, layer.id);
+      });
+    }
 
     return el;
   }
@@ -304,14 +343,10 @@
   }
 
   function syncTransformBoxForSelection(state) {
-    if (state.selectedId === "__video__") {
-      window.EditorTransform.syncTransformBoxForVideo();
-      return;
-    }
     var selected = state.layers.find(function (l) {
       return l.id === state.selectedId;
     });
-    if (selected && layerFrameVisible(selected)) {
+    if (selected && layerFrameVisible(selected) && !isBoundLayer(selected)) {
       window.EditorTransform.syncTransformBox(selected);
     } else {
       window.EditorTransform.syncTransformBox(null);
@@ -418,31 +453,6 @@
     listEl.addEventListener("pointercancel", onPanelDragEnd);
   }
 
-  function renderVideoRow(state) {
-    var li = document.createElement("li");
-    li.className =
-      "editor-layer-row editor-layer-row--video" +
-      (state.selectedId === "__video__" ? " editor-layer-row--selected" : "");
-    li.dataset.layerId = "__video__";
-
-    var label = document.createElement("span");
-    label.className = "editor-layer-row__label";
-    label.textContent = "Video gốc";
-
-    var kind = document.createElement("span");
-    kind.className = "editor-layer-row__kind";
-    kind.textContent = "video";
-
-    li.appendChild(label);
-    li.appendChild(kind);
-
-    li.addEventListener("click", function () {
-      selectLayer("__video__");
-    });
-
-    listEl.appendChild(li);
-  }
-
   function renderPanel() {
     if (!listEl || !emptyEl || !getState) return;
     var state = getState();
@@ -457,16 +467,19 @@
       var li = document.createElement("li");
       li.className =
         "editor-layer-row" +
+        (isBoundLayer(layer) ? " editor-layer-row--bound" : "") +
         (state.selectedId === layer.id ? " editor-layer-row--selected" : "");
       li.dataset.layerId = layer.id;
 
       var handle = document.createElement("span");
       handle.className = "editor-layer-row__drag-handle";
-      handle.title = "Kéo để sắp xếp";
-      handle.textContent = "⋮⋮";
-      handle.addEventListener("pointerdown", function (e) {
-        onDragHandlePointerDown(e, layer.id, li);
-      });
+      handle.title = isBoundLayer(layer) ? "" : "Kéo để sắp xếp";
+      handle.textContent = isBoundLayer(layer) ? "▣" : "⋮⋮";
+      if (!isBoundLayer(layer)) {
+        handle.addEventListener("pointerdown", function (e) {
+          onDragHandlePointerDown(e, layer.id, li);
+        });
+      }
 
       var label = document.createElement("span");
       label.className = "editor-layer-row__label";
@@ -523,9 +536,11 @@
       });
 
       actions.appendChild(visBtn);
-      actions.appendChild(upBtn);
-      actions.appendChild(downBtn);
-      actions.appendChild(delBtn);
+      if (!isBoundLayer(layer)) {
+        actions.appendChild(upBtn);
+        actions.appendChild(downBtn);
+        actions.appendChild(delBtn);
+      }
 
       li.appendChild(handle);
       li.appendChild(label);
@@ -541,14 +556,13 @@
       listEl.appendChild(li);
     });
 
-    renderVideoRow(state);
-
     if (layers.length === 0) {
       emptyEl.hidden = false;
+      listEl.hidden = true;
     } else {
       emptyEl.hidden = true;
+      listEl.hidden = false;
     }
-    listEl.hidden = false;
   }
 
   function patchLayerRowLabel(layer) {
@@ -576,15 +590,6 @@
         );
       });
     }
-    if (selectedId === "__video__") {
-      window.EditorTransform.syncTransformBoxForVideo();
-      return;
-    }
-    var selected = selectedId
-      ? getState().layers.find(function (l) {
-          return l.id === selectedId;
-        })
-      : null;
     syncTransformBoxForSelection({
       selectedId: selectedId,
       layers: getState().layers,
@@ -616,7 +621,7 @@
     reorderLayers = opts.reorderLayers;
     isLayerVisibleOnFrame = opts.isLayerVisibleOnFrame;
     getCurrentTime = opts.getCurrentTime;
-    isMainVideoPlaying = opts.isMainVideoPlaying;
+    isTimelinePlaying = opts.isTimelinePlaying;
   }
 
   window.EditorLayers = {
@@ -627,9 +632,13 @@
     patchLayerDOM: patchLayerDOM,
     patchLayerRowLabel: patchLayerRowLabel,
     patchLayer: patchLayer,
+    defaultBoundLayer: defaultBoundLayer,
     defaultTextLayer: defaultTextLayer,
     defaultImageLayer: defaultImageLayer,
     defaultVideoLayer: defaultVideoLayer,
+    isBoundLayer: isBoundLayer,
+    BOUND_LAYER_ID: BOUND_LAYER_ID,
+    repatchShapeLayers: repatchShapeLayers,
     nextId: nextId,
     TEXT_PLACEHOLDER: TEXT_PLACEHOLDER,
     isPlaceholderText: isPlaceholderText,

@@ -1,19 +1,17 @@
 (function () {
   "use strict";
 
+  var DEFAULT_PROJECT_DURATION = 30;
+  var DEFAULT_FRAME = { width: 1920, height: 1080 };
+
   var state = {
-    frame: { width: 1920, height: 1080 },
-    framePreset: "original",
-    videoSource: { width: 1920, height: 1080, name: "", duration: 0 },
-    videoTransform: { x: 0, y: 0, width: 1, height: 1, rotation: 0, opacity: 1 },
-    video: { name: "", duration: 0 },
+    frame: { width: DEFAULT_FRAME.width, height: DEFAULT_FRAME.height },
+    framePreset: "16:9",
     layers: [],
     selectedId: null,
     currentTime: 0,
   };
 
-  var videoEl = null;
-  var videoUrl = null;
   var listeners = [];
 
   function $(id) {
@@ -54,9 +52,6 @@
   }
 
   function getSelectedLayer() {
-    if (state.selectedId === "__video__") {
-      return Object.assign({ id: "__video__" }, state.videoTransform);
-    }
     if (!state.selectedId) return null;
     return (
       state.layers.find(function (l) {
@@ -65,66 +60,50 @@
     );
   }
 
-  function syncVideoLayerSelection() {
-    var videoLayerEl = $("editorVideoLayer");
-    if (videoLayerEl) {
-      videoLayerEl.classList.toggle(
-        "editor-video-layer--selected",
-        state.selectedId === "__video__"
-      );
-    }
-  }
-
   function selectLayer(id, opts) {
     state.selectedId = id;
-    syncVideoLayerSelection();
     if (opts && opts.silent) {
       window.EditorLayers.updateSelection(id);
       renderProperties();
       var layer = getSelectedLayer();
-      if (layer) window.EditorTransform.syncTransformBox(layer);
-      else window.EditorTransform.syncTransformBox(null);
-      return;
-    }
-    notify();
-    var layer = getSelectedLayer();
-    if (layer) window.EditorTransform.syncTransformBox(layer);
-    else window.EditorTransform.syncTransformBox(null);
-  }
-
-  function deselectAll() {
-    state.selectedId = null;
-    syncVideoLayerSelection();
-    notify();
-    window.EditorTransform.syncTransformBox(null);
-  }
-
-  function updateVideoTransform(changes, opts) {
-    var merged = window.EditorFrame.clampVideoTransform(
-      Object.assign({}, state.videoTransform, changes)
-    );
-    state.videoTransform = merged;
-    window.EditorFrame.applyVideoTransform(merged);
-    if (opts && opts.live) {
-      if (state.selectedId === "__video__") {
-        window.EditorTransform.syncTransformBox(getSelectedLayer());
+      if (layer && !window.EditorLayers.isBoundLayer(layer)) {
+        window.EditorTransform.syncTransformBox(layer);
+        syncToolbarDrawFromLayer(layer);
+      } else {
+        window.EditorTransform.syncTransformBox(null);
       }
       return;
     }
     notify();
+    var layer = getSelectedLayer();
+    if (layer && !window.EditorLayers.isBoundLayer(layer)) {
+      window.EditorTransform.syncTransformBox(layer);
+      syncToolbarDrawFromLayer(layer);
+    } else {
+      window.EditorTransform.syncTransformBox(null);
+    }
+  }
+
+  function deselectAll() {
+    selectLayer(window.EditorLayers.BOUND_LAYER_ID);
+  }
+
+  function selectBoundLayer() {
+    selectLayer(window.EditorLayers.BOUND_LAYER_ID);
   }
 
   function updateLayer(id, changes, opts) {
-    if (id === "__video__") {
-      updateVideoTransform(changes, opts);
-      return;
-    }
     var idx = state.layers.findIndex(function (l) {
       return l.id === id;
     });
     if (idx < 0) return;
     var merged = Object.assign({}, state.layers[idx], changes);
-    if (changes.x !== undefined || changes.y !== undefined || changes.width !== undefined || changes.height !== undefined) {
+    if (
+      changes.x !== undefined ||
+      changes.y !== undefined ||
+      changes.width !== undefined ||
+      changes.height !== undefined
+    ) {
       merged = window.EditorFrame.clampLayer(merged);
     }
     state.layers[idx] = merged;
@@ -132,7 +111,12 @@
       window.EditorLayers.patchLayerDOM(merged);
       window.EditorLayers.patchLayerRowLabel(merged);
       if (state.selectedId === id) {
-        if (changes.visible !== undefined || changes.start !== undefined || changes.end !== undefined || changes.alwaysVisible !== undefined) {
+        if (
+          changes.visible !== undefined ||
+          changes.start !== undefined ||
+          changes.end !== undefined ||
+          changes.alwaysVisible !== undefined
+        ) {
           window.EditorLayers.updateVisibilityForTime(state.currentTime);
         } else {
           window.EditorTransform.syncTransformBox(merged);
@@ -144,6 +128,7 @@
   }
 
   function deleteLayer(id) {
+    if (id === window.EditorLayers.BOUND_LAYER_ID) return;
     var layer = state.layers.find(function (l) {
       return l.id === id;
     });
@@ -155,15 +140,36 @@
     notify();
   }
 
-  function addVideoLayerFromFile(file) {
+  function addVideoLayerFromFile(file, durationHint) {
     var url = URL.createObjectURL(file);
-    var t = videoEl ? videoEl.currentTime : state.currentTime;
-    addLayer(window.EditorLayers.defaultVideoLayer(url, t, state.video.duration));
+    var vid = document.createElement("video");
+    vid.preload = "metadata";
+    vid.src = url;
+    vid.onloadedmetadata = function () {
+      var dur = vid.duration || durationHint || getDuration();
+      var t = state.currentTime;
+      var layer = window.EditorLayers.defaultVideoLayer(url, t, dur);
+      layer.end = t + dur;
+      addLayer(layer);
+      vid.removeAttribute("src");
+      vid.load();
+    };
+    vid.onerror = function () {
+      var t = state.currentTime;
+      addLayer(
+        window.EditorLayers.defaultVideoLayer(
+          url,
+          t,
+          durationHint || getDuration()
+        )
+      );
+    };
   }
 
   function addLayer(layer) {
     var maxZ = 0;
     state.layers.forEach(function (l) {
+      if (window.EditorLayers.isBoundLayer(l)) return;
       if ((l.zIndex || 0) > maxZ) maxZ = l.zIndex || 0;
     });
     layer.zIndex = maxZ + 1;
@@ -175,6 +181,7 @@
   }
 
   function moveLayerZ(id, delta) {
+    if (id === window.EditorLayers.BOUND_LAYER_ID) return;
     var sorted = state.layers.slice().sort(function (a, b) {
       return (a.zIndex || 0) - (b.zIndex || 0);
     });
@@ -192,6 +199,9 @@
   }
 
   function reorderLayers(orderedIds) {
+    orderedIds = orderedIds.filter(function (id) {
+      return id !== window.EditorLayers.BOUND_LAYER_ID;
+    });
     var n = orderedIds.length;
     orderedIds.forEach(function (id, i) {
       var layer = state.layers.find(function (l) {
@@ -199,17 +209,20 @@
       });
       if (layer) layer.zIndex = n - i;
     });
+    var bound = state.layers.find(function (l) {
+      return window.EditorLayers.isBoundLayer(l);
+    });
+    if (bound) bound.zIndex = 0;
     notify();
   }
 
   function setFramePreset(preset) {
     state.framePreset = preset;
     if (preset !== "custom") {
-      var presetKey = preset === "original" ? "original" : preset;
       var size = window.EditorFrame.frameSizeForPreset(
-        presetKey,
-        state.videoSource.width,
-        state.videoSource.height
+        preset,
+        DEFAULT_FRAME.width,
+        DEFAULT_FRAME.height
       );
       state.frame.width = size.width;
       state.frame.height = size.height;
@@ -227,28 +240,19 @@
   }
 
   function updateMetaDisplay() {
-    var meta = $("editorVideoMeta");
-    if (!meta || meta.hidden) return;
+    var meta = $("editorFrameMeta");
+    if (!meta) return;
     meta.textContent =
-      state.video.name +
-      " — frame " +
+      "Frame " +
       state.frame.width +
       "×" +
       state.frame.height +
-      " (src " +
-      state.videoSource.width +
-      "×" +
-      state.videoSource.height +
-      ") — " +
-      window.EditorTimeline.formatTime(state.video.duration);
+      " — " +
+      window.EditorTimeline.formatTime(getDuration());
   }
 
   function isLayerVisibleOnFrame(layer) {
     return window.EditorCaptions.isLayerTimedVisible(layer, state.currentTime);
-  }
-
-  function isMainVideoPlaying() {
-    return !!(videoEl && !videoEl.paused && !videoEl.ended);
   }
 
   function revokeLayerResources(layer) {
@@ -263,7 +267,12 @@
   }
 
   function getDuration() {
-    return state.video.duration || 0;
+    var maxEnd = DEFAULT_PROJECT_DURATION;
+    state.layers.forEach(function (l) {
+      if (l.alwaysVisible) return;
+      if (l.end != null && l.end > maxEnd) maxEnd = l.end;
+    });
+    return maxEnd;
   }
 
   function getCurrentTime() {
@@ -272,8 +281,10 @@
 
   function setCurrentTime(t, opts) {
     state.currentTime = t;
-    if (videoEl && (!opts || !opts.silent)) videoEl.currentTime = t;
     window.EditorLayers.updateVisibilityForTime(t);
+    if (!opts || !opts.silent) {
+      window.EditorTimeline.updatePlayhead();
+    }
   }
 
   function onTimeUpdate(t) {
@@ -283,9 +294,13 @@
 
   function onFrameResize() {
     window.EditorFrame.fitFrameToPreview();
+    window.EditorLayers.repatchShapeLayers();
     var layer = getSelectedLayer();
-    if (layer) window.EditorTransform.syncTransformBox(layer);
-    window.EditorFrame.applyVideoTransform(state.videoTransform);
+    if (layer && !window.EditorLayers.isBoundLayer(layer)) {
+      window.EditorTransform.syncTransformBox(layer);
+    } else {
+      window.EditorTransform.syncTransformBox(null);
+    }
   }
 
   function isDrawToolActive() {
@@ -294,15 +309,124 @@
 
   function updateDrawToolButtons() {
     var tool = window.EditorDraw ? window.EditorDraw.getTool() : null;
-    var brushBtn = $("editorBrushTool");
     var selectBtn = $("editorSelectTool");
+    var brushBtn = $("editorBrushTool");
+
+    document.querySelectorAll(".editor-menu__item[data-shape], .editor-menu__item[data-tool]").forEach(function (btn) {
+      var active = false;
+      if (btn.getAttribute("data-tool") === "brush") {
+        active = tool === "brush";
+      } else {
+        var shape = btn.getAttribute("data-shape");
+        active = shape && tool === "shape-" + shape;
+      }
+      btn.classList.toggle("editor-menu__item--active", !!active);
+    });
+
     if (brushBtn) {
-      brushBtn.classList.toggle("btn--primary", tool === "brush");
-      brushBtn.classList.toggle("btn--secondary", tool !== "brush");
+      brushBtn.classList.toggle("editor-menu__item--active", tool === "brush");
     }
     if (selectBtn) {
       selectBtn.classList.toggle("btn--primary", !tool);
     }
+  }
+
+  function closeEditorMenus() {
+    var menubar = document.querySelector(".editor-menubar");
+    if (!menubar) return;
+    menubar.querySelectorAll(".editor-menu__dropdown, .editor-menu__submenu").forEach(function (el) {
+      el.hidden = true;
+    });
+    menubar.querySelectorAll(".editor-menu__trigger[aria-expanded='true']").forEach(function (btn) {
+      btn.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function bindMenubar() {
+    var menubar = document.querySelector(".editor-menubar");
+    if (!menubar) return;
+
+    menubar.querySelectorAll(".editor-menu").forEach(function (menu) {
+      var trigger = menu.querySelector(".editor-menu__trigger");
+      var dropdown = menu.querySelector(".editor-menu__dropdown");
+      if (!trigger || !dropdown) return;
+      trigger.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var wasOpen = !dropdown.hidden;
+        closeEditorMenus();
+        if (!wasOpen) {
+          dropdown.hidden = false;
+          trigger.setAttribute("aria-expanded", "true");
+        }
+      });
+    });
+
+    menubar.querySelectorAll(".editor-menu__submenu-wrap").forEach(function (wrap) {
+      var submenu = wrap.querySelector(".editor-menu__submenu");
+      if (!submenu) return;
+      wrap.addEventListener("mouseenter", function () {
+        submenu.hidden = false;
+      });
+      wrap.addEventListener("mouseleave", function () {
+        submenu.hidden = true;
+      });
+    });
+
+    document.addEventListener("click", closeEditorMenus);
+  }
+
+  function syncToolbarDrawFromLayer(layer) {
+    if (!layer || layer.kind !== "shape") return;
+    var drawStroke = $("editorDrawStroke");
+    var drawStrokeWidth = $("editorDrawStrokeWidth");
+    if (drawStroke && layer.stroke) drawStroke.value = layer.stroke;
+    if (drawStrokeWidth && layer.strokeWidth != null) {
+      drawStrokeWidth.value = String(layer.strokeWidth);
+      if (window.EditorDraw && window.EditorDraw.setDrawStrokeWidth) {
+        window.EditorDraw.setDrawStrokeWidth(layer.strokeWidth);
+      }
+    }
+  }
+
+  function applyToolbarDrawToSelectedShape() {
+    var layer = getSelectedLayer();
+    if (!layer || layer.kind !== "shape" || !window.EditorDraw) return;
+    var drawStroke = $("editorDrawStroke");
+    var drawStrokeWidth = $("editorDrawStrokeWidth");
+    var drawFill = $("editorDrawFill");
+    var drawFillOn = $("editorDrawFillOn");
+    var strokeWidth = drawStrokeWidth
+      ? parseInt(drawStrokeWidth.value, 10)
+      : window.EditorDraw.getDrawStrokeWidth();
+    if (!isFinite(strokeWidth) || strokeWidth < 1) {
+      strokeWidth = window.EditorDraw.getDrawStrokeWidth();
+    }
+    window.EditorDraw.setDrawStroke(
+      drawStroke ? drawStroke.value : window.EditorDraw.getDrawStroke()
+    );
+    window.EditorDraw.setDrawStrokeWidth(strokeWidth);
+    var changes = {
+      stroke: window.EditorDraw.getDrawStroke(),
+      strokeWidth: strokeWidth,
+    };
+    if (drawFillOn && drawFillOn.checked && drawFill) {
+      changes.fill = drawFill.value;
+    } else {
+      changes.fill = "transparent";
+    }
+    updateLayer(layer.id, changes, { live: true });
+  }
+
+  function applyShapeStyleFromProperties(layerId, changes) {
+    updateLayer(layerId, changes, { live: true });
+    var layer = getSelectedLayer();
+    syncToolbarDrawFromLayer(layer);
+  }
+
+  function bindLiveInput(el, handler) {
+    if (!el) return;
+    el.addEventListener("input", handler);
+    el.addEventListener("change", handler);
   }
 
   function showToast(msg) {
@@ -319,15 +443,14 @@
     var payload = {
       frame: Object.assign({}, state.frame),
       framePreset: state.framePreset,
-      videoSource: Object.assign({}, state.videoSource),
-      videoTransform: Object.assign({}, state.videoTransform),
-      video: {
-        name: state.video.name,
-        duration: state.video.duration,
-      },
-      layers: state.layers.map(function (l) {
-        return Object.assign({}, l);
-      }),
+      duration: getDuration(),
+      layers: state.layers
+        .filter(function (l) {
+          return !window.EditorLayers.isBoundLayer(l);
+        })
+        .map(function (l) {
+          return Object.assign({}, l);
+        }),
     };
     return JSON.stringify(payload, null, 2);
   }
@@ -338,9 +461,6 @@
       '<h4 class="editor-properties__heading">Frame bound</h4>' +
       '<div class="form-field"><label for="propFramePreset">Tỷ lệ</label>' +
       '<select id="propFramePreset">' +
-      '<option value="original"' +
-      (state.framePreset === "original" ? " selected" : "") +
-      ">Gốc video</option>" +
       '<option value="16:9"' +
       (state.framePreset === "16:9" ? " selected" : "") +
       ">16:9</option>" +
@@ -397,21 +517,22 @@
     return (
       '<fieldset class="editor-properties__offset">' +
       '<legend>Vị trí (kéo trên khung hoặc nhập số)</legend>' +
+      '<p class="field-hint">Layer có thể kéo ra ngoài frame — phần ngoài bị cắt khi preview.</p>' +
       '<div class="editor-properties__offset-grid">' +
       '<div class="form-field"><label for="propX">X (%)</label>' +
-      '<input type="number" id="propX" min="0" max="100" step="0.1" value="' +
+      '<input type="number" id="propX" step="0.1" value="' +
       Math.round(layer.x * 1000) / 10 +
       '" /></div>' +
       '<div class="form-field"><label for="propY">Y (%)</label>' +
-      '<input type="number" id="propY" min="0" max="100" step="0.1" value="' +
+      '<input type="number" id="propY" step="0.1" value="' +
       Math.round(layer.y * 1000) / 10 +
       '" /></div>' +
       '<div class="form-field"><label for="propWidth">Rộng (%)</label>' +
-      '<input type="number" id="propWidth" min="2" max="100" step="0.1" value="' +
+      '<input type="number" id="propWidth" min="2" step="0.1" value="' +
       Math.round(layer.width * 1000) / 10 +
       '" /></div>' +
       '<div class="form-field"><label for="propHeight">Cao (%)</label>' +
-      '<input type="number" id="propHeight" min="2" max="100" step="0.1" value="' +
+      '<input type="number" id="propHeight" min="2" step="0.1" value="' +
       Math.round(layer.height * 1000) / 10 +
       '" /></div>' +
       "</div></fieldset>"
@@ -423,39 +544,20 @@
     if (!panel) return;
 
     if (!state.selectedId) {
-      panel.innerHTML =
-        renderFrameProperties() +
-        '<p class="editor-panel__empty">Chọn một layer hoặc Video gốc để chỉnh sửa.</p>';
-      bindFramePropertyInputs();
-      return;
-    }
-
-    if (state.selectedId === "__video__") {
-      var vt = state.videoTransform;
-      panel.innerHTML =
-        renderFrameProperties() +
-        '<div class="editor-properties__section">' +
-        '<h4 class="editor-properties__heading">Video gốc</h4>' +
-        renderOffsetFields(vt) +
-        '<div class="form-field"><label for="propOpacity">Opacity</label>' +
-        '<input type="number" id="propOpacity" min="0" max="1" step="0.05" value="' +
-        (vt.opacity != null ? vt.opacity : 1) +
-        '" /></div>' +
-        '<div class="form-field"><label for="propRotation">Rotation (°)</label>' +
-        '<input type="number" id="propRotation" step="1" value="' +
-        Math.round(vt.rotation || 0) +
-        '" /></div>' +
-        '<p class="field-hint">Video có thể kéo ra ngoài frame (overflow). Phần ngoài bị cắt — FFmpeg export dùng <code>crop</code> theo <code>frame</code> + <code>videoTransform</code>.</p></div>';
-      bindFramePropertyInputs();
-      bindPropertyInputs("__video__");
+      selectBoundLayer();
       return;
     }
 
     var layer = getSelectedLayer();
     if (!layer) {
+      selectBoundLayer();
+      return;
+    }
+
+    if (window.EditorLayers.isBoundLayer(layer)) {
       panel.innerHTML =
         renderFrameProperties() +
-        '<p class="editor-panel__empty">Chọn một layer để chỉnh sửa.</p>';
+        '<p class="field-hint">Khung video output — chỉnh tỷ lệ và kích thước frame tại đây.</p>';
       bindFramePropertyInputs();
       return;
     }
@@ -469,15 +571,25 @@
       var placeholder = window.EditorLayers.TEXT_PLACEHOLDER;
       html +=
         '<div class="form-field"><label for="propText">Nội dung</label>' +
-        '<input type="text" id="propText" placeholder="' + escapeAttr(placeholder) + '" value="' +
-        (window.EditorLayers.isPlaceholderText(layer.text) ? "" : escapeAttr(layer.text || "")) + '" /></div>' +
+        '<input type="text" id="propText" placeholder="' +
+        escapeAttr(placeholder) +
+        '" value="' +
+        (window.EditorLayers.isPlaceholderText(layer.text)
+          ? ""
+          : escapeAttr(layer.text || "")) +
+        '" /></div>' +
         '<div class="form-field"><label for="propFontSize">Font size</label>' +
-        '<input type="number" id="propFontSize" min="8" max="120" value="' + (layer.fontSize || 28) + '" /></div>' +
+        '<input type="number" id="propFontSize" min="8" max="120" value="' +
+        (layer.fontSize || 28) +
+        '" /></div>' +
         '<div class="form-field"><label for="propColor">Màu chữ</label>' +
-        '<input type="color" id="propColor" value="' + (layer.color || "#ffffff") + '" /></div>' +
+        '<input type="color" id="propColor" value="' +
+        (layer.color || "#ffffff") +
+        '" /></div>' +
         '<div class="form-field"><label for="propBgColor">Màu nền</label>' +
         '<input type="text" id="propBgColor" placeholder="rgba(0,0,0,0.5) hoặc để trống" value="' +
-        escapeAttr(layer.bgColor || "") + '" /></div>' +
+        escapeAttr(layer.bgColor || "") +
+        '" /></div>' +
         renderTimingFields(layer) +
         renderOffsetFields(layer);
     }
@@ -491,7 +603,7 @@
         '<div class="form-field form-field--checkbox">' +
         '<label><input type="checkbox" id="propVideoMuted"' +
         (layer.muted !== false ? " checked" : "") +
-        ' /> Tắt tiếng overlay</label></div>' +
+        ' /> Tắt tiếng</label></div>' +
         '<div class="form-field form-field--checkbox">' +
         '<label><input type="checkbox" id="propVideoLoop"' +
         (layer.loop ? " checked" : "") +
@@ -522,7 +634,7 @@
         ' /></div>' +
         '<div class="form-field"><label for="propStrokeWidth">Độ dày nét</label>' +
         '<input type="number" id="propStrokeWidth" min="1" max="40" value="' +
-        (layer.strokeWidth || 4) +
+        (layer.strokeWidth || 6) +
         '" /></div>' +
         renderTimingFields(layer) +
         renderOffsetFields(layer);
@@ -539,16 +651,23 @@
 
     html +=
       '<div class="form-field"><label for="propOpacity">Opacity</label>' +
-      '<input type="number" id="propOpacity" min="0" max="1" step="0.05" value="' + (layer.opacity != null ? layer.opacity : 1) + '" /></div>' +
+      '<input type="number" id="propOpacity" min="0" max="1" step="0.05" value="' +
+      (layer.opacity != null ? layer.opacity : 1) +
+      '" /></div>' +
       '<div class="form-field"><label for="propRotation">Rotation (°)</label>' +
-      '<input type="number" id="propRotation" step="1" value="' + Math.round(layer.rotation || 0) + '" /></div>';
+      '<input type="number" id="propRotation" step="1" value="' +
+      Math.round(layer.rotation || 0) +
+      '" /></div>';
 
     panel.innerHTML = html;
     bindPropertyInputs(layer.id);
   }
 
   function escapeAttr(s) {
-    return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/</g, "&lt;");
   }
 
   function bindFramePropertyInputs() {
@@ -691,30 +810,34 @@
     bindOffsetInput(propWidth, "width", true);
     bindOffsetInput(propHeight, "height", true);
     if (propStroke) {
-      propStroke.addEventListener("input", function () {
-        updateLayer(layerId, { stroke: propStroke.value }, { live: true });
+      bindLiveInput(propStroke, function () {
+        applyShapeStyleFromProperties(layerId, { stroke: propStroke.value });
       });
     }
     if (propFill) {
-      propFill.addEventListener("input", function () {
-        updateLayer(layerId, { fill: propFill.value }, { live: true });
+      bindLiveInput(propFill, function () {
+        applyShapeStyleFromProperties(layerId, { fill: propFill.value });
       });
     }
     if (propFillOn) {
       propFillOn.addEventListener("change", function () {
         if (propFillOn.checked && propFill) {
           propFill.disabled = false;
-          updateLayer(layerId, { fill: propFill.value }, { live: true });
+          applyShapeStyleFromProperties(layerId, { fill: propFill.value });
         } else {
           if (propFill) propFill.disabled = true;
-          updateLayer(layerId, { fill: "transparent" }, { live: true });
+          applyShapeStyleFromProperties(layerId, { fill: "transparent" });
         }
       });
     }
     if (propStrokeWidth) {
-      propStrokeWidth.addEventListener("input", function () {
+      bindLiveInput(propStrokeWidth, function () {
         var v = parseInt(propStrokeWidth.value, 10);
-        if (isFinite(v)) updateLayer(layerId, { strokeWidth: v }, { live: true });
+        if (!isFinite(v) || v < 1) return;
+        if (window.EditorDraw && window.EditorDraw.setDrawStrokeWidth) {
+          window.EditorDraw.setDrawStrokeWidth(v);
+        }
+        applyShapeStyleFromProperties(layerId, { strokeWidth: v });
       });
     }
     if (opacity) {
@@ -729,80 +852,6 @@
         if (isFinite(v)) updateLayer(layerId, { rotation: v });
       });
     }
-  }
-
-  function loadVideo(file) {
-    if (videoUrl) URL.revokeObjectURL(videoUrl);
-    videoUrl = URL.createObjectURL(file);
-    videoEl.src = videoUrl;
-    state.video.name = file.name;
-
-    videoEl.onloadedmetadata = function () {
-      var vw = videoEl.videoWidth || 1920;
-      var vh = videoEl.videoHeight || 1080;
-      state.video.duration = videoEl.duration;
-      state.video.name = file.name;
-      state.videoSource = {
-        width: vw,
-        height: vh,
-        name: file.name,
-        duration: videoEl.duration,
-      };
-      state.framePreset = "original";
-      state.frame.width = vw;
-      state.frame.height = vh;
-      state.videoTransform = {
-        x: 0,
-        y: 0,
-        width: 1,
-        height: 1,
-        rotation: 0,
-        opacity: 1,
-      };
-      window.EditorFrame.setDimensions(state.frame.width, state.frame.height);
-      window.EditorFrame.applyVideoTransform(state.videoTransform);
-
-      var meta = $("editorVideoMeta");
-      if (meta) {
-        meta.hidden = false;
-        updateMetaDisplay();
-      }
-
-      $("editorUploadGate").hidden = true;
-      $("editorWorkspace").hidden = false;
-      window.EditorTimeline.updateTimeDisplay();
-      window.EditorTimeline.updatePlayhead();
-      onFrameResize();
-      notify();
-    };
-  }
-
-  function resetToUpload() {
-    if (videoEl) {
-      videoEl.pause();
-      videoEl.removeAttribute("src");
-      videoEl.load();
-    }
-    if (videoUrl) {
-      URL.revokeObjectURL(videoUrl);
-      videoUrl = null;
-    }
-    state.video = { name: "", duration: 0 };
-    state.videoSource = { width: 1920, height: 1080, name: "", duration: 0 };
-    state.videoTransform = { x: 0, y: 0, width: 1, height: 1, rotation: 0, opacity: 1 };
-    state.framePreset = "original";
-    state.frame = { width: 1920, height: 1080 };
-    state.layers.forEach(revokeLayerResources);
-    state.layers = [];
-    state.selectedId = null;
-    state.currentTime = 0;
-    $("editorUploadGate").hidden = false;
-    $("editorWorkspace").hidden = true;
-    var meta = $("editorVideoMeta");
-    if (meta) meta.hidden = true;
-    var input = $("editorVideoInput");
-    if (input) input.value = "";
-    notify();
   }
 
   function bindDropZone(el, handlers) {
@@ -848,60 +897,49 @@
   }
 
   function bindDragDrop() {
-    bindDropZone($("editorUploadGate"), {
-      onVideo: function (file) {
-        loadVideo(file);
-      },
-    });
-
     bindDropZone($("editorFrame"), {
       onVideo: function (file) {
         addVideoLayerFromFile(file);
       },
       onImage: function (file) {
         var url = URL.createObjectURL(file);
-        var t = videoEl ? videoEl.currentTime : state.currentTime;
-        addLayer(window.EditorLayers.defaultImageLayer(url, t, state.video.duration));
+        var t = state.currentTime;
+        addLayer(
+          window.EditorLayers.defaultImageLayer(url, t, getDuration())
+        );
       },
     });
   }
 
-  function bindUpload() {
-    var input = $("editorVideoInput");
-    if (!input) return;
-    input.addEventListener("change", function () {
-      if (!input.files || !input.files[0]) return;
-      loadVideo(input.files[0]);
-    });
-  }
-
   function bindToolbar() {
+    bindMenubar();
+
     $("editorAddText").addEventListener("click", function () {
-      var t = videoEl ? videoEl.currentTime : state.currentTime;
-      addLayer(window.EditorLayers.defaultTextLayer(t, state.video.duration));
+      closeEditorMenus();
+      var t = state.currentTime;
+      addLayer(window.EditorLayers.defaultTextLayer(t, getDuration()));
     });
 
-    $("editorAddImage").addEventListener("click", function () {
-      $("editorImageInput").click();
+    $("editorInsertFile").addEventListener("click", function () {
+      closeEditorMenus();
+      $("editorMediaInput").click();
     });
 
-    $("editorAddVideo").addEventListener("click", function () {
-      $("editorVideoLayerInput").click();
-    });
-
-    $("editorImageInput").addEventListener("change", function () {
-      var input = $("editorImageInput");
+    $("editorMediaInput").addEventListener("change", function () {
+      var input = $("editorMediaInput");
       if (!input.files || !input.files[0]) return;
-      var url = URL.createObjectURL(input.files[0]);
-      var t = videoEl ? videoEl.currentTime : state.currentTime;
-      addLayer(window.EditorLayers.defaultImageLayer(url, t, state.video.duration));
-      input.value = "";
-    });
-
-    $("editorVideoLayerInput").addEventListener("change", function () {
-      var input = $("editorVideoLayerInput");
-      if (!input.files || !input.files[0]) return;
-      addVideoLayerFromFile(input.files[0]);
+      var file = input.files[0];
+      if (file.type.indexOf("video/") === 0) {
+        addVideoLayerFromFile(file);
+      } else if (file.type.indexOf("image/") === 0) {
+        var url = URL.createObjectURL(file);
+        var t = state.currentTime;
+        addLayer(
+          window.EditorLayers.defaultImageLayer(url, t, getDuration())
+        );
+      } else {
+        showToast("Chỉ hỗ trợ file video hoặc ảnh");
+      }
       input.value = "";
     });
 
@@ -912,14 +950,8 @@
       });
     }
 
-    var changeVideoBtn = $("editorChangeVideo");
-    if (changeVideoBtn) {
-      changeVideoBtn.addEventListener("click", function () {
-        resetToUpload();
-      });
-    }
-
     $("editorExport").addEventListener("click", function () {
+      closeEditorMenus();
       var dialog = $("editorExportDialog");
       var textarea = $("editorExportText");
       textarea.value = exportJSON();
@@ -938,30 +970,20 @@
       $("editorExportDialog").close();
     });
 
-    var shapesToggle = $("editorShapesToggle");
-    var shapesMenu = $("editorShapesMenu");
-    if (shapesToggle && shapesMenu) {
-      shapesToggle.addEventListener("click", function (e) {
-        e.stopPropagation();
-        shapesMenu.hidden = !shapesMenu.hidden;
+    document.querySelectorAll(".editor-menu__item[data-shape]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var shape = btn.getAttribute("data-shape");
+        window.EditorDraw.setTool("shape-" + shape);
+        closeEditorMenus();
+        updateDrawToolButtons();
       });
-      shapesMenu.querySelectorAll("[data-shape]").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-          var shape = btn.getAttribute("data-shape");
-          window.EditorDraw.setTool("shape-" + shape);
-          shapesMenu.hidden = true;
-          updateDrawToolButtons();
-        });
-      });
-      document.addEventListener("click", function () {
-        shapesMenu.hidden = true;
-      });
-    }
+    });
 
     var brushBtn = $("editorBrushTool");
     if (brushBtn) {
       brushBtn.addEventListener("click", function () {
         window.EditorDraw.setTool("brush");
+        closeEditorMenus();
         updateDrawToolButtons();
       });
     }
@@ -982,19 +1004,30 @@
     });
 
     var drawStroke = $("editorDrawStroke");
+    var drawStrokeWidth = $("editorDrawStrokeWidth");
     var drawFill = $("editorDrawFill");
     var drawFillOn = $("editorDrawFillOn");
-    if (drawStroke) {
-      drawStroke.addEventListener("input", function () {
+    function onToolbarDrawChange() {
+      if (drawStroke && window.EditorDraw) {
         window.EditorDraw.setDrawStroke(drawStroke.value);
-      });
+      }
+      if (drawStrokeWidth && window.EditorDraw) {
+        var w = parseInt(drawStrokeWidth.value, 10);
+        if (isFinite(w) && w >= 1) {
+          window.EditorDraw.setDrawStrokeWidth(w);
+        }
+      }
+      applyToolbarDrawToSelectedShape();
     }
+    bindLiveInput(drawStroke, onToolbarDrawChange);
+    bindLiveInput(drawStrokeWidth, onToolbarDrawChange);
     if (drawFill) {
       drawFill.addEventListener("input", function () {
         window.EditorDraw.setShapeFill(
           drawFill.value,
           drawFillOn ? drawFillOn.checked : true
         );
+        applyToolbarDrawToSelectedShape();
       });
     }
     if (drawFillOn) {
@@ -1006,15 +1039,14 @@
           );
         }
         if (drawFill) drawFill.disabled = !drawFillOn.checked;
+        applyToolbarDrawToSelectedShape();
       });
       if (drawFill) drawFill.disabled = !drawFillOn.checked;
     }
   }
 
   function initModules() {
-    window.EditorFrame.init($("editorFrame"), {
-      videoLayerEl: $("editorVideoLayer"),
-    });
+    window.EditorFrame.init($("editorFrame"));
 
     window.EditorDraw.init({
       frameEl: $("editorFrame"),
@@ -1036,19 +1068,6 @@
       isDrawToolActive: isDrawToolActive,
     });
 
-    var videoLayerEl = $("editorVideoLayer");
-    if (videoLayerEl) {
-      videoLayerEl.addEventListener("pointerdown", function (e) {
-        if (isDrawToolActive()) {
-          if (window.EditorDraw && window.EditorDraw.onFramePointerDown) {
-            window.EditorDraw.onFramePointerDown(e);
-          }
-          return;
-        }
-        window.EditorTransform.onLayerPointerDown(e, "__video__");
-      });
-    }
-
     window.EditorLayers.init({
       overlayEl: $("editorOverlay"),
       listEl: $("editorLayersList"),
@@ -1061,7 +1080,9 @@
       reorderLayers: reorderLayers,
       isLayerVisibleOnFrame: isLayerVisibleOnFrame,
       getCurrentTime: getCurrentTime,
-      isMainVideoPlaying: isMainVideoPlaying,
+      isTimelinePlaying: function () {
+        return window.EditorTimeline.isPlaying();
+      },
     });
 
     window.EditorCaptions.init({
@@ -1072,35 +1093,34 @@
       selectLayer: selectLayer,
     });
 
-    videoEl = $("editorVideo");
-    if (videoEl) {
-      videoEl.addEventListener("play", function () {
-        window.EditorLayers.updateVisibilityForTime(state.currentTime);
-      });
-      videoEl.addEventListener("pause", function () {
-        window.EditorLayers.updateVisibilityForTime(state.currentTime);
-      });
-    }
     window.EditorTimeline.init({
       timelineEl: $("editorTimeline"),
       playheadEl: $("editorPlayhead"),
       timeDisplayEl: $("editorTimeDisplay"),
       playPauseBtn: $("editorPlayPause"),
-      videoEl: videoEl,
       getDuration: getDuration,
       getCurrentTime: getCurrentTime,
       setCurrentTime: setCurrentTime,
       onTimeUpdate: onTimeUpdate,
+      onPlayStateChange: function () {
+        window.EditorLayers.updateVisibilityForTime(state.currentTime);
+      },
     });
   }
 
   function init() {
+    state.layers = [window.EditorLayers.defaultBoundLayer()];
+    state.selectedId = window.EditorLayers.BOUND_LAYER_ID;
     initModules();
-    bindUpload();
     bindDragDrop();
     bindToolbar();
+    window.EditorFrame.setDimensions(state.frame.width, state.frame.height);
+    window.EditorTimeline.updateTimeDisplay();
+    window.EditorTimeline.updatePlayhead();
+    onFrameResize();
+    notify();
     window.addEventListener("beforeunload", function () {
-      if (videoUrl) URL.revokeObjectURL(videoUrl);
+      state.layers.forEach(revokeLayerResources);
     });
   }
 

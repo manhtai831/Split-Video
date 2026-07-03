@@ -101,45 +101,6 @@ body.editor-active .main {
   display: none;
 }
 
-/* Upload gate */
-.editor-upload-gate {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-}
-
-.editor-upload-gate[hidden] {
-  display: none;
-}
-
-.editor-upload-gate__card {
-  text-align: center;
-  max-width: 420px;
-  padding: 40px 32px;
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 16px;
-}
-
-.editor-upload-gate__card h2 {
-  margin: 0 0 12px;
-  font-size: 22px;
-}
-
-.editor-upload-gate__hint {
-  margin: 0 0 24px;
-  font-size: 14px;
-  color: #94a3b8;
-  line-height: 1.5;
-}
-
-.editor-upload-gate__btn {
-  display: inline-block;
-  cursor: pointer;
-}
-
 /* Workspace */
 .editor-workspace {
   flex: 1;
@@ -185,37 +146,44 @@ body.editor-active .main {
   color: #fff;
 }
 
-.editor-toolbar__actions,
-.editor-toolbar__playback,
-.editor-toolbar__export {
+.editor-toolbar__playback {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.editor-toolbar__playback {
   margin-left: auto;
 }
 
-.editor-toolbar__draw-tools {
+.editor-menubar {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-left: 4px;
-  padding-left: 10px;
-  border-left: 1px solid #334155;
+  gap: 2px;
 }
 
-.editor-toolbar__shapes {
+.editor-menu {
   position: relative;
 }
 
-.editor-shapes-menu {
+.editor-menu__trigger {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.editor-menu__trigger:hover,
+.editor-menu__trigger[aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.editor-menu__dropdown,
+.editor-menu__submenu {
   position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  z-index: 20;
-  min-width: 160px;
+  z-index: 30;
+  min-width: 180px;
   background: #1e293b;
   border: 1px solid #475569;
   border-radius: 8px;
@@ -223,39 +191,64 @@ body.editor-active .main {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
-.editor-shapes-menu[hidden] {
+.editor-menu__dropdown {
+  top: calc(100% + 4px);
+  left: 0;
+}
+
+.editor-menu__dropdown[hidden],
+.editor-menu__submenu[hidden] {
   display: none;
 }
 
-.editor-shapes-menu button {
+.editor-menu__submenu-wrap {
+  position: relative;
+}
+
+.editor-menu__submenu {
+  top: -4px;
+  left: calc(100% - 4px);
+}
+
+.editor-menu__item {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
   width: 100%;
   text-align: left;
-  padding: 8px 10px;
+  padding: 8px 12px;
   border: none;
   background: transparent;
   color: #e2e8f0;
   font-size: 13px;
   border-radius: 6px;
   cursor: pointer;
+  white-space: nowrap;
 }
 
-.editor-shapes-menu__icon {
+.editor-menu__item:hover,
+.editor-menu__item--active {
+  background: rgba(99, 102, 241, 0.2);
+}
+
+.editor-menu__item--active {
+  color: #c7d2fe;
+}
+
+.editor-menu__arrow {
+  color: #94a3b8;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.editor-toolbar__draw-tools {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  flex-shrink: 0;
-  color: #a5b4fc;
-}
-
-.editor-shapes-menu__icon svg {
-  display: block;
-  width: 22px;
-  height: 22px;
+  gap: 6px;
+  margin-left: 8px;
+  padding-left: 10px;
+  border-left: 1px solid #334155;
 }
 
 .editor-toolbar__draw-colors {
@@ -283,6 +276,17 @@ body.editor-active .main {
   cursor: pointer;
 }
 
+.editor-toolbar__draw-colors input[type="number"] {
+  width: 44px;
+  height: 28px;
+  padding: 0 4px;
+  border: 1px solid #475569;
+  border-radius: 4px;
+  background: #1e293b;
+  color: #e2e8f0;
+  font-size: 12px;
+}
+
 .editor-toolbar__fill-toggle {
   display: flex;
   align-items: center;
@@ -292,10 +296,6 @@ body.editor-active .main {
 .editor-toolbar__fill-toggle input[type="checkbox"] {
   width: auto;
   margin: 0;
-}
-
-.editor-shapes-menu button:hover {
-  background: rgba(99, 102, 241, 0.2);
 }
 
 .editor-frame--draw-tool {
@@ -321,6 +321,21 @@ body.editor-active .main {
 .editor-layer--shape,
 .editor-layer--draw {
   background: transparent;
+  overflow: visible;
+}
+
+.editor-layer--bound {
+  pointer-events: none;
+  border: 2px dashed rgba(129, 140, 248, 0.55);
+  box-sizing: border-box;
+  background: transparent;
+  z-index: 0 !important;
+}
+
+.editor-layer--bound.editor-layer--selected {
+  outline: none;
+  border-color: #818cf8;
+  box-shadow: inset 0 0 0 1px rgba(129, 140, 248, 0.35);
 }
 
 .editor-time-display {
@@ -386,50 +401,22 @@ body.editor-active .main {
   border: 2px dashed rgba(255, 255, 255, 0.25);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5), inset 0 0 60px rgba(0, 0, 0, 0.35);
   background: #000;
-  overflow: hidden;
+  overflow: visible;
   cursor: default;
   user-select: none;
   touch-action: none;
   flex-shrink: 0;
 }
 
-.editor-frame--draw-tool .editor-video-layer,
 .editor-frame--draw-tool .editor-layer,
 .editor-frame--draw-tool .editor-transform-box {
   pointer-events: none !important;
 }
 
-.editor-frame__video {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  pointer-events: none;
-}
-
-.editor-video-layer {
-  position: absolute;
-  box-sizing: border-box;
-  overflow: hidden;
-  transform-origin: center center;
-  touch-action: none;
-  z-index: 0;
-}
-
-.editor-video-layer--selected {
-  outline: 2px solid #818cf8;
-  outline-offset: -1px;
-}
-
-.editor-video-layer .editor-frame__video {
-  width: 100%;
-  height: 100%;
-  object-fit: fill;
-}
-
 .editor-frame__overlay {
   position: absolute;
   inset: 0;
+  overflow: hidden;
   pointer-events: none;
 }
 
@@ -521,11 +508,15 @@ body.editor-active .main {
   opacity: 0.45;
 }
 
-.editor-layer-row--video {
+.editor-layer-row--bound {
   margin-top: 8px;
   border-top: 1px solid #334155;
   padding-top: 10px;
-  cursor: pointer;
+}
+
+.editor-layer-row--bound .editor-layer-row__drag-handle {
+  cursor: default;
+  color: #818cf8;
 }
 
 .editor-layer-row__drag-handle {
@@ -793,11 +784,6 @@ body.editor-active .main {
 .editor-frame.editor-drop-zone--active {
   border-color: #6366f1;
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.35), inset 0 0 60px rgba(0, 0, 0, 0.35);
-}
-
-.editor-upload-gate.editor-drop-zone--active .editor-upload-gate__card {
-  border-color: #6366f1;
-  background: rgba(99, 102, 241, 0.1);
 }
 
 /* Timeline */
