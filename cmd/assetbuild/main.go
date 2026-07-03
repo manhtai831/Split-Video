@@ -21,13 +21,21 @@ const (
 var assetDirs = []string{"css", "js"}
 
 func main() {
-	if err := run(); err != nil {
+	prod := false
+	for _, arg := range os.Args[1:] {
+		if arg == "prod" {
+			prod = true
+			break
+		}
+	}
+
+	if err := run(prod); err != nil {
 		fmt.Fprintf(os.Stderr, "assetbuild: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run() error {
+func run(prod bool) error {
 	if err := os.RemoveAll(outputRoot); err != nil {
 		return fmt.Errorf("clean output: %w", err)
 	}
@@ -68,7 +76,10 @@ func run() error {
 		return err
 	}
 
-	return writeManifest(manifestEntries)
+	if prod {
+		return writeManifest(manifestEntries)
+	}
+	return nil
 }
 
 func copySVGAssets() error {

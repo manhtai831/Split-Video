@@ -12,4 +12,4 @@ build-assets:
 	go run ./cmd/assetbuild
 
 build:
-	go run ./cmd/assetbuild && go build -o dist/main .
+	go run ./cmd/assetbuild prod && go build -o dist/main .

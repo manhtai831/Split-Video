@@ -12,7 +12,7 @@ ENV CGO_ENABLED=1
 # Copy the entire project
 COPY . .
 
-RUN go run ./cmd/assetbuild
+RUN go run ./cmd/assetbuild prod
 RUN mkdir -p dist && go build  -o ./dist/main .
 
 FROM alpine:3.24 AS runner
