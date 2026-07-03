@@ -18,11 +18,12 @@ func handleEditor(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := structs.PageData{
-		Title:         "Video Editor — Mock UI",
-		Description:   "Chỉnh sửa video trên trình duyệt: thêm text, logo, caption theo timeline. Xuất cấu hình JSON (mock — chưa xử lý video thật).",
-		DescriptionEN: "Browser-based video editor mock: add text, logo, caption layers with timeline. Export JSON config (mock — no real video processing).",
+		Title:         "Video Editor",
+		Description:   "Quản lý project chỉnh sửa video: tạo draft, xuất bản, mở lại để chỉnh sửa tiếp.",
+		DescriptionEN: "Manage video editor projects: create drafts, publish, and reopen to continue editing.",
 		ActivePage:    "editor",
 		UserID:        middleware.GetUserID(w, r),
+		Result:        r.URL.Query().Get("job"),
 	}
 
 	if err := templates.Render(w, "templates/pages/editor.html", data); err != nil {

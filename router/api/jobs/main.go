@@ -112,7 +112,7 @@ func handleDownload(w http.ResponseWriter, r *http.Request, identifier, fileIDRa
 		return
 	}
 
-	fileData, err := JobFileDataService.GetOutputFileByIdentifierAndUser(identifier, userID, fileID)
+	fileData, err := JobFileDataService.GetFileByIdentifierAndUser(identifier, userID, fileID)
 	if err != nil {
 		http.NotFound(w, r)
 		return
@@ -123,9 +123,19 @@ func handleDownload(w http.ResponseWriter, r *http.Request, identifier, fileIDRa
 		return
 	}
 
-	_ = JobService.MarkJobDownloaded(fileData.JobID)
+	if fileData.Type == enums.JobFileDataTypeOutput {
+		_ = JobService.MarkJobDownloaded(fileData.JobID)
+	}
 
-	w.Header().Set("Content-Disposition", "attachment; filename=\""+filepath.Base(fileData.Name)+"\"")
+	disposition := "attachment"
+	if fileData.Type == enums.JobFileDataTypeInput {
+		job, jobErr := JobService.GetJobByIdentifierForUser(identifier, userID)
+		if jobErr == nil && job.Type == enums.JobTypeEditor {
+			disposition = "inline"
+		}
+	}
+
+	w.Header().Set("Content-Disposition", disposition+"; filename=\""+filepath.Base(fileData.Name)+"\"")
 	http.ServeFile(w, r, fileData.Path)
 }
 

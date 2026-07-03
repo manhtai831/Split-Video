@@ -34,7 +34,7 @@ func userScopeQuery(userID string) *gorm.DB {
 
 func GetAllJobs() ([]entities.Job, error) {
 	var jobs []entities.Job
-	result := Global.DB.Where("status = ?", enums.StatusProcessing).Order("id ASC").Find(&jobs)
+	result := Global.DB.Where("status = ?", enums.StatusPending).Order("id ASC").Find(&jobs)
 	return jobs, result.Error
 }
 

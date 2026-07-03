@@ -61,6 +61,13 @@ func ToJobItemDto(job entities.Job) (structs.JobItemDto, error) {
 		}
 	}
 
+	if job.Type == enums.JobTypeEditor {
+		dto.FileName = dto.EncodeSummary
+		if dto.FileName == "" {
+			dto.FileName = "Editor project"
+		}
+	}
+
 	for _, f := range outputFiles {
 		dto.OutputFiles = append(dto.OutputFiles, structs.JobOutputFileDto{
 			ID:          f.ID,
@@ -114,6 +121,12 @@ func buildEncodeSummary(jobType enums.JobType, extrasJSON string) string {
 			return ""
 		}
 		return buildExtractAudioEncodeSummary(extras)
+	case enums.JobTypeEditor:
+		extras, err := structs.ParseEditorJobExtrasJSON(extrasJSON)
+		if err != nil {
+			return ""
+		}
+		return buildEditorEncodeSummary(extras)
 	default:
 		extras, err := structs.ParseSplitJobExtrasJSON(extrasJSON)
 		if err != nil {
@@ -134,6 +147,20 @@ func buildGifEncodeSummary(extras structs.GifJobExtrasDto) string {
 	}
 	if len(extras.Segments) > 1 {
 		parts = append(parts, fmt.Sprintf("%d đoạn", len(extras.Segments)))
+	}
+	return strings.Join(parts, " · ")
+}
+
+func buildEditorEncodeSummary(extras structs.EditorJobExtrasDto) string {
+	parts := []string{
+		fmt.Sprintf("%d×%d", extras.Frame.Width, extras.Frame.Height),
+	}
+	if extras.FramePreset != "" {
+		parts = append(parts, extras.FramePreset)
+	}
+	layerCount := len(extras.Layers)
+	if layerCount > 0 {
+		parts = append(parts, fmt.Sprintf("%d layers", layerCount))
 	}
 	return strings.Join(parts, " · ")
 }

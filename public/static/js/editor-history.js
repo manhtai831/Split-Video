@@ -125,6 +125,12 @@
     render();
   }
 
+  function reset() {
+    entries = [];
+    index = -1;
+    render();
+  }
+
   window.EditorHistory = {
     init: init,
     record: record,
@@ -132,6 +138,7 @@
     redo: redo,
     jumpTo: jumpTo,
     render: render,
+    reset: reset,
     canUndo: canUndo,
     canRedo: canRedo,
     getRetainedBlobUrls: getRetainedBlobUrls,

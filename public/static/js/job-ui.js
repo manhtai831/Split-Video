@@ -6,6 +6,7 @@
   var UNDOWNLOADED_CLASS = "history-row--undownloaded";
 
   var STATUS_LABELS = {
+    draft: "Draft",
     pending: "Pending",
     processing: "Processing",
     completed: "Completed",
@@ -18,6 +19,7 @@
     merge: "Merge",
     gif: "GIF",
     extract_audio: "Tách audio",
+    editor: "Editor",
   };
 
   var modals = {};

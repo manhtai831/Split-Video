@@ -1,11 +1,78 @@
 {{define "content"}}
 <link href="{{asset "css/jobs-ui.css"}}" rel="stylesheet" />
 <link href="{{asset "css/editor.css"}}" rel="stylesheet" />
-<div class="editor-overlay" id="editorOverlayRoot">
+<div class="container">
+  <div class="page-header">
+    <h2>Video Editor <span class="page-header__subtitle" lang="en">/ Browser Video Editor</span></h2>
+    <p class="page-description--en">{{.DescriptionEN}}</p>
+  </div>
+
+  <div class="editor-list-toolbar">
+    <button type="button" id="editorNewProject" class="btn btn--primary">+ Tạo project mới</button>
+  </div>
+
+  <section class="home-section" aria-labelledby="editorJobsHeading">
+    <h2 id="editorJobsHeading" class="home-section__title">Lịch sử Editor</h2>
+
+    <div id="editorJobsEmpty" class="job-empty" hidden>
+      <p>Chưa có project editor nào.</p>
+    </div>
+
+    <div id="editorJobsTableWrap" class="history-table-wrap">
+      <table class="history-table" aria-label="Lịch sử job editor">
+        <thead>
+          <tr>
+            <th>Project</th>
+            <th>Trạng thái</th>
+            <th>Tiến độ</th>
+            <th>Tạo lúc</th>
+            <th>Hoàn thành</th>
+            <th class="cell-actions" scope="col" aria-label="Thao tác">
+              <span class="cell-actions__header-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
+                </svg>
+              </span>
+              <span class="sr-only">Thao tác</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody id="editorJobsTableBody"></tbody>
+      </table>
+      <div id="editorJobsCardList" class="history-card-list"></div>
+    </div>
+
+    <div id="editorJobsSkeleton" class="history-skeleton" hidden>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+    </div>
+
+    <div id="editorJobsPagination" class="history-pagination" hidden>
+      <span id="editorJobsRange" class="history-pagination__range"></span>
+      <div class="history-pagination__controls">
+        <button type="button" id="editorJobsPagePrev" class="btn btn--secondary btn--sm" disabled>« Trước</button>
+        <span id="editorJobsPageInfo" class="history-pagination__info"></span>
+        <button type="button" id="editorJobsPageNext" class="btn btn--secondary btn--sm">Sau »</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+{{template "jobModals" .}}
+
+<div class="editor-overlay" id="editorOverlayRoot" hidden>
   <header class="editor-overlay__header">
     <div class="editor-overlay__brand">
-      <a href="/" class="editor-overlay__back" title="Thoát editor">←</a>
-      <h1 class="editor-overlay__title">Video Editor <span lang="en">/ Mock UI</span></h1>
+      <button type="button" id="editorClose" class="editor-overlay__back" title="Đóng editor" aria-label="Đóng editor">←</button>
+      <h1 class="editor-overlay__title">Video Editor</h1>
+    </div>
+    <div class="editor-overlay__actions">
+      <button type="button" id="editorSave" class="btn btn--secondary btn--sm">Save</button>
+      <button type="button" id="editorDuplicate" class="btn btn--ghost btn--sm">Duplicate</button>
+      <button type="button" id="editorPublish" class="btn btn--primary btn--sm">Xuất bản</button>
+      <button type="button" id="editorRevertDraft" class="btn btn--ghost btn--sm">Lưu draft</button>
+      <span id="editorJobStatus" class="editor-job-status"></span>
     </div>
     <div id="editorFrameMeta" class="editor-overlay__meta"></div>
   </header>
@@ -112,7 +179,7 @@
 
 <dialog id="editorExportDialog" class="editor-export-dialog">
   <h3>Export JSON</h3>
-  <p class="field-hint">Mock only — chưa xử lý video thật.</p>
+  <p class="field-hint">Preview cấu hình project (không ảnh hưởng xuất bản).</p>
   <textarea id="editorExportText" class="editor-export-dialog__textarea" readonly rows="16"></textarea>
   <div class="editor-export-dialog__actions">
     <button type="button" id="editorExportCopy" class="btn btn--secondary btn--sm">Copy</button>
@@ -122,6 +189,9 @@
 
 <div id="editorToast" class="editor-toast" hidden></div>
 
+<script src="{{asset "js/job-ui.js"}}"></script>
+<script src="{{asset "js/editor-api.js"}}"></script>
+<script src="{{asset "js/editor-media.js"}}"></script>
 <script src="{{asset "js/editor-frame.js"}}"></script>
 <script src="{{asset "js/editor-transform.js"}}"></script>
 <script src="{{asset "js/editor-draw.js"}}"></script>
@@ -130,10 +200,26 @@
 <script src="{{asset "js/editor-timeline.js"}}"></script>
 <script src="{{asset "js/editor-history.js"}}"></script>
 <script src="{{asset "js/editor-mock.js"}}"></script>
+<script src="{{asset "js/editor-shell.js"}}"></script>
+<script src="{{asset "js/editor-jobs-panel.js"}}"></script>
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    document.body.classList.add("editor-active");
     if (window.EditorApp) window.EditorApp.init();
+    if (window.EditorShell) {
+      window.EditorShell.init({
+        onClose: function () {
+          if (window.editorJobsPanelRefresh) window.editorJobsPanelRefresh();
+        },
+      });
+    }
+    if (window.initEditorJobsPanel) window.initEditorJobsPanel();
+
+    var newBtn = document.getElementById("editorNewProject");
+    if (newBtn) {
+      newBtn.addEventListener("click", function () {
+        if (window.EditorShell) window.EditorShell.open();
+      });
+    }
   });
 </script>
 {{end}}

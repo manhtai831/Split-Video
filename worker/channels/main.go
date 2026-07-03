@@ -4,6 +4,7 @@ import (
 	"app/entities"
 	"app/enums"
 	"app/services/JobService"
+	"app/worker/EditorVideoWorker"
 	"app/worker/ExtractAudioWorker"
 	"app/worker/GifVideoWorker"
 	"app/worker/MergeVideoWorker"
@@ -51,12 +52,22 @@ func worker(id int) {
 func processJob(job entities.Job) {
 	fmt.Printf("Worker processing job: %d\n", job.ID)
 
+	current, err := JobService.GetJobById(job.ID)
+	if err != nil {
+		fmt.Printf("Error getting job: %v\n", err)
+		return
+	}
+	if current.Status != enums.StatusPending {
+		fmt.Printf("Skipping job %d with status %s\n", job.ID, current.Status)
+		return
+	}
+
 	JobService.UpdateJob(job.ID, entities.Job{
 		Status:    enums.StatusProcessing,
 		StartedAt: time.Now(),
 	})
 
-	job, err := JobService.GetJobById(job.ID)
+	job, err = JobService.GetJobById(job.ID)
 	if err != nil {
 		fmt.Printf("Error getting job: %v\n", err)
 		return
@@ -96,10 +107,22 @@ func processJob(job entities.Job) {
 		JobManagerInstance.JobMutex.Unlock()
 
 		err = ExtractAudioWorker.Process(job, context)
+	case enums.JobTypeEditor:
+		context, cancel := context.WithCancel(context.Background())
+
+		JobManagerInstance.JobMutex.Lock()
+		JobManagerInstance.JobCancelMap[job.Identifier] = cancel
+		JobManagerInstance.JobMutex.Unlock()
+
+		err = EditorVideoWorker.Process(job, context)
 	}
 
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
+			currentJob, fetchErr := JobService.GetJobById(job.ID)
+			if fetchErr == nil && currentJob.Status == enums.StatusDraft {
+				return
+			}
 			JobService.UpdateJob(job.ID, entities.Job{
 				Status:     enums.StatusCancelled,
 				FinishedAt: time.Now(),

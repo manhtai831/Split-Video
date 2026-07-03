@@ -16,6 +16,20 @@ func outputFileJoinQuery(identifier, userID string) *gorm.DB {
 		Where("job_file_data.type = ?", enums.JobFileDataTypeOutput)
 }
 
+func fileJoinQuery(identifier, userID string) *gorm.DB {
+	return Global.DB.Model(&entities.JobFileData{}).
+		Joins("INNER JOIN jobs ON jobs.id = job_file_data.job_id").
+		Where("jobs.identifier = ? AND jobs.user_id = ?", identifier, userID)
+}
+
+func GetFileByIdentifierAndUser(identifier, userID string, fileID int) (entities.JobFileData, error) {
+	var data entities.JobFileData
+	err := fileJoinQuery(identifier, userID).
+		Where("job_file_data.id = ?", fileID).
+		First(&data).Error
+	return data, err
+}
+
 func GetOutputFileByIdentifierAndUser(identifier, userID string, fileID int) (entities.JobFileData, error) {
 	var data entities.JobFileData
 	err := outputFileJoinQuery(identifier, userID).

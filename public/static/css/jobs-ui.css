@@ -137,6 +137,11 @@
   white-space: nowrap;
 }
 
+.badge--draft {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
 .badge--pending {
   background: #f3f4f6;
   color: #4b5563;

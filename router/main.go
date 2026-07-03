@@ -2,6 +2,7 @@ package router
 
 import (
 	apijobs "app/router/api/jobs"
+	apieditor "app/router/api/editor"
 	"app/router/editor"
 	"app/router/extractaudio"
 	"app/router/job"
@@ -22,6 +23,7 @@ var DB *gorm.DB
 func Bootstrap() {
 	staticfiles.Bootstrap()
 	apijobs.Bootstrap()
+	apieditor.Bootstrap()
 	job.Bootstrap()
 	split.Bootstrap()
 	merge.Bootstrap()

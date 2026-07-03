@@ -149,6 +149,13 @@
       vid.pause();
       return;
     }
+    if (layer.fileId && layer.mediaState !== "ready") {
+      if (window.EditorMedia) {
+        window.EditorMedia.ensureLayerMedia(layer);
+      }
+      vid.pause();
+      return;
+    }
     var offset = Math.max(0, currentTime - (layer.start || 0));
     if (Math.abs(vid.currentTime - offset) > 0.15) {
       vid.currentTime = offset;
@@ -290,19 +297,34 @@
     } else if (layer.kind === "text") {
       applyTextLayerStyles(el, layer);
     } else if (layer.kind === "image") {
-      var img = document.createElement("img");
-      img.src = layer.src || "";
-      img.alt = "";
-      img.draggable = false;
-      el.appendChild(img);
+      if (layer.fileId && layer.mediaState !== "ready" && !layer.src) {
+        var imgPh = document.createElement("div");
+        imgPh.className = "editor-layer__media-placeholder";
+        imgPh.textContent = layer.mediaState === "loading" ? "Đang tải…" : "Ảnh";
+        el.appendChild(imgPh);
+      } else {
+        var img = document.createElement("img");
+        img.src = layer.src || layer.mediaUrl || "";
+        img.alt = "";
+        img.draggable = false;
+        el.appendChild(img);
+      }
     } else if (layer.kind === "video") {
-      var vid = document.createElement("video");
-      vid.src = layer.src || "";
-      vid.muted = layer.muted !== false;
-      vid.playsInline = true;
-      vid.loop = !!layer.loop;
-      vid.draggable = false;
-      el.appendChild(vid);
+      if (layer.fileId && layer.mediaState !== "ready" && !layer.src) {
+        var vidPh = document.createElement("div");
+        vidPh.className = "editor-layer__media-placeholder";
+        vidPh.textContent = layer.mediaState === "loading" ? "Đang tải…" : "Video";
+        el.appendChild(vidPh);
+      } else {
+        var vid = document.createElement("video");
+        vid.src = layer.src || layer.mediaUrl || "";
+        vid.muted = layer.muted !== false;
+        vid.playsInline = true;
+        vid.loop = !!layer.loop;
+        vid.preload = layer.fileId ? "none" : "auto";
+        vid.draggable = false;
+        el.appendChild(vid);
+      }
     } else if (layer.kind === "shape" || layer.kind === "draw") {
       patchShapeDrawDOM(el, layer);
     } else if (layer.kind === "blur") {
@@ -340,6 +362,9 @@
   }
 
   function updateVisibilityForTime(currentTime) {
+    if (window.EditorMedia) {
+      window.EditorMedia.onTimeUpdate(currentTime);
+    }
     if (!overlayEl || !getState) return;
     var state = getState();
     overlayEl.querySelectorAll(".editor-layer").forEach(function (el) {

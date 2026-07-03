@@ -17,6 +17,13 @@
   var liveHistoryTimer = null;
   var pendingLiveLabel = null;
   var trackedBlobUrls = [];
+  var jobIdentifier = null;
+  var jobStatus = null;
+  var isDirty = false;
+  var clientKeyCounter = 0;
+  var pendingFiles = {};
+  var isReadOnly = false;
+  var suppressDirty = false;
 
   function $(id) {
     return document.getElementById(id);
@@ -78,6 +85,219 @@
       blur: "blur",
     };
     return labels[layer.kind] || layer.kind;
+  }
+
+  function markDirty() {
+    if (!suppressDirty) {
+      isDirty = true;
+    }
+  }
+
+  function nextClientKey() {
+    clientKeyCounter += 1;
+    return "ck-" + clientKeyCounter;
+  }
+
+  function assignPendingFile(layer, file) {
+    if (!file || layer.fileId) return;
+    var key = nextClientKey();
+    layer.clientKey = key;
+    pendingFiles[key] = file;
+    markDirty();
+  }
+
+  function buildConfigForSave() {
+    return {
+      frame: Object.assign({}, state.frame),
+      framePreset: state.framePreset,
+      duration: getDuration(),
+      layers: state.layers
+        .filter(function (l) {
+          return !window.EditorLayers.isBoundLayer(l);
+        })
+        .map(function (l) {
+          var copy = Object.assign({}, l);
+          delete copy.mediaState;
+          if (copy.fileId) {
+            delete copy.clientKey;
+            delete copy.src;
+          }
+          return copy;
+        }),
+    };
+  }
+
+  function collectPendingFiles() {
+    var files = [];
+    Object.keys(pendingFiles).forEach(function (key) {
+      if (pendingFiles[key]) {
+        files.push({ clientKey: key, file: pendingFiles[key] });
+      }
+    });
+    return files;
+  }
+
+  function applyServerLayers(serverLayers) {
+    var bound = state.layers.find(function (l) {
+      return window.EditorLayers.isBoundLayer(l);
+    });
+    var hydrated = (serverLayers || []).map(function (layer) {
+      var copy = Object.assign({}, layer);
+      if (copy.fileId) {
+        copy.mediaState = "idle";
+        delete copy.src;
+        if (copy.clientKey) {
+          delete pendingFiles[copy.clientKey];
+          delete copy.clientKey;
+        }
+      }
+      return copy;
+    });
+    state.layers = bound ? [bound].concat(hydrated) : hydrated;
+    syncRetainedResources();
+  }
+
+  function syncJobFromResponse(resp) {
+    suppressDirty = true;
+    jobIdentifier = resp.identifier;
+    jobStatus = resp.status;
+    state.frame = resp.frame || state.frame;
+    state.framePreset = resp.framePreset || state.framePreset;
+    applyServerLayers(resp.layers);
+    isDirty = false;
+    suppressDirty = false;
+    updateJobStatusDisplay();
+    applyReadOnlyUI();
+    if (window.EditorShell && window.EditorShell.syncJobQuery) {
+      window.EditorShell.syncJobQuery(resp.identifier);
+    }
+    notify();
+  }
+
+  function updateJobStatusDisplay() {
+    var el = $("editorJobStatus");
+    if (!el) return;
+    if (!jobIdentifier) {
+      el.textContent = "";
+      return;
+    }
+    var label = jobStatus || "draft";
+    if (window.JobUI && window.JobUI.badgeHtml) {
+      el.innerHTML = window.JobUI.badgeHtml(label, "status");
+    } else {
+      el.textContent = label;
+    }
+  }
+
+  function applyReadOnlyUI() {
+    isReadOnly = jobStatus === "processing";
+    var workspace = $("editorWorkspace");
+    if (workspace) {
+      workspace.classList.toggle("editor-workspace--readonly", isReadOnly);
+    }
+    var saveBtn = $("editorSave");
+    var dupBtn = $("editorDuplicate");
+    var pubBtn = $("editorPublish");
+    var revertBtn = $("editorRevertDraft");
+    if (saveBtn) saveBtn.disabled = isReadOnly;
+    if (dupBtn) dupBtn.disabled = isReadOnly;
+    if (pubBtn) pubBtn.disabled = isReadOnly;
+    if (revertBtn) {
+      revertBtn.disabled = !(jobStatus === "pending" || jobStatus === "processing");
+    }
+  }
+
+  function loadFromServer(jobDto) {
+    syncJobFromResponse(jobDto);
+    recordHistory("Mở project");
+  }
+
+  function saveDraft(opts) {
+    opts = opts || {};
+    if (!window.EditorAPI) {
+      return Promise.reject(new Error("Editor API unavailable"));
+    }
+    var config = buildConfigForSave();
+    var files = collectPendingFiles();
+    var promise = jobIdentifier
+      ? window.EditorAPI.updateJob(jobIdentifier, config, files)
+      : window.EditorAPI.createJob(config, files);
+
+    return promise.then(function (resp) {
+      syncJobFromResponse(resp);
+      if (!opts.silent) {
+        showToast("Đã lưu draft");
+      }
+      return resp;
+    });
+  }
+
+  function publishProject() {
+    var chain = Promise.resolve();
+    if (isDirty || !jobIdentifier) {
+      chain = saveDraft({ silent: true });
+    }
+    return chain.then(function () {
+      if (!jobIdentifier) {
+        throw new Error("Chưa có job để xuất bản");
+      }
+      return window.EditorAPI.publishJob(jobIdentifier);
+    }).then(function (resp) {
+      syncJobFromResponse(resp);
+      showToast("Đã xuất bản — job đang chờ xử lý");
+      return resp;
+    });
+  }
+
+  function duplicateProject() {
+    if (!jobIdentifier) {
+      showToast("Lưu project trước khi nhân bản");
+      return Promise.resolve();
+    }
+    var chain = Promise.resolve();
+    if (isDirty) {
+      chain = saveDraft({ silent: true });
+    }
+    return chain.then(function () {
+      return window.EditorAPI.duplicateJob(jobIdentifier);
+    }).then(function (resp) {
+      loadFromServer(resp);
+      showToast("Đã nhân bản project");
+    });
+  }
+
+  function revertDraft() {
+    if (!jobIdentifier) return Promise.resolve();
+    return window.EditorAPI.revertDraft(jobIdentifier).then(function (resp) {
+      syncJobFromResponse(resp);
+      showToast("Đã chuyển về draft");
+    });
+  }
+
+  function resetProject() {
+    suppressDirty = true;
+    jobIdentifier = null;
+    jobStatus = null;
+    isDirty = false;
+    pendingFiles = {};
+    clientKeyCounter = 0;
+    state.frame = { width: DEFAULT_FRAME.width, height: DEFAULT_FRAME.height };
+    state.framePreset = "16:9";
+    state.layers = [window.EditorLayers.defaultBoundLayer()];
+    state.selectedId = window.EditorLayers.BOUND_LAYER_ID;
+    state.currentTime = 0;
+    if (window.EditorHistory && window.EditorHistory.reset) {
+      window.EditorHistory.reset();
+    }
+    suppressDirty = false;
+    updateJobStatusDisplay();
+    applyReadOnlyUI();
+    window.EditorFrame.setDimensions(state.frame.width, state.frame.height);
+    window.EditorTimeline.updateTimeDisplay();
+    window.EditorTimeline.updatePlayhead();
+    onFrameResize();
+    notify();
+    recordHistory("Bắt đầu");
   }
 
   function trackBlobUrl(url) {
@@ -252,6 +472,9 @@
     if (!opts || !opts.skipHistory) {
       recordHistory("Sửa " + formatLayerLabel(merged));
     }
+    if (!isRestoringHistory && !isReadOnly) {
+      markDirty();
+    }
   }
 
   function deleteLayer(id) {
@@ -265,6 +488,7 @@
     });
     if (state.selectedId === id) state.selectedId = null;
     notify();
+    markDirty();
     recordHistory(label);
   }
 
@@ -279,19 +503,20 @@
       var t = state.currentTime;
       var layer = window.EditorLayers.defaultVideoLayer(url, t, dur);
       layer.end = t + dur;
+      assignPendingFile(layer, file);
       addLayer(layer);
       vid.removeAttribute("src");
       vid.load();
     };
     vid.onerror = function () {
       var t = state.currentTime;
-      addLayer(
-        window.EditorLayers.defaultVideoLayer(
-          url,
-          t,
-          durationHint || getDuration()
-        )
+      var layer = window.EditorLayers.defaultVideoLayer(
+        url,
+        t,
+        durationHint || getDuration()
       );
+      assignPendingFile(layer, file);
+      addLayer(layer);
     };
   }
 
@@ -310,6 +535,9 @@
     state.layers.push(layer);
     state.selectedId = layer.id;
     notify();
+    if (!isRestoringHistory && !isReadOnly) {
+      markDirty();
+    }
     if (!opts || !opts.skipHistory) {
       var histLabel =
         opts && opts.historyLabel
@@ -1092,9 +1320,9 @@
         var url = URL.createObjectURL(file);
         trackBlobUrl(url);
         var t = state.currentTime;
-        addLayer(
-          window.EditorLayers.defaultImageLayer(url, t, getDuration())
-        );
+        var layer = window.EditorLayers.defaultImageLayer(url, t, getDuration());
+        assignPendingFile(layer, file);
+        addLayer(layer);
       },
     });
   }
@@ -1123,9 +1351,9 @@
         var url = URL.createObjectURL(file);
         trackBlobUrl(url);
         var t = state.currentTime;
-        addLayer(
-          window.EditorLayers.defaultImageLayer(url, t, getDuration())
-        );
+        var imgLayer = window.EditorLayers.defaultImageLayer(url, t, getDuration());
+        assignPendingFile(imgLayer, file);
+        addLayer(imgLayer);
       } else {
         showToast("Chỉ hỗ trợ file video hoặc ảnh");
       }
@@ -1191,6 +1419,62 @@
       selectBtn.addEventListener("click", function () {
         window.EditorDraw.setTool(null);
         updateDrawToolButtons();
+      });
+    }
+
+    var saveBtn = $("editorSave");
+    if (saveBtn) {
+      saveBtn.addEventListener("click", function () {
+        saveBtn.disabled = true;
+        saveDraft()
+          .catch(function (err) {
+            showToast(err.message || "Không thể lưu");
+          })
+          .finally(function () {
+            applyReadOnlyUI();
+          });
+      });
+    }
+
+    var dupBtn = $("editorDuplicate");
+    if (dupBtn) {
+      dupBtn.addEventListener("click", function () {
+        dupBtn.disabled = true;
+        duplicateProject()
+          .catch(function (err) {
+            showToast(err.message || "Không thể nhân bản");
+          })
+          .finally(function () {
+            applyReadOnlyUI();
+          });
+      });
+    }
+
+    var pubBtn = $("editorPublish");
+    if (pubBtn) {
+      pubBtn.addEventListener("click", function () {
+        pubBtn.disabled = true;
+        publishProject()
+          .catch(function (err) {
+            showToast(err.message || "Không thể xuất bản");
+          })
+          .finally(function () {
+            applyReadOnlyUI();
+          });
+      });
+    }
+
+    var revertBtn = $("editorRevertDraft");
+    if (revertBtn) {
+      revertBtn.addEventListener("click", function () {
+        revertBtn.disabled = true;
+        revertDraft()
+          .catch(function (err) {
+            showToast(err.message || "Không thể lưu draft");
+          })
+          .finally(function () {
+            applyReadOnlyUI();
+          });
       });
     }
 
@@ -1392,11 +1676,19 @@
         window.EditorLayers.updateVisibilityForTime(state.currentTime);
       },
     });
+
+    if (window.EditorMedia) {
+      window.EditorMedia.init({
+        getState: getState,
+        getCurrentTime: getCurrentTime,
+        getJobIdentifier: function () {
+          return jobIdentifier;
+        },
+      });
+    }
   }
 
   function init() {
-    state.layers = [window.EditorLayers.defaultBoundLayer()];
-    state.selectedId = window.EditorLayers.BOUND_LAYER_ID;
     initModules();
 
     if (window.EditorHistory) {
@@ -1418,12 +1710,6 @@
 
     bindDragDrop();
     bindToolbar();
-    window.EditorFrame.setDimensions(state.frame.width, state.frame.height);
-    window.EditorTimeline.updateTimeDisplay();
-    window.EditorTimeline.updatePlayhead();
-    onFrameResize();
-    notify();
-    recordHistory("Bắt đầu");
     window.addEventListener("beforeunload", function () {
       trackedBlobUrls.forEach(function (url) {
         try {
@@ -1441,5 +1727,18 @@
     onFrameResize: onFrameResize,
     exportJSON: exportJSON,
     refreshUI: refreshUI,
+    saveDraft: saveDraft,
+    loadFromServer: loadFromServer,
+    resetProject: resetProject,
+    showToast: showToast,
+    isDirty: function () {
+      return isDirty;
+    },
+    getJobIdentifier: function () {
+      return jobIdentifier;
+    },
+    getJobStatus: function () {
+      return jobStatus;
+    },
   };
 })();
