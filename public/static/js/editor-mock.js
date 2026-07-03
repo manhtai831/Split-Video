@@ -1237,6 +1237,41 @@
           e.preventDefault();
           deleteLayer(layer.id);
         }
+        return;
+      }
+
+      if (
+        e.key === "ArrowLeft" ||
+        e.key === "ArrowRight" ||
+        e.key === "ArrowUp" ||
+        e.key === "ArrowDown"
+      ) {
+        if (shouldIgnoreShortcut(e)) return;
+        if (isDrawToolActive()) return;
+        var moveLayer = getSelectedLayer();
+        if (!moveLayer || window.EditorLayers.isBoundLayer(moveLayer)) return;
+        var rect = window.EditorFrame.getFrameRect();
+        if (!rect.width || !rect.height) return;
+        e.preventDefault();
+        var stepPx = e.shiftKey ? window.EditorFrame.SNAP_THRESHOLD_PX + 0.5 : 2;
+        var dxNorm = 0;
+        var dyNorm = 0;
+        if (e.key === "ArrowLeft") dxNorm = -stepPx / rect.width;
+        if (e.key === "ArrowRight") dxNorm = stepPx / rect.width;
+        if (e.key === "ArrowUp") dyNorm = -stepPx / rect.height;
+        if (e.key === "ArrowDown") dyNorm = stepPx / rect.height;
+        var nudged = window.EditorTransform.nudgeLayer(
+          moveLayer,
+          dxNorm,
+          dyNorm
+        );
+        if (nudged.moved) {
+          updateLayer(
+            moveLayer.id,
+            { x: nudged.layer.x, y: nudged.layer.y },
+            { live: true }
+          );
+        }
       }
     });
 

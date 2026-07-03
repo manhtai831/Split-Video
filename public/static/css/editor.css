@@ -655,6 +655,35 @@ body.editor-active .main {
 }
 
 /* Transform box */
+.editor-snap-guides {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  overflow: hidden;
+}
+
+.editor-snap-guide {
+  position: absolute;
+  background: #22d3ee;
+  opacity: 1;
+  box-shadow: 0 0 6px rgba(34, 211, 238, 0.85);
+}
+
+.editor-snap-guide--v {
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  transform: translateX(-50%);
+}
+
+.editor-snap-guide--h {
+  left: 0;
+  right: 0;
+  height: 2px;
+  transform: translateY(-50%);
+}
+
 .editor-transform-box {
   position: absolute;
   border: 1px solid #818cf8;
