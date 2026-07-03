@@ -25,6 +25,23 @@
         <button type="button" id="editorAddText" class="btn btn--secondary btn--sm">+ Text</button>
         <button type="button" id="editorAddImage" class="btn btn--secondary btn--sm">+ Logo</button>
         <button type="button" id="editorAddVideo" class="btn btn--secondary btn--sm">+ Video</button>
+        <div class="editor-toolbar__draw-tools">
+          <div class="editor-toolbar__shapes">
+            <button type="button" id="editorShapesToggle" class="btn btn--secondary btn--sm" aria-haspopup="true">Shapes ▾</button>
+            <div id="editorShapesMenu" class="editor-shapes-menu" hidden>
+              <button type="button" data-shape="rect"><span class="editor-shapes-menu__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="6" width="16" height="12" rx="1"/></svg></span><span>Hình chữ nhật</span></button>
+              <button type="button" data-shape="circle"><span class="editor-shapes-menu__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg></span><span>Tròn</span></button>
+              <button type="button" data-shape="line"><span class="editor-shapes-menu__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="19" x2="19" y2="5"/></svg></span><span>Đường thẳng</span></button>
+              <button type="button" data-shape="arrow"><span class="editor-shapes-menu__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="12" x2="18" y2="12"/><polyline points="14,8 18,12 14,16" fill="currentColor" stroke="none"/></svg></span><span>Mũi tên</span></button>
+            </div>
+          </div>
+          <div class="editor-toolbar__draw-colors">
+            <label title="Màu viền / nét"><span>Viền</span><input type="color" id="editorDrawStroke" value="#ffffff" /></label>
+            <label class="editor-toolbar__fill-toggle" title="Bật màu nền shape"><input type="checkbox" id="editorDrawFillOn" /><span>Nền</span><input type="color" id="editorDrawFill" value="#6366f1" /></label>
+          </div>
+          <button type="button" id="editorBrushTool" class="btn btn--secondary btn--sm" title="Vẽ tự do">Brush</button>
+          <button type="button" id="editorSelectTool" class="btn btn--ghost btn--sm" title="Chọn layer">Select</button>
+        </div>
         <input id="editorImageInput" type="file" accept="image/*" hidden aria-hidden="true" tabindex="-1" />
         <input id="editorVideoLayerInput" type="file" accept="video/*" hidden aria-hidden="true" tabindex="-1" />
         <button type="button" id="editorChangeVideo" class="btn btn--ghost btn--sm">Đổi video</button>
@@ -47,8 +64,11 @@
 
       <div class="editor-preview-wrap">
         <div id="editorFrame" class="editor-frame editor-drop-zone" title="Kéo thả ảnh hoặc video overlay vào khung">
-          <video id="editorVideo" class="editor-frame__video" playsinline></video>
+          <div id="editorVideoLayer" class="editor-video-layer">
+            <video id="editorVideo" class="editor-frame__video" playsinline></video>
+          </div>
           <div id="editorOverlay" class="editor-frame__overlay"></div>
+          <svg id="editorDrawPreview" class="editor-draw-preview" hidden></svg>
           <div id="editorTransformBox" class="editor-transform-box" hidden>
             <div class="editor-transform-box__body" data-handle="drag" title="Kéo để di chuyển"></div>
             <div class="editor-transform-box__edge" data-handle="n" title="Kéo cạnh trên"></div>
@@ -99,6 +119,7 @@
 
 <script src="{{asset "js/editor-frame.js"}}"></script>
 <script src="{{asset "js/editor-transform.js"}}"></script>
+<script src="{{asset "js/editor-draw.js"}}"></script>
 <script src="{{asset "js/editor-layers.js"}}"></script>
 <script src="{{asset "js/editor-captions.js"}}"></script>
 <script src="{{asset "js/editor-timeline.js"}}"></script>

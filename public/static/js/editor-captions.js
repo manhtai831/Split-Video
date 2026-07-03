@@ -32,6 +32,8 @@
     }
     if (layer.kind === "image") return "Image";
     if (layer.kind === "video") return "Video";
+    if (layer.kind === "shape") return "Shape";
+    if (layer.kind === "draw") return "Draw";
     return layer.kind;
   }
 

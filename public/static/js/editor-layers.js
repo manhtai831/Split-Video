@@ -9,11 +9,15 @@
   var updateLayer = null;
   var deleteLayer = null;
   var moveLayerZ = null;
+  var reorderLayers = null;
   var isLayerVisibleOnFrame = null;
   var getCurrentTime = null;
   var isMainVideoPlaying = null;
 
   var layerIdCounter = 0;
+  var panelDrag = null;
+  var dropIndicator = null;
+  var DRAG_THRESHOLD_PX = 4;
 
   var TEXT_PLACEHOLDER = "Nhập nội dung...";
 
@@ -111,6 +115,8 @@
     }
     if (layer.kind === "image") return "Image";
     if (layer.kind === "video") return "Video";
+    if (layer.kind === "shape") return "Shape (" + (layer.shape || "rect") + ")";
+    if (layer.kind === "draw") return "Drawing";
     return layer.kind;
   }
 
@@ -182,6 +188,24 @@
     el.style.opacity = layer.opacity != null ? layer.opacity : 1;
     if (layer.kind === "text") {
       applyTextLayerStyles(el, layer);
+    } else if (layer.kind === "shape" || layer.kind === "draw") {
+      patchShapeDrawDOM(el, layer);
+    }
+  }
+
+  function patchShapeDrawDOM(el, layer) {
+    var svg = el.querySelector("svg");
+    if (!svg) {
+      svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", "0 0 1 1");
+      svg.setAttribute("preserveAspectRatio", "none");
+      svg.classList.add("editor-layer__svg");
+      el.appendChild(svg);
+    }
+    if (layer.kind === "shape" && window.EditorDraw) {
+      svg.innerHTML = window.EditorDraw.shapeSvgMarkup(layer);
+    } else if (layer.kind === "draw" && window.EditorDraw) {
+      svg.innerHTML = window.EditorDraw.drawPathsMarkup(layer);
     }
   }
 
@@ -224,6 +248,17 @@
       vid.loop = !!layer.loop;
       vid.draggable = false;
       el.appendChild(vid);
+    } else if (layer.kind === "shape" || layer.kind === "draw") {
+      var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", "0 0 1 1");
+      svg.setAttribute("preserveAspectRatio", "none");
+      svg.classList.add("editor-layer__svg");
+      if (layer.kind === "shape" && window.EditorDraw) {
+        svg.innerHTML = window.EditorDraw.shapeSvgMarkup(layer);
+      } else if (layer.kind === "draw" && window.EditorDraw) {
+        svg.innerHTML = window.EditorDraw.drawPathsMarkup(layer);
+      }
+      el.appendChild(svg);
     }
 
     applyLayerFrameVisibility(
@@ -233,6 +268,7 @@
     );
 
     el.addEventListener("pointerdown", function (e) {
+      if (window.EditorDraw && window.EditorDraw.isToolActive()) return;
       window.EditorTransform.onLayerPointerDown(e, layer.id);
     });
 
@@ -268,6 +304,10 @@
   }
 
   function syncTransformBoxForSelection(state) {
+    if (state.selectedId === "__video__") {
+      window.EditorTransform.syncTransformBoxForVideo();
+      return;
+    }
     var selected = state.layers.find(function (l) {
       return l.id === state.selectedId;
     });
@@ -278,6 +318,131 @@
     }
   }
 
+  function getPanelOrderedIds() {
+    if (!listEl) return [];
+    return Array.prototype.slice
+      .call(listEl.querySelectorAll(".editor-layer-row[data-layer-id]"))
+      .map(function (el) {
+        return el.dataset.layerId;
+      });
+  }
+
+  function findDropIndex(clientY) {
+    var rows = listEl.querySelectorAll(".editor-layer-row[data-layer-id]");
+    for (var i = 0; i < rows.length; i++) {
+      var rect = rows[i].getBoundingClientRect();
+      var mid = rect.top + rect.height / 2;
+      if (clientY < mid) return i;
+    }
+    return rows.length;
+  }
+
+  function showDropIndicator(index) {
+    if (!dropIndicator) {
+      dropIndicator = document.createElement("li");
+      dropIndicator.className = "editor-layer-row__drop-indicator";
+      dropIndicator.setAttribute("aria-hidden", "true");
+    }
+    var rows = listEl.querySelectorAll(".editor-layer-row[data-layer-id]");
+    if (index >= rows.length) {
+      if (rows.length) {
+        rows[rows.length - 1].after(dropIndicator);
+      } else {
+        listEl.appendChild(dropIndicator);
+      }
+    } else if (rows[index]) {
+      rows[index].before(dropIndicator);
+    }
+  }
+
+  function hideDropIndicator() {
+    if (dropIndicator && dropIndicator.parentNode) {
+      dropIndicator.parentNode.removeChild(dropIndicator);
+    }
+  }
+
+  function onPanelDragMove(e) {
+    if (!panelDrag || !panelDrag.moved) return;
+    var dropIdx = findDropIndex(e.clientY);
+    showDropIndicator(dropIdx);
+    panelDrag.dropIndex = dropIdx;
+  }
+
+  function onPanelDragEnd(e) {
+    if (!panelDrag) return;
+    listEl.releasePointerCapture(e.pointerId);
+    listEl.removeEventListener("pointermove", onPanelDragMove);
+    listEl.removeEventListener("pointerup", onPanelDragEnd);
+    listEl.removeEventListener("pointercancel", onPanelDragEnd);
+    hideDropIndicator();
+    if (panelDrag.moved && panelDrag.dropIndex != null && reorderLayers) {
+      var ids = getPanelOrderedIds();
+      var from = ids.indexOf(panelDrag.layerId);
+      if (from >= 0) {
+        ids.splice(from, 1);
+        var to = panelDrag.dropIndex;
+        if (from < to) to -= 1;
+        ids.splice(to, 0, panelDrag.layerId);
+        reorderLayers(ids);
+      }
+    }
+    if (panelDrag.rowEl) {
+      panelDrag.rowEl.classList.remove("editor-layer-row--dragging");
+    }
+    panelDrag = null;
+  }
+
+  function onDragHandlePointerDown(e, layerId, rowEl) {
+    e.preventDefault();
+    e.stopPropagation();
+    panelDrag = {
+      layerId: layerId,
+      rowEl: rowEl,
+      startY: e.clientY,
+      moved: false,
+      dropIndex: null,
+    };
+    listEl.setPointerCapture(e.pointerId);
+    listEl.addEventListener("pointermove", function move(e) {
+      if (!panelDrag) return;
+      if (
+        !panelDrag.moved &&
+        Math.abs(e.clientY - panelDrag.startY) > DRAG_THRESHOLD_PX
+      ) {
+        panelDrag.moved = true;
+        rowEl.classList.add("editor-layer-row--dragging");
+      }
+      if (panelDrag.moved) onPanelDragMove(e);
+    });
+    listEl.addEventListener("pointerup", onPanelDragEnd);
+    listEl.addEventListener("pointercancel", onPanelDragEnd);
+  }
+
+  function renderVideoRow(state) {
+    var li = document.createElement("li");
+    li.className =
+      "editor-layer-row editor-layer-row--video" +
+      (state.selectedId === "__video__" ? " editor-layer-row--selected" : "");
+    li.dataset.layerId = "__video__";
+
+    var label = document.createElement("span");
+    label.className = "editor-layer-row__label";
+    label.textContent = "Video gốc";
+
+    var kind = document.createElement("span");
+    kind.className = "editor-layer-row__kind";
+    kind.textContent = "video";
+
+    li.appendChild(label);
+    li.appendChild(kind);
+
+    li.addEventListener("click", function () {
+      selectLayer("__video__");
+    });
+
+    listEl.appendChild(li);
+  }
+
   function renderPanel() {
     if (!listEl || !emptyEl || !getState) return;
     var state = getState();
@@ -286,13 +451,7 @@
     });
 
     listEl.innerHTML = "";
-    if (layers.length === 0) {
-      listEl.hidden = true;
-      emptyEl.hidden = false;
-      return;
-    }
-    listEl.hidden = false;
-    emptyEl.hidden = true;
+    hideDropIndicator();
 
     layers.forEach(function (layer) {
       var li = document.createElement("li");
@@ -300,6 +459,14 @@
         "editor-layer-row" +
         (state.selectedId === layer.id ? " editor-layer-row--selected" : "");
       li.dataset.layerId = layer.id;
+
+      var handle = document.createElement("span");
+      handle.className = "editor-layer-row__drag-handle";
+      handle.title = "Kéo để sắp xếp";
+      handle.textContent = "⋮⋮";
+      handle.addEventListener("pointerdown", function (e) {
+        onDragHandlePointerDown(e, layer.id, li);
+      });
 
       var label = document.createElement("span");
       label.className = "editor-layer-row__label";
@@ -360,16 +527,28 @@
       actions.appendChild(downBtn);
       actions.appendChild(delBtn);
 
+      li.appendChild(handle);
       li.appendChild(label);
       li.appendChild(kind);
       li.appendChild(actions);
 
-      li.addEventListener("click", function () {
+      li.addEventListener("click", function (e) {
+        if (e.target.closest(".editor-layer-row__drag-handle")) return;
+        if (e.target.closest(".editor-layer-row__actions")) return;
         selectLayer(layer.id);
       });
 
       listEl.appendChild(li);
     });
+
+    renderVideoRow(state);
+
+    if (layers.length === 0) {
+      emptyEl.hidden = false;
+    } else {
+      emptyEl.hidden = true;
+    }
+    listEl.hidden = false;
   }
 
   function patchLayerRowLabel(layer) {
@@ -396,6 +575,10 @@
           el.dataset.layerId === selectedId
         );
       });
+    }
+    if (selectedId === "__video__") {
+      window.EditorTransform.syncTransformBoxForVideo();
+      return;
     }
     var selected = selectedId
       ? getState().layers.find(function (l) {
@@ -430,6 +613,7 @@
     updateLayer = opts.updateLayer;
     deleteLayer = opts.deleteLayer;
     moveLayerZ = opts.moveLayerZ;
+    reorderLayers = opts.reorderLayers;
     isLayerVisibleOnFrame = opts.isLayerVisibleOnFrame;
     getCurrentTime = opts.getCurrentTime;
     isMainVideoPlaying = opts.isMainVideoPlaying;

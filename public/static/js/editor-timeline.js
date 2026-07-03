@@ -12,10 +12,8 @@
   var onTimeUpdate = null;
 
   var dragging = false;
-
-  function $(id) {
-    return document.getElementById(id);
-  }
+  var rafId = null;
+  var lastDisplayedSecond = -1;
 
   function clamp(v, min, max) {
     return Math.min(max, Math.max(min, v));
@@ -39,18 +37,50 @@
     return (pct / 100) * dur;
   }
 
-  function updatePlayhead() {
+  function updatePlayheadPosition(t) {
     if (!playheadEl) return;
-    var t = getCurrentTime ? getCurrentTime() : 0;
     playheadEl.style.left = timeToPct(t) + "%";
-    updateTimeDisplay();
   }
 
-  function updateTimeDisplay() {
+  function updateTimeDisplay(t) {
     if (!timeDisplayEl) return;
-    var cur = getCurrentTime ? getCurrentTime() : 0;
+    var cur = t != null ? t : getCurrentTime ? getCurrentTime() : 0;
     var dur = getDuration ? getDuration() : 0;
+    var sec = Math.floor(cur);
+    if (sec === lastDisplayedSecond && t == null) return;
+    lastDisplayedSecond = sec;
     timeDisplayEl.textContent = formatTime(cur) + " / " + formatTime(dur);
+  }
+
+  function updatePlayhead() {
+    var t = getCurrentTime ? getCurrentTime() : 0;
+    updatePlayheadPosition(t);
+    updateTimeDisplay(t);
+  }
+
+  function tick() {
+    if (!videoEl || videoEl.paused || videoEl.ended) {
+      stopRaf();
+      return;
+    }
+    var t = videoEl.currentTime;
+    if (setCurrentTime) setCurrentTime(t, { silent: true });
+    updatePlayheadPosition(t);
+    updateTimeDisplay(t);
+    if (onTimeUpdate) onTimeUpdate(t);
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function startRaf() {
+    stopRaf();
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function stopRaf() {
+    if (rafId != null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
   }
 
   function seekFromEvent(e) {
@@ -59,7 +89,8 @@
     var pct = clamp(((e.clientX - rect.left) / rect.width) * 100, 0, 100);
     var t = pctToTime(pct);
     if (setCurrentTime) setCurrentTime(t);
-    updatePlayhead();
+    updatePlayheadPosition(t);
+    updateTimeDisplay(t);
     if (onTimeUpdate) onTimeUpdate(t);
   }
 
@@ -67,6 +98,7 @@
     if (e.target.closest(".editor-caption-segment")) return;
     e.preventDefault();
     dragging = true;
+    stopRaf();
     timelineEl.setPointerCapture(e.pointerId);
     seekFromEvent(e);
   }
@@ -80,6 +112,7 @@
     if (!dragging) return;
     dragging = false;
     timelineEl.releasePointerCapture(e.pointerId);
+    if (videoEl && !videoEl.paused && !videoEl.ended) startRaf();
   }
 
   function updatePlayPauseButton() {
@@ -93,13 +126,28 @@
   function bindVideo() {
     if (!videoEl) return;
     videoEl.addEventListener("timeupdate", function () {
+      if (rafId != null) return;
       updatePlayhead();
       if (onTimeUpdate) onTimeUpdate(videoEl.currentTime);
     });
-    videoEl.addEventListener("loadedmetadata", updateTimeDisplay);
-    videoEl.addEventListener("play", updatePlayPauseButton);
-    videoEl.addEventListener("pause", updatePlayPauseButton);
-    videoEl.addEventListener("ended", updatePlayPauseButton);
+    videoEl.addEventListener("loadedmetadata", function () {
+      lastDisplayedSecond = -1;
+      updateTimeDisplay();
+    });
+    videoEl.addEventListener("play", function () {
+      updatePlayPauseButton();
+      startRaf();
+    });
+    videoEl.addEventListener("pause", function () {
+      updatePlayPauseButton();
+      stopRaf();
+      updatePlayhead();
+    });
+    videoEl.addEventListener("ended", function () {
+      updatePlayPauseButton();
+      stopRaf();
+      updatePlayhead();
+    });
   }
 
   function play() {

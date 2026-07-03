@@ -3,6 +3,9 @@
 
   var state = {
     frame: { width: 1920, height: 1080 },
+    framePreset: "original",
+    videoSource: { width: 1920, height: 1080, name: "", duration: 0 },
+    videoTransform: { x: 0, y: 0, width: 1, height: 1, rotation: 0, opacity: 1 },
     video: { name: "", duration: 0 },
     layers: [],
     selectedId: null,
@@ -42,6 +45,7 @@
     listeners.forEach(function (fn) {
       fn(state);
     });
+    updateMetaDisplay();
     refreshUI();
   }
 
@@ -50,33 +54,71 @@
   }
 
   function getSelectedLayer() {
+    if (state.selectedId === "__video__") {
+      return Object.assign({ id: "__video__" }, state.videoTransform);
+    }
     if (!state.selectedId) return null;
-    return state.layers.find(function (l) {
-      return l.id === state.selectedId;
-    }) || null;
+    return (
+      state.layers.find(function (l) {
+        return l.id === state.selectedId;
+      }) || null
+    );
+  }
+
+  function syncVideoLayerSelection() {
+    var videoLayerEl = $("editorVideoLayer");
+    if (videoLayerEl) {
+      videoLayerEl.classList.toggle(
+        "editor-video-layer--selected",
+        state.selectedId === "__video__"
+      );
+    }
   }
 
   function selectLayer(id, opts) {
     state.selectedId = id;
+    syncVideoLayerSelection();
     if (opts && opts.silent) {
       window.EditorLayers.updateSelection(id);
       renderProperties();
       var layer = getSelectedLayer();
       if (layer) window.EditorTransform.syncTransformBox(layer);
+      else window.EditorTransform.syncTransformBox(null);
       return;
     }
     notify();
     var layer = getSelectedLayer();
     if (layer) window.EditorTransform.syncTransformBox(layer);
+    else window.EditorTransform.syncTransformBox(null);
   }
 
   function deselectAll() {
     state.selectedId = null;
+    syncVideoLayerSelection();
     notify();
     window.EditorTransform.syncTransformBox(null);
   }
 
+  function updateVideoTransform(changes, opts) {
+    var merged = window.EditorFrame.clampVideoTransform(
+      Object.assign({}, state.videoTransform, changes)
+    );
+    state.videoTransform = merged;
+    window.EditorFrame.applyVideoTransform(merged);
+    if (opts && opts.live) {
+      if (state.selectedId === "__video__") {
+        window.EditorTransform.syncTransformBox(getSelectedLayer());
+      }
+      return;
+    }
+    notify();
+  }
+
   function updateLayer(id, changes, opts) {
+    if (id === "__video__") {
+      updateVideoTransform(changes, opts);
+      return;
+    }
     var idx = state.layers.findIndex(function (l) {
       return l.id === id;
     });
@@ -149,6 +191,58 @@
     updateLayer(b.id, { zIndex: tmp });
   }
 
+  function reorderLayers(orderedIds) {
+    var n = orderedIds.length;
+    orderedIds.forEach(function (id, i) {
+      var layer = state.layers.find(function (l) {
+        return l.id === id;
+      });
+      if (layer) layer.zIndex = n - i;
+    });
+    notify();
+  }
+
+  function setFramePreset(preset) {
+    state.framePreset = preset;
+    if (preset !== "custom") {
+      var presetKey = preset === "original" ? "original" : preset;
+      var size = window.EditorFrame.frameSizeForPreset(
+        presetKey,
+        state.videoSource.width,
+        state.videoSource.height
+      );
+      state.frame.width = size.width;
+      state.frame.height = size.height;
+      window.EditorFrame.setDimensions(size.width, size.height);
+    }
+    notify();
+  }
+
+  function setFrameDimensions(width, height) {
+    state.framePreset = "custom";
+    state.frame.width = Math.max(1, Math.round(width));
+    state.frame.height = Math.max(1, Math.round(height));
+    window.EditorFrame.setDimensions(state.frame.width, state.frame.height);
+    notify();
+  }
+
+  function updateMetaDisplay() {
+    var meta = $("editorVideoMeta");
+    if (!meta || meta.hidden) return;
+    meta.textContent =
+      state.video.name +
+      " — frame " +
+      state.frame.width +
+      "×" +
+      state.frame.height +
+      " (src " +
+      state.videoSource.width +
+      "×" +
+      state.videoSource.height +
+      ") — " +
+      window.EditorTimeline.formatTime(state.video.duration);
+  }
+
   function isLayerVisibleOnFrame(layer) {
     return window.EditorCaptions.isLayerTimedVisible(layer, state.currentTime);
   }
@@ -176,9 +270,9 @@
     return state.currentTime;
   }
 
-  function setCurrentTime(t) {
+  function setCurrentTime(t, opts) {
     state.currentTime = t;
-    if (videoEl) videoEl.currentTime = t;
+    if (videoEl && (!opts || !opts.silent)) videoEl.currentTime = t;
     window.EditorLayers.updateVisibilityForTime(t);
   }
 
@@ -188,8 +282,27 @@
   }
 
   function onFrameResize() {
+    window.EditorFrame.fitFrameToPreview();
     var layer = getSelectedLayer();
     if (layer) window.EditorTransform.syncTransformBox(layer);
+    window.EditorFrame.applyVideoTransform(state.videoTransform);
+  }
+
+  function isDrawToolActive() {
+    return window.EditorDraw && window.EditorDraw.isToolActive();
+  }
+
+  function updateDrawToolButtons() {
+    var tool = window.EditorDraw ? window.EditorDraw.getTool() : null;
+    var brushBtn = $("editorBrushTool");
+    var selectBtn = $("editorSelectTool");
+    if (brushBtn) {
+      brushBtn.classList.toggle("btn--primary", tool === "brush");
+      brushBtn.classList.toggle("btn--secondary", tool !== "brush");
+    }
+    if (selectBtn) {
+      selectBtn.classList.toggle("btn--primary", !tool);
+    }
   }
 
   function showToast(msg) {
@@ -205,16 +318,58 @@
   function exportJSON() {
     var payload = {
       frame: Object.assign({}, state.frame),
+      framePreset: state.framePreset,
+      videoSource: Object.assign({}, state.videoSource),
+      videoTransform: Object.assign({}, state.videoTransform),
       video: {
         name: state.video.name,
         duration: state.video.duration,
       },
       layers: state.layers.map(function (l) {
-        var copy = Object.assign({}, l);
-        return copy;
+        return Object.assign({}, l);
       }),
     };
     return JSON.stringify(payload, null, 2);
+  }
+
+  function renderFrameProperties() {
+    return (
+      '<div class="editor-properties__section">' +
+      '<h4 class="editor-properties__heading">Frame bound</h4>' +
+      '<div class="form-field"><label for="propFramePreset">Tỷ lệ</label>' +
+      '<select id="propFramePreset">' +
+      '<option value="original"' +
+      (state.framePreset === "original" ? " selected" : "") +
+      ">Gốc video</option>" +
+      '<option value="16:9"' +
+      (state.framePreset === "16:9" ? " selected" : "") +
+      ">16:9</option>" +
+      '<option value="9:16"' +
+      (state.framePreset === "9:16" ? " selected" : "") +
+      ">9:16</option>" +
+      '<option value="1:1"' +
+      (state.framePreset === "1:1" ? " selected" : "") +
+      ">1:1</option>" +
+      '<option value="4:3"' +
+      (state.framePreset === "4:3" ? " selected" : "") +
+      ">4:3</option>" +
+      '<option value="custom"' +
+      (state.framePreset === "custom" ? " selected" : "") +
+      ">Tùy chỉnh</option>" +
+      "</select></div>" +
+      '<div class="editor-properties__offset-grid">' +
+      '<div class="form-field"><label for="propFrameWidth">Rộng (px)</label>' +
+      '<input type="number" id="propFrameWidth" min="1" step="1" value="' +
+      state.frame.width +
+      '" /></div>' +
+      '<div class="form-field"><label for="propFrameHeight">Cao (px)</label>' +
+      '<input type="number" id="propFrameHeight" min="1" step="1" value="' +
+      state.frame.height +
+      '" /></div>' +
+      "</div>" +
+      '<p class="field-hint">Preview giữ đúng tỷ lệ frame. Đổi W×H → preset tự chuyển sang Tùy chỉnh.</p>' +
+      "</div>"
+    );
   }
 
   function renderTimingFields(layer) {
@@ -266,13 +421,49 @@
   function renderProperties() {
     var panel = $("editorProperties");
     if (!panel) return;
-    var layer = getSelectedLayer();
-    if (!layer) {
-      panel.innerHTML = '<p class="editor-panel__empty">Chọn một layer để chỉnh sửa.</p>';
+
+    if (!state.selectedId) {
+      panel.innerHTML =
+        renderFrameProperties() +
+        '<p class="editor-panel__empty">Chọn một layer hoặc Video gốc để chỉnh sửa.</p>';
+      bindFramePropertyInputs();
       return;
     }
 
-    var html = '<div class="form-field"><label>Loại</label><input type="text" value="' + layer.kind + '" disabled /></div>';
+    if (state.selectedId === "__video__") {
+      var vt = state.videoTransform;
+      panel.innerHTML =
+        renderFrameProperties() +
+        '<div class="editor-properties__section">' +
+        '<h4 class="editor-properties__heading">Video gốc</h4>' +
+        renderOffsetFields(vt) +
+        '<div class="form-field"><label for="propOpacity">Opacity</label>' +
+        '<input type="number" id="propOpacity" min="0" max="1" step="0.05" value="' +
+        (vt.opacity != null ? vt.opacity : 1) +
+        '" /></div>' +
+        '<div class="form-field"><label for="propRotation">Rotation (°)</label>' +
+        '<input type="number" id="propRotation" step="1" value="' +
+        Math.round(vt.rotation || 0) +
+        '" /></div>' +
+        '<p class="field-hint">Video có thể kéo ra ngoài frame (overflow). Phần ngoài bị cắt — FFmpeg export dùng <code>crop</code> theo <code>frame</code> + <code>videoTransform</code>.</p></div>';
+      bindFramePropertyInputs();
+      bindPropertyInputs("__video__");
+      return;
+    }
+
+    var layer = getSelectedLayer();
+    if (!layer) {
+      panel.innerHTML =
+        renderFrameProperties() +
+        '<p class="editor-panel__empty">Chọn một layer để chỉnh sửa.</p>';
+      bindFramePropertyInputs();
+      return;
+    }
+
+    var html =
+      '<div class="form-field"><label>Loại</label><input type="text" value="' +
+      layer.kind +
+      '" disabled /></div>';
 
     if (layer.kind === "text") {
       var placeholder = window.EditorLayers.TEXT_PLACEHOLDER;
@@ -309,6 +500,43 @@
         renderOffsetFields(layer);
     }
 
+    if (layer.kind === "shape") {
+      html +=
+        '<div class="form-field"><label for="propShape">Hình</label>' +
+        '<input type="text" id="propShape" value="' +
+        escapeAttr(layer.shape || "rect") +
+        '" disabled /></div>' +
+        '<div class="form-field"><label for="propStroke">Màu viền</label>' +
+        '<input type="color" id="propStroke" value="' +
+        (layer.stroke || "#ffffff") +
+        '" /></div>' +
+        '<div class="form-field form-field--checkbox">' +
+        '<label><input type="checkbox" id="propFillOn"' +
+        (layer.fill && layer.fill !== "transparent" ? " checked" : "") +
+        ' /> Tô nền</label></div>' +
+        '<div class="form-field"><label for="propFill">Màu nền</label>' +
+        '<input type="color" id="propFill" value="' +
+        (layer.fill && layer.fill !== "transparent" ? layer.fill : "#6366f1") +
+        '"' +
+        (layer.fill && layer.fill !== "transparent" ? "" : " disabled") +
+        ' /></div>' +
+        '<div class="form-field"><label for="propStrokeWidth">Độ dày nét</label>' +
+        '<input type="number" id="propStrokeWidth" min="1" max="40" value="' +
+        (layer.strokeWidth || 4) +
+        '" /></div>' +
+        renderTimingFields(layer) +
+        renderOffsetFields(layer);
+    }
+
+    if (layer.kind === "draw") {
+      html +=
+        '<p class="field-hint">Vẽ vector — ' +
+        (layer.paths ? layer.paths.length : 0) +
+        " nét</p>" +
+        renderTimingFields(layer) +
+        renderOffsetFields(layer);
+    }
+
     html +=
       '<div class="form-field"><label for="propOpacity">Opacity</label>' +
       '<input type="number" id="propOpacity" min="0" max="1" step="0.05" value="' + (layer.opacity != null ? layer.opacity : 1) + '" /></div>' +
@@ -321,6 +549,35 @@
 
   function escapeAttr(s) {
     return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  }
+
+  function bindFramePropertyInputs() {
+    var preset = $("propFramePreset");
+    var frameWidth = $("propFrameWidth");
+    var frameHeight = $("propFrameHeight");
+
+    if (preset) {
+      preset.addEventListener("change", function () {
+        setFramePreset(preset.value);
+      });
+    }
+    function applyCustomDimensions() {
+      var w = parseInt(frameWidth && frameWidth.value, 10);
+      var h = parseInt(frameHeight && frameHeight.value, 10);
+      if (isFinite(w) && isFinite(h)) setFrameDimensions(w, h);
+    }
+    if (frameWidth) {
+      frameWidth.addEventListener("change", applyCustomDimensions);
+      frameWidth.addEventListener("input", function () {
+        if (preset) preset.value = "custom";
+      });
+    }
+    if (frameHeight) {
+      frameHeight.addEventListener("change", applyCustomDimensions);
+      frameHeight.addEventListener("input", function () {
+        if (preset) preset.value = "custom";
+      });
+    }
   }
 
   function bindPropertyInputs(layerId) {
@@ -340,6 +597,10 @@
     var propHeight = $("propHeight");
     var opacity = $("propOpacity");
     var rotation = $("propRotation");
+    var propStroke = $("propStroke");
+    var propFill = $("propFill");
+    var propFillOn = $("propFillOn");
+    var propStrokeWidth = $("propStrokeWidth");
 
     if (text) {
       text.addEventListener("input", function () {
@@ -429,6 +690,33 @@
     bindOffsetInput(propY, "y", true);
     bindOffsetInput(propWidth, "width", true);
     bindOffsetInput(propHeight, "height", true);
+    if (propStroke) {
+      propStroke.addEventListener("input", function () {
+        updateLayer(layerId, { stroke: propStroke.value }, { live: true });
+      });
+    }
+    if (propFill) {
+      propFill.addEventListener("input", function () {
+        updateLayer(layerId, { fill: propFill.value }, { live: true });
+      });
+    }
+    if (propFillOn) {
+      propFillOn.addEventListener("change", function () {
+        if (propFillOn.checked && propFill) {
+          propFill.disabled = false;
+          updateLayer(layerId, { fill: propFill.value }, { live: true });
+        } else {
+          if (propFill) propFill.disabled = true;
+          updateLayer(layerId, { fill: "transparent" }, { live: true });
+        }
+      });
+    }
+    if (propStrokeWidth) {
+      propStrokeWidth.addEventListener("input", function () {
+        var v = parseInt(propStrokeWidth.value, 10);
+        if (isFinite(v)) updateLayer(layerId, { strokeWidth: v }, { live: true });
+      });
+    }
     if (opacity) {
       opacity.addEventListener("input", function () {
         var v = parseFloat(opacity.value);
@@ -450,22 +738,34 @@
     state.video.name = file.name;
 
     videoEl.onloadedmetadata = function () {
+      var vw = videoEl.videoWidth || 1920;
+      var vh = videoEl.videoHeight || 1080;
       state.video.duration = videoEl.duration;
-      state.frame.width = videoEl.videoWidth || 1920;
-      state.frame.height = videoEl.videoHeight || 1080;
+      state.video.name = file.name;
+      state.videoSource = {
+        width: vw,
+        height: vh,
+        name: file.name,
+        duration: videoEl.duration,
+      };
+      state.framePreset = "original";
+      state.frame.width = vw;
+      state.frame.height = vh;
+      state.videoTransform = {
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1,
+        rotation: 0,
+        opacity: 1,
+      };
       window.EditorFrame.setDimensions(state.frame.width, state.frame.height);
+      window.EditorFrame.applyVideoTransform(state.videoTransform);
 
       var meta = $("editorVideoMeta");
       if (meta) {
         meta.hidden = false;
-        meta.textContent =
-          file.name +
-          " — " +
-          state.frame.width +
-          "×" +
-          state.frame.height +
-          " — " +
-          window.EditorTimeline.formatTime(state.video.duration);
+        updateMetaDisplay();
       }
 
       $("editorUploadGate").hidden = true;
@@ -488,6 +788,10 @@
       videoUrl = null;
     }
     state.video = { name: "", duration: 0 };
+    state.videoSource = { width: 1920, height: 1080, name: "", duration: 0 };
+    state.videoTransform = { x: 0, y: 0, width: 1, height: 1, rotation: 0, opacity: 1 };
+    state.framePreset = "original";
+    state.frame = { width: 1920, height: 1080 };
     state.layers.forEach(revokeLayerResources);
     state.layers = [];
     state.selectedId = null;
@@ -633,10 +937,94 @@
     $("editorExportClose").addEventListener("click", function () {
       $("editorExportDialog").close();
     });
+
+    var shapesToggle = $("editorShapesToggle");
+    var shapesMenu = $("editorShapesMenu");
+    if (shapesToggle && shapesMenu) {
+      shapesToggle.addEventListener("click", function (e) {
+        e.stopPropagation();
+        shapesMenu.hidden = !shapesMenu.hidden;
+      });
+      shapesMenu.querySelectorAll("[data-shape]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var shape = btn.getAttribute("data-shape");
+          window.EditorDraw.setTool("shape-" + shape);
+          shapesMenu.hidden = true;
+          updateDrawToolButtons();
+        });
+      });
+      document.addEventListener("click", function () {
+        shapesMenu.hidden = true;
+      });
+    }
+
+    var brushBtn = $("editorBrushTool");
+    if (brushBtn) {
+      brushBtn.addEventListener("click", function () {
+        window.EditorDraw.setTool("brush");
+        updateDrawToolButtons();
+      });
+    }
+
+    var selectBtn = $("editorSelectTool");
+    if (selectBtn) {
+      selectBtn.addEventListener("click", function () {
+        window.EditorDraw.setTool(null);
+        updateDrawToolButtons();
+      });
+    }
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && window.EditorDraw) {
+        window.EditorDraw.setTool(null);
+        updateDrawToolButtons();
+      }
+    });
+
+    var drawStroke = $("editorDrawStroke");
+    var drawFill = $("editorDrawFill");
+    var drawFillOn = $("editorDrawFillOn");
+    if (drawStroke) {
+      drawStroke.addEventListener("input", function () {
+        window.EditorDraw.setDrawStroke(drawStroke.value);
+      });
+    }
+    if (drawFill) {
+      drawFill.addEventListener("input", function () {
+        window.EditorDraw.setShapeFill(
+          drawFill.value,
+          drawFillOn ? drawFillOn.checked : true
+        );
+      });
+    }
+    if (drawFillOn) {
+      drawFillOn.addEventListener("change", function () {
+        if (drawFill) {
+          window.EditorDraw.setShapeFill(
+            drawFill.value,
+            drawFillOn.checked
+          );
+        }
+        if (drawFill) drawFill.disabled = !drawFillOn.checked;
+      });
+      if (drawFill) drawFill.disabled = !drawFillOn.checked;
+    }
   }
 
   function initModules() {
-    window.EditorFrame.init($("editorFrame"));
+    window.EditorFrame.init($("editorFrame"), {
+      videoLayerEl: $("editorVideoLayer"),
+    });
+
+    window.EditorDraw.init({
+      frameEl: $("editorFrame"),
+      previewSvg: $("editorDrawPreview"),
+      getState: getState,
+      addLayer: addLayer,
+      getCurrentTime: getCurrentTime,
+      getDuration: getDuration,
+      onToolChange: updateDrawToolButtons,
+    });
 
     window.EditorTransform.init({
       frameEl: $("editorFrame"),
@@ -645,7 +1033,21 @@
       updateLayer: updateLayer,
       onSelect: selectLayer,
       onDeselect: deselectAll,
+      isDrawToolActive: isDrawToolActive,
     });
+
+    var videoLayerEl = $("editorVideoLayer");
+    if (videoLayerEl) {
+      videoLayerEl.addEventListener("pointerdown", function (e) {
+        if (isDrawToolActive()) {
+          if (window.EditorDraw && window.EditorDraw.onFramePointerDown) {
+            window.EditorDraw.onFramePointerDown(e);
+          }
+          return;
+        }
+        window.EditorTransform.onLayerPointerDown(e, "__video__");
+      });
+    }
 
     window.EditorLayers.init({
       overlayEl: $("editorOverlay"),
@@ -656,6 +1058,7 @@
       updateLayer: updateLayer,
       deleteLayer: deleteLayer,
       moveLayerZ: moveLayerZ,
+      reorderLayers: reorderLayers,
       isLayerVisibleOnFrame: isLayerVisibleOnFrame,
       getCurrentTime: getCurrentTime,
       isMainVideoPlaying: isMainVideoPlaying,
