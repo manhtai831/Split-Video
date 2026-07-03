@@ -42,8 +42,7 @@
 
   function defaultTiming(currentTime, duration) {
     var start = currentTime || 0;
-    var end = Math.min(start + 5, duration || 10);
-    return { start: start, end: end, alwaysVisible: false };
+    return { start: start, end: start + 5, alwaysVisible: false };
   }
 
   function isBoundLayer(layer) {

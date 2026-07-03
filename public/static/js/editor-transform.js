@@ -8,6 +8,7 @@
   var onSelect = null;
   var onDeselect = null;
   var isDrawToolActive = null;
+  var onInteractionEnd = null;
 
   var mode = null;
   var handle = null;
@@ -30,8 +31,11 @@
   }
 
   function finishInteraction() {
-    if (interactionMoved && typeof window.EditorApp !== "undefined") {
-      window.EditorApp.refreshUI();
+    if (interactionMoved) {
+      if (onInteractionEnd) onInteractionEnd();
+      if (typeof window.EditorApp !== "undefined") {
+        window.EditorApp.refreshUI();
+      }
     }
     interactionMoved = false;
     mode = null;
@@ -310,6 +314,7 @@
     onSelect = opts.onSelect;
     onDeselect = opts.onDeselect;
     isDrawToolActive = opts.isDrawToolActive;
+    onInteractionEnd = opts.onInteractionEnd || null;
 
     if (transformBox) {
       transformBox.addEventListener("pointerdown", onPointerDown);

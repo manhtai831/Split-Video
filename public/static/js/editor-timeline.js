@@ -14,6 +14,7 @@
   var dragging = false;
   var rafId = null;
   var lastDisplayedSecond = -1;
+  var lastDisplayedDuration = -1;
   var isPlaying = false;
   var lastTickTime = 0;
 
@@ -49,9 +50,21 @@
     var cur = t != null ? t : getCurrentTime ? getCurrentTime() : 0;
     var dur = getDuration ? getDuration() : 0;
     var sec = Math.floor(cur);
-    if (sec === lastDisplayedSecond && t == null) return;
+    if (
+      sec === lastDisplayedSecond &&
+      dur === lastDisplayedDuration &&
+      t == null
+    ) {
+      return;
+    }
     lastDisplayedSecond = sec;
+    lastDisplayedDuration = dur;
     timeDisplayEl.textContent = formatTime(cur) + " / " + formatTime(dur);
+  }
+
+  function refreshDuration() {
+    lastDisplayedDuration = -1;
+    updatePlayhead();
   }
 
   function updatePlayhead() {
@@ -189,6 +202,7 @@
     init: init,
     updatePlayhead: updatePlayhead,
     updateTimeDisplay: updateTimeDisplay,
+    refreshDuration: refreshDuration,
     play: play,
     pause: pause,
     togglePlayPause: togglePlayPause,

@@ -128,16 +128,17 @@
     if (dragging.mode === "start") {
       start = clamp(dragging.startStart + dx, 0, end - minLen);
     } else if (dragging.mode === "end") {
-      end = clamp(dragging.startEnd + dx, start + minLen, dur);
+      end = Math.max(start + minLen, dragging.startEnd + dx);
     } else {
       var len = end - start;
-      start = clamp(dragging.startStart + dx, 0, dur - len);
+      start = clamp(dragging.startStart + dx, 0, Math.max(dur, end) - len);
       end = start + len;
     }
 
+    var effectiveDur = Math.max(dur, end);
     var seg = e.currentTarget;
-    seg.style.left = window.EditorTimeline.timeToPct(start) + "%";
-    seg.style.width = window.EditorTimeline.timeToPct(end - start) + "%";
+    seg.style.left = (start / effectiveDur) * 100 + "%";
+    seg.style.width = ((end - start) / effectiveDur) * 100 + "%";
     dragging.pendingStart = start;
     dragging.pendingEnd = end;
   }

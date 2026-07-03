@@ -58,9 +58,15 @@
 
     <div class="editor-main">
       <aside class="editor-panel editor-panel--layers">
-        <h3 class="editor-panel__title">Layers</h3>
-        <ul id="editorLayersList" class="editor-layers-list" role="list"></ul>
-        <p id="editorLayersEmpty" class="editor-panel__empty">Thêm ảnh, video, text hoặc kéo thả vào khung.</p>
+        <div class="editor-panel__layers-section">
+          <h3 class="editor-panel__title">Layers</h3>
+          <ul id="editorLayersList" class="editor-layers-list" role="list"></ul>
+          <p id="editorLayersEmpty" class="editor-panel__empty">Thêm ảnh, video, text hoặc kéo thả vào khung.</p>
+        </div>
+        <div class="editor-panel__history-section">
+          <h3 class="editor-panel__title editor-panel__title--history">History</h3>
+          <ol id="editorHistoryList" class="editor-history-list"></ol>
+        </div>
       </aside>
 
       <div class="editor-preview-wrap">
@@ -122,6 +128,7 @@
 <script src="{{asset "js/editor-layers.js"}}"></script>
 <script src="{{asset "js/editor-captions.js"}}"></script>
 <script src="{{asset "js/editor-timeline.js"}}"></script>
+<script src="{{asset "js/editor-history.js"}}"></script>
 <script src="{{asset "js/editor-mock.js"}}"></script>
 <script>
   document.addEventListener("DOMContentLoaded", function () {

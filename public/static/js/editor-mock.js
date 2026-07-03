@@ -13,6 +13,10 @@
   };
 
   var listeners = [];
+  var isRestoringHistory = false;
+  var liveHistoryTimer = null;
+  var pendingLiveLabel = null;
+  var trackedBlobUrls = [];
 
   function $(id) {
     return document.getElementById(id);
@@ -31,6 +35,115 @@
     );
   }
 
+  function isTypingInField() {
+    var active = document.activeElement;
+    if (!active) return false;
+    var tag = active.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
+      return true;
+    }
+    return active.isContentEditable;
+  }
+
+  function shouldIgnoreShortcut(e) {
+    if (isTypingInField()) return true;
+    if (e.target && e.target.closest && e.target.closest("dialog")) return true;
+    return false;
+  }
+
+  function formatLayerLabel(layer) {
+    if (!layer) return "layer";
+    if (layer.kind === "bound") return "Frame bound";
+    if (layer.kind === "text") {
+      if (window.EditorLayers.isPlaceholderText(layer.text)) return "Text";
+      var text = String(layer.text || "");
+      return text.length > 24 ? text.slice(0, 24) + "…" : text;
+    }
+    if (layer.kind === "image") return "Ảnh";
+    if (layer.kind === "video") return "Video";
+    if (layer.kind === "shape") return "Shape";
+    if (layer.kind === "draw") return "Vẽ";
+    if (layer.kind === "blur") return "Blur";
+    return layer.kind;
+  }
+
+  function formatAddLayerLabel(layer) {
+    if (!layer) return "layer";
+    var labels = {
+      text: "text",
+      image: "ảnh",
+      video: "video",
+      shape: "shape",
+      draw: "vẽ",
+      blur: "blur",
+    };
+    return labels[layer.kind] || layer.kind;
+  }
+
+  function trackBlobUrl(url) {
+    if (!url || trackedBlobUrls.indexOf(url) >= 0) return;
+    trackedBlobUrls.push(url);
+  }
+
+  function syncRetainedResources() {
+    var retained = {};
+    if (window.EditorHistory) {
+      var urls = window.EditorHistory.getRetainedBlobUrls();
+      Object.keys(urls).forEach(function (u) {
+        retained[u] = true;
+      });
+    }
+    state.layers.forEach(function (l) {
+      if (l.src) retained[l.src] = true;
+    });
+    trackedBlobUrls.forEach(function (url) {
+      if (!retained[url]) {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (err) {
+          /* ignore */
+        }
+      }
+    });
+    trackedBlobUrls = Object.keys(retained);
+  }
+
+  function recordHistory(label) {
+    if (isRestoringHistory || !window.EditorHistory) return;
+    window.EditorHistory.record(label);
+    syncRetainedResources();
+  }
+
+  function recordHistoryDebounced(label) {
+    if (isRestoringHistory) return;
+    pendingLiveLabel = label;
+    if (liveHistoryTimer) clearTimeout(liveHistoryTimer);
+    liveHistoryTimer = setTimeout(function () {
+      liveHistoryTimer = null;
+      recordHistory(pendingLiveLabel || label);
+      pendingLiveLabel = null;
+    }, 400);
+  }
+
+  function applyHistoryState(snapshot) {
+    isRestoringHistory = true;
+    state.frame = Object.assign({}, snapshot.frame);
+    state.framePreset = snapshot.framePreset;
+    state.layers = JSON.parse(JSON.stringify(snapshot.layers));
+    state.selectedId = snapshot.selectedId;
+    window.EditorFrame.setDimensions(state.frame.width, state.frame.height);
+    isRestoringHistory = false;
+    notify();
+    var layer = getSelectedLayer();
+    if (layer && !window.EditorLayers.isBoundLayer(layer)) {
+      window.EditorTransform.syncTransformBox(layer);
+      syncToolbarDrawFromLayer(layer);
+    } else {
+      window.EditorTransform.syncTransformBox(null);
+    }
+    syncRetainedResources();
+  }
+
   function refreshUI() {
     window.EditorLayers.render();
     window.EditorCaptions.renderCaptionTracks();
@@ -40,11 +153,17 @@
   }
 
   function notify() {
+    var dur = getDuration();
+    if (state.currentTime > dur) {
+      state.currentTime = dur;
+      window.EditorLayers.updateVisibilityForTime(dur);
+    }
     listeners.forEach(function (fn) {
       fn(state);
     });
     updateMetaDisplay();
     refreshUI();
+    window.EditorTimeline.refreshDuration();
   }
 
   function getState() {
@@ -122,9 +241,17 @@
           window.EditorTransform.syncTransformBox(merged);
         }
       }
+      if (!opts.skipHistory) {
+        recordHistoryDebounced("Sửa " + formatLayerLabel(merged));
+      }
       return;
     }
-    notify();
+    if (!opts || !opts.skipNotify) {
+      notify();
+    }
+    if (!opts || !opts.skipHistory) {
+      recordHistory("Sửa " + formatLayerLabel(merged));
+    }
   }
 
   function deleteLayer(id) {
@@ -132,16 +259,18 @@
     var layer = state.layers.find(function (l) {
       return l.id === id;
     });
-    revokeLayerResources(layer);
+    var label = layer ? "Xóa " + formatLayerLabel(layer) : "Xóa layer";
     state.layers = state.layers.filter(function (l) {
       return l.id !== id;
     });
     if (state.selectedId === id) state.selectedId = null;
     notify();
+    recordHistory(label);
   }
 
   function addVideoLayerFromFile(file, durationHint) {
     var url = URL.createObjectURL(file);
+    trackBlobUrl(url);
     var vid = document.createElement("video");
     vid.preload = "metadata";
     vid.src = url;
@@ -167,6 +296,10 @@
   }
 
   function addLayer(layer) {
+    return addLayerWithOpts(layer, null);
+  }
+
+  function addLayerWithOpts(layer, opts) {
     var maxZ = 0;
     state.layers.forEach(function (l) {
       if (window.EditorLayers.isBoundLayer(l)) return;
@@ -177,7 +310,33 @@
     state.layers.push(layer);
     state.selectedId = layer.id;
     notify();
+    if (!opts || !opts.skipHistory) {
+      var histLabel =
+        opts && opts.historyLabel
+          ? opts.historyLabel
+          : "Thêm " + formatAddLayerLabel(layer);
+      recordHistory(histLabel);
+    }
     return layer;
+  }
+
+  function duplicateLayer(id) {
+    id = id != null ? id : state.selectedId;
+    if (!id || id === window.EditorLayers.BOUND_LAYER_ID) return null;
+    var source = state.layers.find(function (l) {
+      return l.id === id;
+    });
+    if (!source || window.EditorLayers.isBoundLayer(source)) return null;
+
+    var copy = JSON.parse(JSON.stringify(source));
+    copy.id = window.EditorLayers.nextId();
+    copy.x = Math.min(copy.x + 0.02, 1 - copy.width);
+    copy.y = Math.min(copy.y + 0.02, 1 - copy.height);
+    if (copy.src) trackBlobUrl(copy.src);
+
+    return addLayerWithOpts(copy, {
+      historyLabel: "Nhân bản " + formatLayerLabel(source),
+    });
   }
 
   function moveLayerZ(id, delta) {
@@ -194,8 +353,10 @@
     var a = sorted[idx];
     var b = sorted[swapIdx];
     var tmp = a.zIndex;
-    updateLayer(a.id, { zIndex: b.zIndex });
-    updateLayer(b.id, { zIndex: tmp });
+    updateLayer(a.id, { zIndex: b.zIndex }, { skipHistory: true, skipNotify: true });
+    updateLayer(b.id, { zIndex: tmp }, { skipHistory: true, skipNotify: true });
+    notify();
+    recordHistory("Đổi thứ tự layer");
   }
 
   function reorderLayers(orderedIds) {
@@ -214,6 +375,7 @@
     });
     if (bound) bound.zIndex = 0;
     notify();
+    recordHistory("Sắp xếp layers");
   }
 
   function setFramePreset(preset) {
@@ -229,6 +391,7 @@
       window.EditorFrame.setDimensions(size.width, size.height);
     }
     notify();
+    recordHistory("Đổi frame " + preset);
   }
 
   function setFrameDimensions(width, height) {
@@ -237,6 +400,9 @@
     state.frame.height = Math.max(1, Math.round(height));
     window.EditorFrame.setDimensions(state.frame.width, state.frame.height);
     notify();
+    recordHistory(
+      "Đổi frame " + state.frame.width + "×" + state.frame.height
+    );
   }
 
   function updateMetaDisplay() {
@@ -267,12 +433,12 @@
   }
 
   function getDuration() {
-    var maxEnd = DEFAULT_PROJECT_DURATION;
+    var maxEnd = 0;
     state.layers.forEach(function (l) {
       if (l.alwaysVisible) return;
       if (l.end != null && l.end > maxEnd) maxEnd = l.end;
     });
-    return maxEnd;
+    return maxEnd > 0 ? maxEnd : DEFAULT_PROJECT_DURATION;
   }
 
   function getCurrentTime() {
@@ -924,6 +1090,7 @@
       },
       onImage: function (file) {
         var url = URL.createObjectURL(file);
+        trackBlobUrl(url);
         var t = state.currentTime;
         addLayer(
           window.EditorLayers.defaultImageLayer(url, t, getDuration())
@@ -954,6 +1121,7 @@
         addVideoLayerFromFile(file);
       } else if (file.type.indexOf("image/") === 0) {
         var url = URL.createObjectURL(file);
+        trackBlobUrl(url);
         var t = state.currentTime;
         addLayer(
           window.EditorLayers.defaultImageLayer(url, t, getDuration())
@@ -1030,6 +1198,45 @@
       if (e.key === "Escape" && window.EditorDraw) {
         window.EditorDraw.setTool(null);
         updateDrawToolButtons();
+        return;
+      }
+
+      var mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key === "z" && !e.shiftKey) {
+        if (shouldIgnoreShortcut(e)) return;
+        if (window.EditorHistory && window.EditorHistory.canUndo()) {
+          e.preventDefault();
+          window.EditorHistory.undo();
+        }
+        return;
+      }
+      if (mod && e.key === "z" && e.shiftKey) {
+        if (shouldIgnoreShortcut(e)) return;
+        if (window.EditorHistory && window.EditorHistory.canRedo()) {
+          e.preventDefault();
+          window.EditorHistory.redo();
+        }
+        return;
+      }
+      if (mod && (e.key === "d" || e.key === "D")) {
+        if (shouldIgnoreShortcut(e)) return;
+        var dupLayer = getSelectedLayer();
+        if (dupLayer && !window.EditorLayers.isBoundLayer(dupLayer)) {
+          e.preventDefault();
+          duplicateLayer(dupLayer.id);
+        }
+        return;
+      }
+
+      if (
+        (e.key === "Delete" || e.key === "Backspace") &&
+        !shouldIgnoreShortcut(e)
+      ) {
+        var layer = getSelectedLayer();
+        if (layer && !window.EditorLayers.isBoundLayer(layer)) {
+          e.preventDefault();
+          deleteLayer(layer.id);
+        }
       }
     });
 
@@ -1075,6 +1282,18 @@
     }
   }
 
+  function onTransformEnd() {
+    if (liveHistoryTimer) {
+      clearTimeout(liveHistoryTimer);
+      liveHistoryTimer = null;
+      pendingLiveLabel = null;
+    }
+    var layer = getSelectedLayer();
+    recordHistory(
+      layer ? "Di chuyển " + formatLayerLabel(layer) : "Di chuyển layer"
+    );
+  }
+
   function initModules() {
     window.EditorFrame.init($("editorFrame"));
 
@@ -1097,6 +1316,7 @@
       onSelect: selectLayer,
       onDeselect: deselectAll,
       isDrawToolActive: isDrawToolActive,
+      onInteractionEnd: onTransformEnd,
     });
 
     window.EditorLayers.init({
@@ -1143,6 +1363,24 @@
     state.layers = [window.EditorLayers.defaultBoundLayer()];
     state.selectedId = window.EditorLayers.BOUND_LAYER_ID;
     initModules();
+
+    if (window.EditorHistory) {
+      window.EditorHistory.init({
+        getState: function () {
+          return {
+            frame: state.frame,
+            framePreset: state.framePreset,
+            layers: state.layers,
+            selectedId: state.selectedId,
+          };
+        },
+        applyState: applyHistoryState,
+        listEl: $("editorHistoryList"),
+        maxEntries: 50,
+        onEntriesChanged: syncRetainedResources,
+      });
+    }
+
     bindDragDrop();
     bindToolbar();
     window.EditorFrame.setDimensions(state.frame.width, state.frame.height);
@@ -1150,8 +1388,15 @@
     window.EditorTimeline.updatePlayhead();
     onFrameResize();
     notify();
+    recordHistory("Bắt đầu");
     window.addEventListener("beforeunload", function () {
-      state.layers.forEach(revokeLayerResources);
+      trackedBlobUrls.forEach(function (url) {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (err) {
+          /* ignore */
+        }
+      });
     });
   }
 

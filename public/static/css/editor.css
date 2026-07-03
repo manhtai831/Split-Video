@@ -375,6 +375,66 @@ body.editor-active .main {
   min-height: 0;
 }
 
+.editor-panel--layers {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.editor-panel__layers-section {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+}
+
+.editor-panel__history-section {
+  flex-shrink: 0;
+  border-top: 1px solid #334155;
+  padding: 12px;
+  max-height: 180px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.editor-panel__title--history {
+  margin-top: 0;
+}
+
+.editor-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.editor-history-item {
+  padding: 6px 8px;
+  font-size: 12px;
+  color: #94a3b8;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.editor-history-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+}
+
+.editor-history-item--current {
+  background: rgba(99, 102, 241, 0.2);
+  color: #c7d2fe;
+  font-weight: 500;
+}
+
 .editor-panel--properties {
   border-right: none;
   border-left: 1px solid #334155;

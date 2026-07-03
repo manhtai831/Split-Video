@@ -68,10 +68,9 @@
 
   function defaultTiming() {
     var t = getCurrentTime ? getCurrentTime() : 0;
-    var d = getDuration ? getDuration() : 10;
     return {
       start: t,
-      end: Math.min(t + 5, d),
+      end: t + 5,
       alwaysVisible: false,
     };
   }
