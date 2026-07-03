@@ -2,6 +2,7 @@ package router
 
 import (
 	apijobs "app/router/api/jobs"
+	"app/router/editor"
 	"app/router/extractaudio"
 	"app/router/job"
 	"app/router/gif"
@@ -26,6 +27,7 @@ func Bootstrap() {
 	merge.Bootstrap()
 	gif.Bootstrap()
 	extractaudio.Bootstrap()
+	editor.Bootstrap()
 
 	http.HandleFunc("/", handleHome)
 }
