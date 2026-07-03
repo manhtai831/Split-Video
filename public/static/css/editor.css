@@ -309,6 +309,13 @@ body.editor-active .main {
   overflow: visible;
 }
 
+.editor-draw-preview--blur {
+  box-sizing: border-box;
+  border: 1px dashed rgba(148, 163, 184, 0.65);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
 .editor-layer--shape svg,
 .editor-layer--draw svg,
 .editor-layer__svg {
@@ -322,6 +329,11 @@ body.editor-active .main {
 .editor-layer--draw {
   background: transparent;
   overflow: visible;
+}
+
+.editor-layer--blur {
+  background: transparent;
+  overflow: hidden;
 }
 
 .editor-layer--bound {
@@ -877,6 +889,11 @@ body.editor-active .main {
   border-color: #ec4899;
 }
 
+.editor-caption-segment--blur {
+  background: rgba(56, 189, 248, 0.3);
+  border-color: #38bdf8;
+}
+
 .editor-caption-segment--selected.editor-caption-segment--text {
   background: rgba(99, 102, 241, 0.55);
 }
@@ -895,6 +912,10 @@ body.editor-active .main {
 
 .editor-caption-segment--selected.editor-caption-segment--draw {
   background: rgba(236, 72, 153, 0.5);
+}
+
+.editor-caption-segment--selected.editor-caption-segment--blur {
+  background: rgba(56, 189, 248, 0.5);
 }
 
 .editor-caption-segment__thumb {

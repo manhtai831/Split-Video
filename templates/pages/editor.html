@@ -24,6 +24,7 @@
           <div class="editor-menu__dropdown" hidden>
             <button type="button" id="editorInsertFile" class="editor-menu__item">File</button>
             <button type="button" id="editorAddText" class="editor-menu__item">Text</button>
+            <button type="button" id="editorInsertBlur" class="editor-menu__item" data-tool="blur">Blur</button>
             <div class="editor-menu__submenu-wrap">
               <button type="button" class="editor-menu__item editor-menu__item--submenu" aria-haspopup="true">
                 Shape
@@ -66,6 +67,7 @@
         <div id="editorFrame" class="editor-frame editor-drop-zone" title="Kéo thả ảnh hoặc video vào khung canvas">
           <div id="editorOverlay" class="editor-frame__overlay"></div>
           <svg id="editorDrawPreview" class="editor-draw-preview" hidden></svg>
+          <div id="editorBlurPreview" class="editor-draw-preview editor-draw-preview--blur" hidden></div>
           <div id="editorTransformBox" class="editor-transform-box" hidden>
             <div class="editor-transform-box__body" data-handle="drag" title="Kéo để di chuyển"></div>
             <div class="editor-transform-box__edge" data-handle="n" title="Kéo cạnh trên"></div>

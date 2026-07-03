@@ -139,6 +139,7 @@
     if (layer.kind === "video") return "Video";
     if (layer.kind === "shape") return "Shape (" + (layer.shape || "rect") + ")";
     if (layer.kind === "draw") return "Drawing";
+    if (layer.kind === "blur") return "Blur";
     return layer.kind;
   }
 
@@ -212,6 +213,8 @@
       applyTextLayerStyles(el, layer);
     } else if (layer.kind === "shape" || layer.kind === "draw") {
       patchShapeDrawDOM(el, layer);
+    } else if (layer.kind === "blur") {
+      patchBlurDOM(el, layer);
     }
   }
 
@@ -224,6 +227,13 @@
       w: Math.max(1, (layer.width || 0.1) * frameRect.width),
       h: Math.max(1, (layer.height || 0.1) * frameRect.height),
     };
+  }
+
+  function patchBlurDOM(el, layer) {
+    var amount = layer.blurAmount != null ? layer.blurAmount : 12;
+    var blur = "blur(" + amount + "px)";
+    el.style.backdropFilter = blur;
+    el.style.webkitBackdropFilter = blur;
   }
 
   function patchShapeDrawDOM(el, layer) {
@@ -296,6 +306,8 @@
       el.appendChild(vid);
     } else if (layer.kind === "shape" || layer.kind === "draw") {
       patchShapeDrawDOM(el, layer);
+    } else if (layer.kind === "blur") {
+      patchBlurDOM(el, layer);
     }
 
     applyLayerFrameVisibility(

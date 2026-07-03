@@ -314,8 +314,11 @@
 
     document.querySelectorAll(".editor-menu__item[data-shape], .editor-menu__item[data-tool]").forEach(function (btn) {
       var active = false;
-      if (btn.getAttribute("data-tool") === "brush") {
+      var dataTool = btn.getAttribute("data-tool");
+      if (dataTool === "brush") {
         active = tool === "brush";
+      } else if (dataTool === "blur") {
+        active = tool === "blur";
       } else {
         var shape = btn.getAttribute("data-shape");
         active = shape && tool === "shape-" + shape;
@@ -649,6 +652,16 @@
         renderOffsetFields(layer);
     }
 
+    if (layer.kind === "blur") {
+      html +=
+        '<div class="form-field"><label for="propBlurAmount">Độ mờ (px)</label>' +
+        '<input type="number" id="propBlurAmount" min="1" max="80" value="' +
+        (layer.blurAmount != null ? layer.blurAmount : 12) +
+        '" /></div>' +
+        renderTimingFields(layer) +
+        renderOffsetFields(layer);
+    }
+
     html +=
       '<div class="form-field"><label for="propOpacity">Opacity</label>' +
       '<input type="number" id="propOpacity" min="0" max="1" step="0.05" value="' +
@@ -720,6 +733,7 @@
     var propFill = $("propFill");
     var propFillOn = $("propFillOn");
     var propStrokeWidth = $("propStrokeWidth");
+    var propBlurAmount = $("propBlurAmount");
 
     if (text) {
       text.addEventListener("input", function () {
@@ -838,6 +852,13 @@
           window.EditorDraw.setDrawStrokeWidth(v);
         }
         applyShapeStyleFromProperties(layerId, { strokeWidth: v });
+      });
+    }
+    if (propBlurAmount) {
+      bindLiveInput(propBlurAmount, function () {
+        var v = parseInt(propBlurAmount.value, 10);
+        if (!isFinite(v) || v < 1) return;
+        updateLayer(layerId, { blurAmount: v }, { live: true });
       });
     }
     if (opacity) {
@@ -988,6 +1009,15 @@
       });
     }
 
+    var blurBtn = $("editorInsertBlur");
+    if (blurBtn) {
+      blurBtn.addEventListener("click", function () {
+        window.EditorDraw.setTool("blur");
+        closeEditorMenus();
+        updateDrawToolButtons();
+      });
+    }
+
     var selectBtn = $("editorSelectTool");
     if (selectBtn) {
       selectBtn.addEventListener("click", function () {
@@ -1051,6 +1081,7 @@
     window.EditorDraw.init({
       frameEl: $("editorFrame"),
       previewSvg: $("editorDrawPreview"),
+      blurPreviewEl: $("editorBlurPreview"),
       getState: getState,
       addLayer: addLayer,
       getCurrentTime: getCurrentTime,

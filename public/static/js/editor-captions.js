@@ -34,6 +34,7 @@
     if (layer.kind === "video") return "Video";
     if (layer.kind === "shape") return "Shape";
     if (layer.kind === "draw") return "Draw";
+    if (layer.kind === "blur") return "Blur";
     return layer.kind;
   }
 

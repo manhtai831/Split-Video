@@ -3,6 +3,7 @@
 
   var frameEl = null;
   var previewSvg = null;
+  var blurPreviewEl = null;
   var getState = null;
   var addLayer = null;
   var getCurrentTime = null;
@@ -15,6 +16,7 @@
   var drawStrokeWidth = 6;
   var shapeFill = "transparent";
   var shapeFillHasColor = false;
+  var blurAmount = 12;
 
   var shapeDrag = null;
   var brushStroke = null;
@@ -46,9 +48,15 @@
   }
 
   function clearPreview() {
-    if (!previewSvg) return;
-    previewSvg.innerHTML = "";
-    previewSvg.hidden = true;
+    if (previewSvg) {
+      previewSvg.innerHTML = "";
+      previewSvg.hidden = true;
+    }
+    if (blurPreviewEl) {
+      blurPreviewEl.hidden = true;
+      blurPreviewEl.style.backdropFilter = "";
+      blurPreviewEl.style.webkitBackdropFilter = "";
+    }
   }
 
   function showPreview() {
@@ -85,6 +93,25 @@
         stroke: drawStroke,
         fill: shapeFillHasColor ? shapeFill : "transparent",
         strokeWidth: drawStrokeWidth,
+      },
+      defaultTiming()
+    );
+  }
+
+  function defaultBlurLayer(x, y, w, h) {
+    return Object.assign(
+      {
+        id: window.EditorLayers.nextId(),
+        kind: "blur",
+        x: x,
+        y: y,
+        width: w,
+        height: h,
+        rotation: 0,
+        opacity: 1,
+        zIndex: 1,
+        visible: true,
+        blurAmount: blurAmount,
       },
       defaultTiming()
     );
@@ -383,6 +410,22 @@
       .join("");
   }
 
+  function renderBlurPreview(x1, y1, x2, y2) {
+    if (!blurPreviewEl) return;
+    var x = Math.min(x1, x2);
+    var y = Math.min(y1, y2);
+    var w = Math.max(0.02, Math.abs(x2 - x1));
+    var h = Math.max(0.02, Math.abs(y2 - y1));
+    blurPreviewEl.style.left = x * 100 + "%";
+    blurPreviewEl.style.top = y * 100 + "%";
+    blurPreviewEl.style.width = w * 100 + "%";
+    blurPreviewEl.style.height = h * 100 + "%";
+    var blur = "blur(" + blurAmount + "px)";
+    blurPreviewEl.style.backdropFilter = blur;
+    blurPreviewEl.style.webkitBackdropFilter = blur;
+    blurPreviewEl.hidden = false;
+  }
+
   function renderShapePreview(shape, x1, y1, x2, y2) {
     var x = Math.min(x1, x2);
     var y = Math.min(y1, y2);
@@ -495,6 +538,20 @@
     if (addLayer) addLayer(layer);
   }
 
+  function commitBlur(x1, y1, x2, y2) {
+    var x = Math.min(x1, x2);
+    var y = Math.min(y1, y2);
+    var w = Math.max(0.02, Math.abs(x2 - x1));
+    var h = Math.max(0.02, Math.abs(y2 - y1));
+    var layer = defaultBlurLayer(x, y, w, h);
+    layer = window.EditorFrame.clampLayer(layer);
+    if (addLayer) addLayer(layer);
+  }
+
+  function exitInsertTool() {
+    setTool(null);
+  }
+
   function setTool(tool) {
     activeTool = tool;
     clearPreview();
@@ -523,8 +580,24 @@
       frameEl.addEventListener("pointercancel", onBrushUp);
       return;
     }
+    if (activeTool === "blur") {
+      shapeDrag = {
+        kind: "blur",
+        x1: p.x,
+        y1: p.y,
+        x2: p.x,
+        y2: p.y,
+      };
+      renderBlurPreview(shapeDrag.x1, shapeDrag.y1, shapeDrag.x2, shapeDrag.y2);
+      frameEl.setPointerCapture(e.pointerId);
+      frameEl.addEventListener("pointermove", onShapeMove);
+      frameEl.addEventListener("pointerup", onShapeUp);
+      frameEl.addEventListener("pointercancel", onShapeUp);
+      return;
+    }
     if (activeTool.indexOf("shape-") === 0) {
       shapeDrag = {
+        kind: "shape",
         shape: activeTool.replace("shape-", ""),
         x1: p.x,
         y1: p.y,
@@ -544,6 +617,10 @@
     var p = normFromEvent(e);
     shapeDrag.x2 = p.x;
     shapeDrag.y2 = p.y;
+    if (shapeDrag.kind === "blur") {
+      renderBlurPreview(shapeDrag.x1, shapeDrag.y1, shapeDrag.x2, shapeDrag.y2);
+      return;
+    }
     renderShapePreview(shapeDrag.shape, shapeDrag.x1, shapeDrag.y1, shapeDrag.x2, shapeDrag.y2);
   }
 
@@ -553,9 +630,14 @@
     frameEl.removeEventListener("pointermove", onShapeMove);
     frameEl.removeEventListener("pointerup", onShapeUp);
     frameEl.removeEventListener("pointercancel", onShapeUp);
-    commitShape(shapeDrag.shape, shapeDrag.x1, shapeDrag.y1, shapeDrag.x2, shapeDrag.y2);
+    if (shapeDrag.kind === "blur") {
+      commitBlur(shapeDrag.x1, shapeDrag.y1, shapeDrag.x2, shapeDrag.y2);
+    } else {
+      commitShape(shapeDrag.shape, shapeDrag.x1, shapeDrag.y1, shapeDrag.x2, shapeDrag.y2);
+    }
     shapeDrag = null;
     clearPreview();
+    exitInsertTool();
   }
 
   function onBrushMove(e) {
@@ -579,6 +661,7 @@
   function init(opts) {
     frameEl = opts.frameEl;
     previewSvg = opts.previewSvg;
+    blurPreviewEl = opts.blurPreviewEl;
     getState = opts.getState;
     addLayer = opts.addLayer;
     getCurrentTime = opts.getCurrentTime;
@@ -618,6 +701,13 @@
     },
     getShapeFill: function () {
       return shapeFillHasColor ? shapeFill : "transparent";
+    },
+    setBlurAmount: function (amount) {
+      var v = parseInt(amount, 10);
+      if (isFinite(v) && v >= 1) blurAmount = v;
+    },
+    getBlurAmount: function () {
+      return blurAmount;
     },
   };
 })();
