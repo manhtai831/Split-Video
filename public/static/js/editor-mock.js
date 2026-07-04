@@ -141,9 +141,21 @@
     var bound = state.layers.find(function (l) {
       return window.EditorLayers.isBoundLayer(l);
     });
+    if (!bound) {
+      bound = window.EditorLayers.defaultBoundLayer();
+    }
     var hydrated = (serverLayers || []).map(function (layer) {
       var copy = Object.assign({}, layer);
-      if (copy.fileId) {
+      if (copy.fileId != null && copy.fileId !== "") {
+        copy.fileId = Number(copy.fileId);
+        if (!copy.mediaUrl && jobIdentifier) {
+          copy.mediaUrl =
+            "/api/jobs/" +
+            encodeURIComponent(jobIdentifier) +
+            "/files/" +
+            copy.fileId +
+            "/download";
+        }
         copy.mediaState = "idle";
         delete copy.src;
         if (copy.clientKey) {
@@ -153,8 +165,23 @@
       }
       return copy;
     });
-    state.layers = bound ? [bound].concat(hydrated) : hydrated;
+    state.layers = [bound].concat(hydrated);
+    if (window.EditorLayers.syncIdCounterFromLayers) {
+      window.EditorLayers.syncIdCounterFromLayers(state.layers);
+    }
     syncRetainedResources();
+  }
+
+  function ensureBoundLayerSelected() {
+    var bound = state.layers.find(function (l) {
+      return window.EditorLayers.isBoundLayer(l);
+    });
+    if (!bound) {
+      state.layers.unshift(window.EditorLayers.defaultBoundLayer());
+    }
+    if (!state.selectedId || !getSelectedLayer()) {
+      state.selectedId = window.EditorLayers.BOUND_LAYER_ID;
+    }
   }
 
   function syncJobFromResponse(resp) {
@@ -164,6 +191,7 @@
     state.frame = resp.frame || state.frame;
     state.framePreset = resp.framePreset || state.framePreset;
     applyServerLayers(resp.layers);
+    state.selectedId = window.EditorLayers.BOUND_LAYER_ID;
     isDirty = false;
     suppressDirty = false;
     updateJobStatusDisplay();
@@ -172,6 +200,7 @@
       window.EditorShell.syncJobQuery(resp.identifier);
     }
     notify();
+    window.EditorLayers.updateVisibilityForTime(state.currentTime);
   }
 
   function updateJobStatusDisplay() {
@@ -286,6 +315,9 @@
     state.layers = [window.EditorLayers.defaultBoundLayer()];
     state.selectedId = window.EditorLayers.BOUND_LAYER_ID;
     state.currentTime = 0;
+    if (window.EditorLayers.resetIdCounter) {
+      window.EditorLayers.resetIdCounter();
+    }
     if (window.EditorHistory && window.EditorHistory.reset) {
       window.EditorHistory.reset();
     }
@@ -354,6 +386,7 @@
     window.EditorFrame.setDimensions(state.frame.width, state.frame.height);
     isRestoringHistory = false;
     notify();
+    window.EditorLayers.updateVisibilityForTime(state.currentTime);
     var layer = getSelectedLayer();
     if (layer && !window.EditorLayers.isBoundLayer(layer)) {
       window.EditorTransform.syncTransformBox(layer);
@@ -940,16 +973,10 @@
     var panel = $("editorProperties");
     if (!panel) return;
 
-    if (!state.selectedId) {
-      selectBoundLayer();
-      return;
-    }
+    ensureBoundLayerSelected();
 
     var layer = getSelectedLayer();
-    if (!layer) {
-      selectBoundLayer();
-      return;
-    }
+    if (!layer) return;
 
     if (window.EditorLayers.isBoundLayer(layer)) {
       panel.innerHTML =

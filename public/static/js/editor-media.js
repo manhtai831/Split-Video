@@ -26,14 +26,28 @@
 
   function isLayerActiveAtTime(layer, t) {
     if (!isMediaLayer(layer) || !layer.fileId) return false;
+    if (layer.alwaysVisible) return true;
     var range = layerTimeRange(layer);
     return t >= range.start && t < range.end;
   }
 
   function isLayerNearTime(layer, t, margin) {
     if (!isMediaLayer(layer) || !layer.fileId) return false;
+    if (layer.alwaysVisible) return true;
     var range = layerTimeRange(layer);
     return t >= range.start - margin && t < range.end + margin;
+  }
+
+  function shouldLoadMediaAtTime(layer, t) {
+    if (!isMediaLayer(layer) || !layer.fileId) return false;
+    if (layer.alwaysVisible) return true;
+    return isLayerActiveAtTime(layer, t) || isLayerNearTime(layer, t, PREFETCH_SEC);
+  }
+
+  function shouldReleaseMediaAtTime(layer, t) {
+    if (!isMediaLayer(layer) || !layer.fileId) return false;
+    if (layer.alwaysVisible) return false;
+    return !isLayerNearTime(layer, t, RELEASE_SEC);
   }
 
   function mediaSrc(layer) {
@@ -112,15 +126,19 @@
     state.layers.forEach(function (layer) {
       if (!isMediaLayer(layer) || !layer.fileId) return;
 
-      if (isLayerActiveAtTime(layer, t) || isLayerNearTime(layer, t, PREFETCH_SEC)) {
+      if (shouldLoadMediaAtTime(layer, t)) {
         ensureLayerMedia(layer);
         return;
       }
 
-      if (!isLayerNearTime(layer, t, RELEASE_SEC)) {
+      if (shouldReleaseMediaAtTime(layer, t)) {
         releaseLayerMedia(layer);
       }
     });
+  }
+
+  function syncAtTime(t) {
+    onTimeUpdate(t != null ? t : getCurrentTime ? getCurrentTime() : 0);
   }
 
   window.EditorMedia = {
@@ -128,5 +146,7 @@
     ensureLayerMedia: ensureLayerMedia,
     releaseLayerMedia: releaseLayerMedia,
     onTimeUpdate: onTimeUpdate,
+    syncAtTime: syncAtTime,
+    shouldLoadMediaAtTime: shouldLoadMediaAtTime,
   };
 })();

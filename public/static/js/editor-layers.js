@@ -40,6 +40,22 @@
     return "layer-" + layerIdCounter;
   }
 
+  function syncIdCounterFromLayers(layers) {
+    var max = layerIdCounter;
+    (layers || []).forEach(function (layer) {
+      if (!layer || typeof layer.id !== "string") return;
+      var match = /^layer-(\d+)$/.exec(layer.id);
+      if (!match) return;
+      var n = parseInt(match[1], 10);
+      if (n > max) max = n;
+    });
+    layerIdCounter = max;
+  }
+
+  function resetIdCounter() {
+    layerIdCounter = 0;
+  }
+
   function defaultTiming(currentTime, duration) {
     var start = currentTime || 0;
     return { start: start, end: start + 5, alwaysVisible: false };
@@ -142,28 +158,58 @@
     return layer.kind;
   }
 
+  function layerMediaSrc(layer) {
+    return layer.src || layer.mediaUrl || "";
+  }
+
+  function shouldRenderMediaElement(layer) {
+    if (!layer.fileId) return true;
+    return !!layerMediaSrc(layer) || layer.mediaState === "ready";
+  }
+
+  function syncImageLayerMedia(el, layer, visible) {
+    if (!visible) return;
+    if (layer.fileId && layer.mediaState !== "ready" && window.EditorMedia) {
+      window.EditorMedia.ensureLayerMedia(layer);
+    }
+    var img = el.querySelector("img");
+    var src = layerMediaSrc(layer);
+    if (!img || !src) return;
+    if (img.getAttribute("src") !== src) {
+      img.src = src;
+    }
+  }
+
   function syncVideoLayerPlayback(el, layer, visible, currentTime) {
+    if (!visible) {
+      var hiddenVid = el.querySelector("video");
+      if (hiddenVid) hiddenVid.pause();
+      return;
+    }
+    if (layer.fileId && layer.mediaState !== "ready" && window.EditorMedia) {
+      window.EditorMedia.ensureLayerMedia(layer);
+    }
     var vid = el.querySelector("video");
     if (!vid) return;
-    if (!visible) {
-      vid.pause();
-      return;
-    }
-    if (layer.fileId && layer.mediaState !== "ready") {
-      if (window.EditorMedia) {
-        window.EditorMedia.ensureLayerMedia(layer);
-      }
-      vid.pause();
-      return;
+    var src = layerMediaSrc(layer);
+    if (src && vid.getAttribute("src") !== src) {
+      vid.src = src;
     }
     var offset = Math.max(0, currentTime - (layer.start || 0));
-    if (Math.abs(vid.currentTime - offset) > 0.15) {
-      vid.currentTime = offset;
+    function applyTime() {
+      if (Math.abs(vid.currentTime - offset) > 0.15) {
+        vid.currentTime = offset;
+      }
+      if (isTimelinePlaying && isTimelinePlaying()) {
+        if (vid.paused) vid.play().catch(function () {});
+      } else {
+        vid.pause();
+      }
     }
-    if (isTimelinePlaying && isTimelinePlaying()) {
-      if (vid.paused) vid.play().catch(function () {});
+    if (vid.readyState >= 1) {
+      applyTime();
     } else {
-      vid.pause();
+      vid.addEventListener("loadedmetadata", applyTime, { once: true });
     }
   }
 
@@ -178,10 +224,51 @@
     el.hidden = !visible;
     el.classList.toggle("editor-layer--frame-hidden", !visible);
     el.setAttribute("aria-hidden", visible ? "false" : "true");
-    if (layer.kind === "video") {
+    if (layer.kind === "image") {
+      syncImageLayerMedia(el, layer, visible);
+    } else if (layer.kind === "video") {
       syncVideoLayerPlayback(el, layer, visible, currentTime);
     }
     return visible;
+  }
+
+  function patchLayerMediaDOM(el, layer) {
+    if (layer.kind !== "image" && layer.kind !== "video") return;
+    var src = layerMediaSrc(layer);
+    if (!src) return;
+
+    var placeholder = el.querySelector(".editor-layer__media-placeholder");
+    if (placeholder) {
+      placeholder.remove();
+    }
+
+    if (layer.kind === "image") {
+      var img = el.querySelector("img");
+      if (!img) {
+        img = document.createElement("img");
+        img.alt = "";
+        img.draggable = false;
+        el.appendChild(img);
+      }
+      if (img.getAttribute("src") !== src) {
+        img.src = src;
+      }
+      return;
+    }
+
+    var vid = el.querySelector("video");
+    if (!vid) {
+      vid = document.createElement("video");
+      vid.muted = layer.muted !== false;
+      vid.playsInline = true;
+      vid.loop = !!layer.loop;
+      vid.preload = layer.fileId ? "metadata" : "auto";
+      vid.draggable = false;
+      el.appendChild(vid);
+    }
+    if (vid.getAttribute("src") !== src) {
+      vid.src = src;
+    }
   }
 
   function applyTextLayerStyles(el, layer) {
@@ -217,6 +304,8 @@
     el.style.opacity = layer.opacity != null ? layer.opacity : 1;
     if (layer.kind === "text") {
       applyTextLayerStyles(el, layer);
+    } else if (layer.kind === "image" || layer.kind === "video") {
+      patchLayerMediaDOM(el, layer);
     } else if (layer.kind === "shape" || layer.kind === "draw") {
       patchShapeDrawDOM(el, layer);
     } else if (layer.kind === "blur") {
@@ -297,31 +386,31 @@
     } else if (layer.kind === "text") {
       applyTextLayerStyles(el, layer);
     } else if (layer.kind === "image") {
-      if (layer.fileId && layer.mediaState !== "ready" && !layer.src) {
+      if (!shouldRenderMediaElement(layer)) {
         var imgPh = document.createElement("div");
         imgPh.className = "editor-layer__media-placeholder";
         imgPh.textContent = layer.mediaState === "loading" ? "Đang tải…" : "Ảnh";
         el.appendChild(imgPh);
       } else {
         var img = document.createElement("img");
-        img.src = layer.src || layer.mediaUrl || "";
+        img.src = layerMediaSrc(layer);
         img.alt = "";
         img.draggable = false;
         el.appendChild(img);
       }
     } else if (layer.kind === "video") {
-      if (layer.fileId && layer.mediaState !== "ready" && !layer.src) {
+      if (!shouldRenderMediaElement(layer)) {
         var vidPh = document.createElement("div");
         vidPh.className = "editor-layer__media-placeholder";
         vidPh.textContent = layer.mediaState === "loading" ? "Đang tải…" : "Video";
         el.appendChild(vidPh);
       } else {
         var vid = document.createElement("video");
-        vid.src = layer.src || layer.mediaUrl || "";
+        vid.src = layerMediaSrc(layer);
         vid.muted = layer.muted !== false;
         vid.playsInline = true;
         vid.loop = !!layer.loop;
-        vid.preload = layer.fileId ? "none" : "auto";
+        vid.preload = layer.fileId ? "metadata" : "auto";
         vid.draggable = false;
         el.appendChild(vid);
       }
@@ -676,6 +765,8 @@
     BOUND_LAYER_ID: BOUND_LAYER_ID,
     repatchShapeLayers: repatchShapeLayers,
     nextId: nextId,
+    syncIdCounterFromLayers: syncIdCounterFromLayers,
+    resetIdCounter: resetIdCounter,
     TEXT_PLACEHOLDER: TEXT_PLACEHOLDER,
     isPlaceholderText: isPlaceholderText,
   };
