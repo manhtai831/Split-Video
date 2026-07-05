@@ -326,7 +326,11 @@
 
   function patchBlurDOM(el, layer) {
     var amount = layer.blurAmount != null ? layer.blurAmount : 12;
-    var blur = "blur(" + amount + "px)";
+    var displayPx =
+      window.EditorFrame && window.EditorFrame.blurAmountToDisplayPx
+        ? window.EditorFrame.blurAmountToDisplayPx(amount)
+        : amount;
+    var blur = "blur(" + displayPx + "px)";
     el.style.backdropFilter = blur;
     el.style.webkitBackdropFilter = blur;
   }
@@ -354,6 +358,15 @@
       if (layer.kind !== "shape" && layer.kind !== "draw") return;
       var el = overlayEl.querySelector('[data-layer-id="' + layer.id + '"]');
       if (el) patchShapeDrawDOM(el, layer);
+    });
+  }
+
+  function repatchBlurLayers() {
+    if (!overlayEl || !getState) return;
+    getState().layers.forEach(function (layer) {
+      if (layer.kind !== "blur") return;
+      var el = overlayEl.querySelector('[data-layer-id="' + layer.id + '"]');
+      if (el) patchBlurDOM(el, layer);
     });
   }
 
@@ -764,6 +777,7 @@
     isBoundLayer: isBoundLayer,
     BOUND_LAYER_ID: BOUND_LAYER_ID,
     repatchShapeLayers: repatchShapeLayers,
+    repatchBlurLayers: repatchBlurLayers,
     nextId: nextId,
     syncIdCounterFromLayers: syncIdCounterFromLayers,
     resetIdCounter: resetIdCounter,

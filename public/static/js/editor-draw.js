@@ -419,7 +419,11 @@
     blurPreviewEl.style.top = y * 100 + "%";
     blurPreviewEl.style.width = w * 100 + "%";
     blurPreviewEl.style.height = h * 100 + "%";
-    var blur = "blur(" + blurAmount + "px)";
+    var displayPx =
+      window.EditorFrame && window.EditorFrame.blurAmountToDisplayPx
+        ? window.EditorFrame.blurAmountToDisplayPx(blurAmount)
+        : blurAmount;
+    var blur = "blur(" + displayPx + "px)";
     blurPreviewEl.style.backdropFilter = blur;
     blurPreviewEl.style.webkitBackdropFilter = blur;
     blurPreviewEl.hidden = false;

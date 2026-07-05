@@ -24,6 +24,8 @@
   var pendingFiles = {};
   var isReadOnly = false;
   var suppressDirty = false;
+  var statusPollTimer = null;
+  var STATUS_POLL_MS = 3000;
 
   function $(id) {
     return document.getElementById(id);
@@ -196,6 +198,7 @@
     suppressDirty = false;
     updateJobStatusDisplay();
     applyReadOnlyUI();
+    syncStatusPolling();
     if (window.EditorShell && window.EditorShell.syncJobQuery) {
       window.EditorShell.syncJobQuery(resp.identifier);
     }
@@ -219,7 +222,9 @@
   }
 
   function applyReadOnlyUI() {
-    isReadOnly = jobStatus === "processing";
+    isReadOnly =
+      jobStatus === "processing" ||
+      jobStatus === "pending";
     var workspace = $("editorWorkspace");
     if (workspace) {
       workspace.classList.toggle("editor-workspace--readonly", isReadOnly);
@@ -234,6 +239,51 @@
     if (revertBtn) {
       revertBtn.disabled = !(jobStatus === "pending" || jobStatus === "processing");
     }
+  }
+
+  function stopStatusPolling() {
+    if (statusPollTimer) {
+      clearInterval(statusPollTimer);
+      statusPollTimer = null;
+    }
+  }
+
+  function syncStatusPolling() {
+    stopStatusPolling();
+    if (!jobIdentifier || !window.EditorAPI) return;
+    if (jobStatus !== "pending" && jobStatus !== "processing") return;
+
+    statusPollTimer = setInterval(function () {
+      if (!jobIdentifier || !window.EditorAPI) {
+        stopStatusPolling();
+        return;
+      }
+      window.EditorAPI.getJob(jobIdentifier)
+        .then(function (resp) {
+          var prevStatus = jobStatus;
+          syncJobFromResponse(resp);
+          if (
+            prevStatus !== "completed" &&
+            resp.status === "completed"
+          ) {
+            showToast("Xuất bản xong — tải file trong Jobs panel");
+            if (window.editorJobsPanelRefresh) {
+              window.editorJobsPanelRefresh();
+            }
+          }
+          if (
+            resp.status === "completed" ||
+            resp.status === "failed" ||
+            resp.status === "draft" ||
+            resp.status === "cancelled"
+          ) {
+            stopStatusPolling();
+          }
+        })
+        .catch(function () {
+          /* silent poll failure */
+        });
+    }, STATUS_POLL_MS);
   }
 
   function loadFromServer(jobDto) {
@@ -304,6 +354,7 @@
   }
 
   function resetProject() {
+    stopStatusPolling();
     suppressDirty = true;
     jobIdentifier = null;
     jobStatus = null;
@@ -324,6 +375,7 @@
     suppressDirty = false;
     updateJobStatusDisplay();
     applyReadOnlyUI();
+    syncStatusPolling();
     window.EditorFrame.setDimensions(state.frame.width, state.frame.height);
     window.EditorTimeline.updateTimeDisplay();
     window.EditorTimeline.updatePlayhead();
@@ -722,6 +774,7 @@
   function onFrameResize() {
     window.EditorFrame.fitFrameToPreview();
     window.EditorLayers.repatchShapeLayers();
+    window.EditorLayers.repatchBlurLayers();
     var layer = getSelectedLayer();
     if (layer && !window.EditorLayers.isBoundLayer(layer)) {
       window.EditorTransform.syncTransformBox(layer);

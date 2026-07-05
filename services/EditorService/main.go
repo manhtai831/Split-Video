@@ -221,6 +221,10 @@ func PublishJob(identifier, userID string) (entities.Job, error) {
 		return entities.Job{}, ErrInvalidStatus
 	}
 
+	if err := JobFileDataService.DeleteOutputFilesByJobId(job.ID); err != nil {
+		return entities.Job{}, err
+	}
+
 	if err := JobService.UpdateJob(job.ID, entities.Job{
 		Status: enums.StatusPending,
 	}); err != nil {

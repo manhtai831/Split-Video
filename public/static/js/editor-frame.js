@@ -319,6 +319,14 @@
     return { width: frameWidth, height: frameHeight };
   }
 
+  function blurAmountToDisplayPx(amount) {
+    if (!amount || amount <= 0) return 0;
+    var rect = getFrameRect();
+    var displayW = rect.width || 0;
+    if (!displayW || !frameWidth) return amount;
+    return amount * (displayW / frameWidth);
+  }
+
   function frameSizeForPreset(preset, sourceW, sourceH) {
     var sw = sourceW || 1920;
     var sh = sourceH || 1080;
@@ -356,6 +364,7 @@
     init: init,
     setDimensions: setDimensions,
     getDimensions: getDimensions,
+    blurAmountToDisplayPx: blurAmountToDisplayPx,
     getFrameRect: getFrameRect,
     normToPx: normToPx,
     pxToNorm: pxToNorm,

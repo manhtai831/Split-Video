@@ -16,6 +16,20 @@ type EditorJobExtrasDto struct {
 	FramePreset string                   `json:"framePreset"`
 	Duration    float64                  `json:"duration"`
 	Layers      []map[string]interface{} `json:"layers"`
+	Encode      FfmpegEncodeOptionsDto   `json:"encode,omitempty"`
+	OutputExt   string                   `json:"output_ext,omitempty"`
+}
+
+func DefaultEditorEncodeOptions() FfmpegEncodeOptionsDto {
+	return FfmpegEncodeOptionsDto{
+		VideoCodec:   "libx264",
+		AudioCodec:   "aac",
+		AudioBitrate: "128k",
+		PixelFormat:  "yuv420p",
+		CRF:          23,
+		Preset:       "medium",
+		FPS:          30,
+	}
 }
 
 func ParseEditorJobExtrasJSON(raw string) (EditorJobExtrasDto, error) {

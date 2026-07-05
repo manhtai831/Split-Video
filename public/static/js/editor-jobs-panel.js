@@ -109,6 +109,26 @@
     });
   }
 
+  function bindEditorCancelAction(container, job) {
+    if (job.status !== "pending" && job.status !== "processing") return;
+    var cancelBtn = container.querySelector(".btn-cancel-job");
+    if (!cancelBtn || !window.EditorAPI) return;
+
+    var newBtn = cancelBtn.cloneNode(true);
+    cancelBtn.parentNode.replaceChild(newBtn, cancelBtn);
+    newBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (!confirm("Bạn có chắc muốn hủy job và quay về draft?")) return;
+      window.EditorAPI.revertDraft(job.identifier)
+        .then(function () {
+          loadJobs();
+        })
+        .catch(function (err) {
+          alert(err.message || "Không thể hủy job.");
+        });
+    });
+  }
+
   function loadJobs() {
     els.skeleton.hidden = false;
     els.tableWrap.hidden = true;
@@ -191,6 +211,7 @@
       "</div></td>";
 
     JobUI.bindRowActions(tr, job);
+    bindEditorCancelAction(tr, job);
     bindEditAction(tr, job);
     return tr;
   }
@@ -227,6 +248,7 @@
       "</div>";
 
     JobUI.bindRowActions(card, job);
+    bindEditorCancelAction(card, job);
     bindEditAction(card, job);
     return card;
   }
