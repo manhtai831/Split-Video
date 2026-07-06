@@ -1,0 +1,19 @@
+{{define "content"}}
+<div class="container">
+  <div class="page-header">
+    <h1>Câu hỏi thường gặp</h1>
+    <p class="page-description--en">{{.DescriptionEN}}</p>
+  </div>
+
+  <section class="faq-list" aria-label="Danh sách câu hỏi">
+    {{range .FAQItems}}
+    <details class="faq-item">
+      <summary class="faq-item__question">{{.Question}}</summary>
+      <p class="faq-item__answer">{{.Answer}}</p>
+    </details>
+    {{end}}
+  </section>
+
+  <p class="seo-content">Chưa tìm thấy câu trả lời? Xem <a href="/about">trang giới thiệu</a> hoặc bắt đầu dùng <a href="/video/split">chia video online</a>.</p>
+</div>
+{{end}}

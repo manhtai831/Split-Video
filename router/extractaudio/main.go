@@ -28,12 +28,14 @@ func handleExtractAudio(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(w, r)
 	data := structs.PageData{
 		Title:         "Tách Âm Thanh Khỏi Video — MP3, M4A, WAV, FLAC, OGG",
-		Description:   "Trích xuất audio từ video MP4, MOV, MKV. Chọn định dạng, bitrate, chỉnh âm lượng, tốc độ phát và metadata. Nhiều video — mỗi file một job.",
+		Description:   "Trích xuất audio từ video MP4, MOV, MKV. Chọn định dạng, bitrate, âm lượng và tốc độ phát. Mỗi video một job riêng.",
 		DescriptionEN: "Extract audio from MP4, MOV, MKV videos. Choose format, bitrate, volume, playback speed and metadata. Multiple videos — one job per file.",
 		ActivePage:    "extract-audio",
 		Result:        "",
 		UserID:        userID,
+		Breadcrumbs:   structs.ToolBreadcrumbs("Tách Âm Thanh", "/video/extract-audio"),
 	}
+	data.Finalize()
 
 	if r.Method == "POST" {
 		handleExtractAudioPost(w, r, userID)

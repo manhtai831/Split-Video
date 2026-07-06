@@ -37,12 +37,14 @@ func handleMerge(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(w, r)
 	data := structs.PageData{
 		Title:         "Ghép Video Online — Nối Nhiều Clip Thành Một",
-		Description:   "Ghép nhiều video thành một file duy nhất. Sắp xếp thứ tự clip, chọn độ phân giải đích và định dạng đầu ra. Hỗ trợ MP4, MKV, MOV.",
+		Description:   "Ghép nhiều video thành một file. Sắp xếp thứ tự clip, chọn độ phân giải và định dạng đầu ra. Hỗ trợ MP4, MKV, MOV.",
 		DescriptionEN: "Merge multiple videos into one file. Reorder clips, choose output resolution and format. Supports MP4, MKV, MOV.",
 		ActivePage:    "merge",
 		Result:        "",
 		UserID:        userID,
+		Breadcrumbs:   structs.ToolBreadcrumbs("Ghép Video Online", "/video/merge"),
 	}
+	data.Finalize()
 
 	if r.Method == "POST" {
 		handleMergePost(w, r, userID)

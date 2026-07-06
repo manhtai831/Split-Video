@@ -28,12 +28,14 @@ func handleGif(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(w, r)
 	data := structs.PageData{
 		Title:         "Tạo GIF từ Video — GIF, WebP, APNG",
-		Description:   "Chuyển đoạn video thành GIF, WebP động hoặc APNG. Chọn thời gian, kích thước, chất lượng và FPS. Hỗ trợ nhiều đoạn từ một video.",
+		Description:   "Chuyển đoạn video thành GIF, WebP động hoặc APNG. Chọn thời gian, kích thước, chất lượng và FPS. Nhiều đoạn từ một video.",
 		DescriptionEN: "Convert video clips to GIF, animated WebP or APNG. Pick time range, size, quality and FPS. Multiple segments from one video.",
 		ActivePage:    "gif",
 		Result:        "",
 		UserID:        userID,
+		Breadcrumbs:   structs.ToolBreadcrumbs("Tạo GIF từ Video", "/video/gif"),
 	}
+	data.Finalize()
 
 	if r.Method == "POST" {
 		handleGifPost(w, r, userID)

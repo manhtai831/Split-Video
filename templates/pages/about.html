@@ -1,0 +1,35 @@
+{{define "content"}}
+<link href="{{asset "css/home.css"}}" rel="stylesheet" />
+<div class="container">
+  <div class="page-header">
+    <h1>Về Video Tools</h1>
+    <p class="page-description--en">{{.DescriptionEN}}</p>
+  </div>
+
+  <section class="seo-content">
+    <h2>Giới thiệu</h2>
+    <p>Video Tools là bộ công cụ xử lý video online miễn phí: chia video, ghép clip, tạo GIF, tách audio và chỉnh sửa video trên trình duyệt. Không cần đăng ký — bạn dùng ngay với định danh ẩn danh qua cookie trình duyệt.</p>
+
+    <h2>Công cụ hỗ trợ</h2>
+    <ul>
+      <li><a href="/video/split">Chia video online</a> — cắt theo dung lượng hoặc thời gian</li>
+      <li><a href="/video/merge">Ghép video online</a> — nối nhiều clip thành một</li>
+      <li><a href="/video/gif">Tạo GIF từ video</a> — GIF, WebP, APNG</li>
+      <li><a href="/video/extract-audio">Tách âm thanh</a> — MP3, M4A, WAV, FLAC, OGG</li>
+      <li><a href="/video/editor">Video Editor</a> — draft, layer, xuất bản</li>
+    </ul>
+
+    <h2>Công nghệ</h2>
+    <p>Video được xử lý bằng FFmpeg trên server tự host. Hệ thống theo dõi job real-time, hỗ trợ retry khi lỗi và tải kết quả qua trình duyệt.</p>
+
+    <h2>Quyền riêng tư &amp; dữ liệu</h2>
+    <p>File video và audio được <strong>tải lên server</strong> để xử lý — không xử lý hoàn toàn trên máy bạn. Sau khi job hoàn thành hoặc thất bại, file input và output được <strong>tự động xóa sau 30 ngày</strong>. Chúng tôi khuyến nghị tải kết quả về sớm.</p>
+    <ul>
+      <li>Không gửi file sang dịch vụ cloud bên thứ ba</li>
+      <li>Chỉ trình duyệt có cookie tương ứng mới truy cập được job của bạn</li>
+      <li>Không chia sẻ file công khai</li>
+    </ul>
+    <p>Chi tiết thêm tại trang <a href="/faq">Câu hỏi thường gặp</a>.</p>
+  </section>
+</div>
+{{end}}

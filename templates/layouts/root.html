@@ -4,12 +4,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#4f46e5" />
   <title>{{.Title}} - Video Tools</title>
-  {{if .Description}}<meta name="description" content="{{.Description}}{{if .DescriptionEN}} | {{.DescriptionEN}}{{end}}" />{{end}}
+  {{if .Description}}<meta name="description" content="{{.Description}}" />{{end}}
+  {{if .NoIndex}}<meta name="robots" content="noindex, nofollow" />{{else}}<meta name="robots" content="index, follow" />{{end}}
+  {{if .CanonicalPath}}<link rel="canonical" href="{{absURL .CanonicalPath}}" />{{end}}
+  <meta property="og:site_name" content="Video Tools" />
+  <meta property="og:title" content="{{.Title}} - Video Tools" />
+  {{if .Description}}<meta property="og:description" content="{{.Description}}" />{{end}}
+  {{if .CanonicalPath}}<meta property="og:url" content="{{absURL .CanonicalPath}}" />{{end}}
+  <meta property="og:type" content="{{.OGType}}" />
+  <meta property="og:locale" content="vi_VN" />
+  {{if .OGImage}}<meta property="og:image" content="{{absURL .OGImage}}" />{{end}}
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="{{.Title}} - Video Tools" />
+  {{if .Description}}<meta name="twitter:description" content="{{.Description}}" />{{end}}
+  {{if .OGImage}}<meta name="twitter:image" content="{{absURL .OGImage}}" />{{end}}
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" id="app-favicon" />
+  <link rel="apple-touch-icon" href="/static/favicon.svg" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link href="{{asset "css/layout.css"}}" rel="stylesheet" />
   <link href="{{asset "css/root.css"}}" rel="stylesheet" />
+  {{template "seo-jsonld" .}}
 </head>
 <body>
   {{template "navbar" .}}
@@ -20,6 +36,7 @@
   </div>
   <div class="sidebar-backdrop" aria-hidden="true"></div>
   {{if .UserID}}<div class="user-id-badge" aria-hidden="true">{{.UserID}}</div>{{end}}
+  {{template "footer" .}}
   <script src="{{asset "js/favicon-alert.js"}}"></script>
   <script src="{{asset "js/layout.js"}}"></script>
 </body>

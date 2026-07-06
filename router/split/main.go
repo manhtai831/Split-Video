@@ -18,19 +18,26 @@ import (
 )
 
 func Bootstrap() {
+	http.HandleFunc("/split", handleLegacySplit)
 	http.HandleFunc("/video/split", handleSplit)
+}
+
+func handleLegacySplit(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/video/split", http.StatusMovedPermanently)
 }
 
 func handleSplit(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(w, r)
 	data := structs.PageData{
 		Title:         "Chia Video Online — Cắt Theo Dung Lượng & Thời Gian",
-		Description:   "Chia nhỏ video lớn theo dung lượng (MB/GB) hoặc thời gian (giây, phút, giờ). Hỗ trợ MP4, MKV, MOV — chọn 4K, 1080P, 720P hoặc giữ nguyên chất lượng gốc. Tải ZIP một lần.",
+		Description:   "Chia video lớn theo dung lượng (MB/GB) hoặc thời gian. Hỗ trợ MP4, MKV, MOV — 4K, 1080P, 720P hoặc giữ chất lượng gốc. Tải ZIP.",
 		DescriptionEN: "Split large videos by file size (MB/GB) or duration (seconds, minutes, hours). Supports MP4, MKV, MOV — choose 4K, 1080P, 720P or keep original quality. One-click ZIP download.",
 		ActivePage:    "split",
 		Result:        "",
 		UserID:        userID,
+		Breadcrumbs:   structs.ToolBreadcrumbs("Chia Video Online", "/video/split"),
 	}
+	data.Finalize()
 
 	if r.Method == "POST" {
 		reader, err := r.MultipartReader()
@@ -111,6 +118,7 @@ func handleSplit(w http.ResponseWriter, r *http.Request) {
 		}
 
 		http.Redirect(w, r, "/video/split", http.StatusSeeOther)
+		return
 	}
 
 	if err := templates.Render(w, "templates/pages/split.html", data); err != nil {

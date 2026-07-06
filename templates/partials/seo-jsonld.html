@@ -1,0 +1,59 @@
+{{define "seo-jsonld"}}
+{{$siteURL := absURL "/"}}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Video Tools",
+  "url": {{json $siteURL}},
+  "applicationCategory": "MultimediaApplication",
+  "operatingSystem": "Web",
+  "inLanguage": "vi",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "VND"
+  }
+}
+</script>
+{{if .Breadcrumbs}}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {{range $i, $crumb := .Breadcrumbs}}
+    {{if $i}},{{end}}
+    {
+      "@type": "ListItem",
+      "position": {{add $i 1}},
+      "name": {{json $crumb.Name}},
+      "item": {{json (absURL $crumb.URL)}}
+    }
+    {{end}}
+  ]
+}
+</script>
+{{end}}
+{{if .FAQItems}}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {{range $i, $item := .FAQItems}}
+    {{if $i}},{{end}}
+    {
+      "@type": "Question",
+      "name": {{json $item.Question}},
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": {{json $item.Answer}}
+      }
+    }
+    {{end}}
+  ]
+}
+</script>
+{{end}}
+{{end}}

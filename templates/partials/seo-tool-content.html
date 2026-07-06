@@ -1,0 +1,61 @@
+{{define "seo-tool-content"}}
+<section class="seo-content" aria-label="Thông tin công cụ">
+{{if eq .ActivePage "split"}}
+  <h2>Chia video online — cắt theo dung lượng và thời gian</h2>
+  <p>Video Tools giúp bạn chia video lớn thành nhiều phần nhỏ ngay trên trình duyệt. Không cần cài phần mềm — chỉ cần tải file lên, chọn cách chia và nhận kết quả dạng ZIP.</p>
+  <h3>Chia theo dung lượng</h3>
+  <p>Phù hợp khi cần upload lên nền tảng có giới hạn dung lượng (ví dụ 100MB, 500MB). Mỗi phần sẽ không vượt quá ngưỡng bạn chọn.</p>
+  <h3>Chia theo thời gian</h3>
+  <p>Cắt video thành các đoạn đều nhau theo giây, phút hoặc giờ — hữu ích cho podcast, khóa học hoặc livestream dài.</p>
+  <h3>Định dạng hỗ trợ</h3>
+  <ul>
+    <li>MP4, MKV, MOV và hầu hết định dạng video phổ biến</li>
+    <li>Chọn độ phân giải đầu ra: 4K, 1080P, 720P hoặc giữ nguyên chất lượng gốc</li>
+    <li>Tải tất cả phần đã chia bằng một file ZIP</li>
+  </ul>
+  <p>Xem thêm: <a href="/video/merge">ghép video online</a>, <a href="/video/gif">tạo GIF từ video</a>, <a href="/faq">câu hỏi thường gặp</a>.</p>
+{{else if eq .ActivePage "merge"}}
+  <h2>Ghép video online — nối nhiều clip thành một</h2>
+  <p>Ghép nhiều video hoặc ảnh tĩnh thành một file duy nhất. Sắp xếp thứ tự clip bằng kéo thả, chọn độ phân giải và định dạng đầu ra phù hợp.</p>
+  <h3>Tính năng chính</h3>
+  <ul>
+    <li>Ghép 2 clip trở lên thành một video liền mạch</li>
+    <li>Hỗ trợ ảnh tĩnh làm slide với thời lượng tùy chỉnh</li>
+    <li>Chọn độ phân giải đích: 4K, 1080P, 720P, v.v.</li>
+    <li>Đầu ra MP4, MKV hoặc MOV</li>
+  </ul>
+  <p>Liên quan: <a href="/video/split">chia video online</a>, <a href="/video/editor">video editor</a>, <a href="/about">về Video Tools</a>.</p>
+{{else if eq .ActivePage "gif"}}
+  <h2>Tạo GIF từ video — GIF, WebP và APNG</h2>
+  <p>Chuyển đoạn video ngắn thành ảnh động để chia sẻ trên mạng xã hội, chat hoặc tài liệu. Chọn khung thời gian, kích thước, FPS và chất lượng trước khi xuất.</p>
+  <h3>So sánh định dạng</h3>
+  <ul>
+    <li><strong>GIF</strong> — tương thích rộng, dễ nhúng mọi nơi</li>
+    <li><strong>WebP động</strong> — dung lượng nhỏ hơn GIF ở cùng chất lượng</li>
+    <li><strong>APNG</strong> — hỗ trợ trong suốt tốt trên trình duyệt hiện đại</li>
+  </ul>
+  <p>Có thể tạo nhiều đoạn từ một video. Xem thêm <a href="/video/split">chia video</a> hoặc <a href="/faq">FAQ</a>.</p>
+{{else if eq .ActivePage "extract-audio"}}
+  <h2>Tách âm thanh khỏi video</h2>
+  <p>Trích xuất track audio từ file video mà không cần phần hình. Hữu ích khi bạn chỉ cần podcast, nhạc nền hoặc bản ghi âm từ clip quay.</p>
+  <h3>Định dạng đầu ra</h3>
+  <ul>
+    <li>MP3 — phổ biến, dung lượng nhỏ</li>
+    <li>M4A, WAV, FLAC, OGG — tùy nhu cầu chất lượng</li>
+    <li>Tùy chỉnh bitrate, âm lượng và tốc độ phát</li>
+  </ul>
+  <p>Mỗi video tạo một job riêng. Tham khảo <a href="/video/merge">ghép video</a> và <a href="/about">chính sách lưu trữ file</a>.</p>
+{{else if eq .ActivePage "editor"}}
+  <h2>Video Editor online — chỉnh sửa trên trình duyệt</h2>
+  <p>Tạo project chỉnh sửa video với layer video, ảnh và text. Lưu draft, mở lại để tiếp tục, rồi xuất bản để render file hoàn chỉnh.</p>
+  <h3>Quy trình làm việc</h3>
+  <ul>
+    <li>Tạo draft mới hoặc mở project đã lưu</li>
+    <li>Thêm layer, chỉnh timeline và transform</li>
+    <li>Xuất bản — hệ thống render nền bằng FFmpeg</li>
+    <li>Tải video đã xuất bản khi job hoàn tất</li>
+  </ul>
+  <p>Kết hợp với <a href="/video/split">chia video</a> và <a href="/video/gif">tạo GIF</a> cho workflow hoàn chỉnh.</p>
+{{end}}
+</section>
+{{end}}
