@@ -163,7 +163,7 @@ body.sidebar-open .hamburger-line:nth-child(3) {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  /* background: var(--card-bg); */
+  background: var(--card-bg);
   padding: 32px 0;
 }
 
@@ -247,7 +247,7 @@ body.sidebar-open .hamburger-line:nth-child(3) {
 
   .main {
     border-right: none;
-    /* background: var(--card-bg); */
+    background: var(--card-bg);
     padding: 0;
   }
 
