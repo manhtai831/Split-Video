@@ -62,7 +62,7 @@
 /* Stats grid — 2×2 on all screen sizes (same as mobile) */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 12px;
 }
 

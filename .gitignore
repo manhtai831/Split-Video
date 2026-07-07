@@ -13,3 +13,5 @@ tmp/
 
 /Dockerfile
 /docker-compose.yml
+
+.gomodcache

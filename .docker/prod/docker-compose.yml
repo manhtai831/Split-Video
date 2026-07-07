@@ -2,6 +2,8 @@ services:
   split_video_service:
     build: .
     restart: always
+    env_file:
+      - .env
     volumes:
       - ./data/database:/app/database
       - ./data/uploads:/app/uploads

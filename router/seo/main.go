@@ -42,6 +42,7 @@ func handleRobots(w http.ResponseWriter, r *http.Request) {
 		"Allow: /video/",
 		"Disallow: /api/",
 		"Disallow: /job/",
+		"Disallow: /admin/",
 		"",
 		"Sitemap: " + sitemapURL,
 		"",

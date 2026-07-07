@@ -1,0 +1,27 @@
+{{define "admin"}}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#4f46e5" />
+  <title>{{.Title}} - Video Tools</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="{{asset "css/root.css"}}" rel="stylesheet" />
+  <link href="{{asset "css/admin-layout.css"}}" rel="stylesheet" />
+</head>
+<body class="admin-body">
+  <header class="admin-header">
+    <div class="admin-header__inner">
+      <h1 class="admin-header__title">{{.Title}}</h1>
+      <span class="admin-header__badge">Admin</span>
+    </div>
+  </header>
+  <div class="admin-shell">
+    <main class="admin-main main">{{template "content" .}}</main>
+  </div>
+</body>
+</html>
+{{end}}

@@ -320,7 +320,7 @@
     }
 
     if (totalPages > 1 || total > limit) {
-      els.pagination.hidden = false;
+      els.pagination.style.display = "flex";
       var start = (page - 1) * limit + 1;
       var end = Math.min(page * limit, total);
       els.range.textContent = "Hiển thị " + start + "–" + end + " / " + total + " jobs";
@@ -329,13 +329,13 @@
       els.pageNext.disabled = page >= totalPages;
       if (onPageChange) onPageChange(page);
     } else {
-      els.pagination.hidden = total === 0;
+      els.pagination.style.display = total === 0 ? "none" : "flex";
       if (total > 0) {
         els.range.textContent = "Hiển thị " + total + " / " + total + " jobs";
         els.pageInfo.textContent = "Trang 1 / 1";
         els.pagePrev.disabled = true;
         els.pageNext.disabled = true;
-        els.pagination.hidden = false;
+        els.pagination.style.display = "flex";
       }
       if (onPageChange) onPageChange(page);
     }

@@ -97,6 +97,21 @@ func ToJobItemDtos(jobs []entities.Job) ([]structs.JobItemDto, error) {
 	return items, nil
 }
 
+func ToAdminJobItemDtos(jobs []entities.Job) ([]structs.AdminJobItemDto, error) {
+	items := make([]structs.AdminJobItemDto, 0, len(jobs))
+	for _, job := range jobs {
+		dto, err := ToJobItemDto(job)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, structs.AdminJobItemDto{
+			JobItemDto: dto,
+			UserID:     job.UserID,
+		})
+	}
+	return items, nil
+}
+
 func buildEncodeSummary(jobType enums.JobType, extrasJSON string) string {
 	if extrasJSON == "" {
 		return ""

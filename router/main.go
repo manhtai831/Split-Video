@@ -4,6 +4,7 @@ import (
 	apijobs "app/router/api/jobs"
 	apieditor "app/router/api/editor"
 	"app/router/about"
+	"app/router/admin"
 	"app/router/editor"
 	"app/router/extractaudio"
 	"app/router/faq"
@@ -36,6 +37,7 @@ func Bootstrap() {
 	editor.Bootstrap()
 	about.Bootstrap()
 	faq.Bootstrap()
+	admin.Bootstrap()
 
 	http.HandleFunc("/", handleHome)
 }

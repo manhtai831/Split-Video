@@ -1,0 +1,168 @@
+{{define "content"}}
+<link href="{{asset "css/home.css"}}" rel="stylesheet" />
+<link href="{{asset "css/jobs-ui.css"}}" rel="stylesheet" />
+
+<div class="container admin-dashboard">
+  <div id="adminErrorBanner" class="home-error-banner" hidden>
+    <span id="adminErrorMessage">Không thể tải dữ liệu.</span>
+    <button type="button" id="adminErrorRetry" class="btn btn--sm">Thử lại</button>
+  </div>
+
+  <section class="home-section" aria-labelledby="jobStatsHeading">
+    <h2 id="jobStatsHeading" class="home-section__title">Tổng quan job</h2>
+    <div id="jobStatsGrid" class="stats-grid">
+      <div class="stat-card stat-card--processing">
+        <span class="stat-card__value" data-stat="processing">—</span>
+        <span class="stat-card__label">Đang xử lý</span>
+      </div>
+      <div class="stat-card stat-card--completed">
+        <span class="stat-card__value" data-stat="completed_today">—</span>
+        <span class="stat-card__label">Hoàn thành hôm nay</span>
+      </div>
+      <div class="stat-card stat-card--failed">
+        <span class="stat-card__value" data-stat="failed">—</span>
+        <span class="stat-card__label">Thất bại (7 ngày)</span>
+      </div>
+      <div class="stat-card stat-card--total">
+        <span class="stat-card__value" data-stat="total">—</span>
+        <span class="stat-card__label">Tổng job</span>
+      </div>
+      <div class="stat-card stat-card--avg stat-card--optional">
+        <span class="stat-card__value" data-stat="avg_encode">—</span>
+        <span class="stat-card__label">TB encode (7 ngày)</span>
+      </div>
+    </div>
+    <div id="jobStatsSkeleton" class="stats-skeleton" hidden>
+      <div class="skeleton-block"></div>
+      <div class="skeleton-block"></div>
+      <div class="skeleton-block"></div>
+      <div class="skeleton-block"></div>
+    </div>
+  </section>
+
+  <section class="home-section" aria-labelledby="storageHeading">
+    <div class="admin-section-header">
+      <h2 id="storageHeading" class="home-section__title">Dung lượng lưu trữ</h2>
+      <div class="admin-section-header__actions">
+        <span id="storageScannedAt" class="admin-section-meta">—</span>
+        <button type="button" id="storageRefreshBtn" class="btn btn--secondary btn--sm">Quét lại</button>
+      </div>
+    </div>
+    <div id="storageStatsGrid" class="stats-grid">
+      <div class="stat-card stat-card--storage-total">
+        <span class="stat-card__value" data-storage="total">—</span>
+        <span class="stat-card__label">Tổng uploads</span>
+      </div>
+      <div class="stat-card stat-card--storage-input">
+        <span class="stat-card__value" data-storage="inputs">—</span>
+        <span class="stat-card__label">Input</span>
+      </div>
+      <div class="stat-card stat-card--storage-output">
+        <span class="stat-card__value" data-storage="output">—</span>
+        <span class="stat-card__label">Output</span>
+      </div>
+      <div class="stat-card stat-card--storage-tmp">
+        <span class="stat-card__value" data-storage="tmp">—</span>
+        <span class="stat-card__label">Tmp</span>
+      </div>
+    </div>
+    <p id="storageDiskInfo" class="admin-section-meta"></p>
+    <div id="storageBreakdown" class="storage-breakdown"></div>
+  </section>
+
+  <section class="home-section" aria-labelledby="historyHeading">
+    <h2 id="historyHeading" class="home-section__title">Tổng hợp job</h2>
+
+    <div class="history-filters">
+      <div class="form-field history-filter-field">
+        <label for="filterPeriod">Thời gian tạo</label>
+        <select id="filterPeriod" name="period">
+          <option value="all">Tất cả</option>
+          <option value="today">Hôm nay</option>
+          <option value="7d" selected>7 ngày</option>
+          <option value="30d">30 ngày</option>
+        </select>
+      </div>
+      <div class="form-field history-filter-field">
+        <label for="filterStatus">Trạng thái</label>
+        <select id="filterStatus" name="status">
+          <option value="">Tất cả</option>
+          <option value="pending">Pending</option>
+          <option value="processing">Processing</option>
+          <option value="completed">Completed</option>
+          <option value="failed">Failed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div class="form-field history-filter-field">
+        <label for="filterType">Loại job</label>
+        <select id="filterType" name="type">
+          <option value="">Tất cả</option>
+          <option value="split">Split</option>
+          <option value="merge">Merge</option>
+          <option value="gif">GIF</option>
+          <option value="extract_audio">Tách audio</option>
+          <option value="editor">Editor</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="historyEmpty" class="home-empty" hidden>
+      <p>Chưa có job nào phù hợp bộ lọc.</p>
+    </div>
+
+    <div id="historyTableWrap" class="history-table-wrap">
+      <table class="history-table" aria-label="Tổng hợp job">
+        <thead>
+          <tr>
+            <th>File</th>
+            <th>Loại</th>
+            <th>Trạng thái</th>
+            <th>Tiến độ</th>
+            <th>User ID</th>
+            <th>Tạo lúc</th>
+            <th>Hoàn thành</th>
+            <th class="cell-actions" scope="col" aria-label="Thao tác">
+              <span class="cell-actions__header-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
+                </svg>
+              </span>
+              <span class="sr-only">Thao tác</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody id="historyTableBody"></tbody>
+      </table>
+      <div id="historyCardList" class="history-card-list"></div>
+    </div>
+
+    <div id="historySkeleton" class="history-skeleton" hidden>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+    </div>
+
+    <div id="historyPagination" class="history-pagination" hidden>
+      <span id="historyRange" class="history-pagination__range"></span>
+      <div class="history-pagination__controls">
+        <button type="button" id="pagePrev" class="btn btn--secondary btn--sm" disabled>« Trước</button>
+        <span id="pageInfo" class="history-pagination__info"></span>
+        <button type="button" id="pageNext" class="btn btn--secondary btn--sm">Sau »</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+{{template "jobModals" .}}
+
+<script src="{{asset "js/job-ui.js"}}"></script>
+<script src="{{asset "js/admin-dashboard.js"}}"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    if (typeof initAdminDashboard === "function") {
+      initAdminDashboard();
+    }
+  });
+</script>
+{{end}}

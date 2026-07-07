@@ -134,6 +134,67 @@ func ListJobsByUser(userID string, opts ListJobsOptions) ([]entities.Job, int64,
 	return jobs, total, err
 }
 
+func ListAllJobs(opts ListJobsOptions) ([]entities.Job, int64, error) {
+	if opts.Page < 1 {
+		opts.Page = 1
+	}
+	if opts.Limit < 1 {
+		opts.Limit = 20
+	}
+
+	base := applyListFilters(Global.DB.Model(&entities.Job{}), opts)
+
+	var total int64
+	if err := base.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var jobs []entities.Job
+	offset := (opts.Page - 1) * opts.Limit
+	err := applyListFilters(Global.DB, opts).
+		Order("created_at DESC").
+		Offset(offset).
+		Limit(opts.Limit).
+		Find(&jobs).Error
+
+	return jobs, total, err
+}
+
+func GetGlobalStats() (JobStats, error) {
+	var stats JobStats
+	now := time.Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	weekAgo := now.Add(-7 * 24 * time.Hour)
+
+	Global.DB.Model(&entities.Job{}).
+		Where("status IN ?", []enums.Status{enums.StatusPending, enums.StatusProcessing}).
+		Count(&stats.Processing)
+
+	Global.DB.Model(&entities.Job{}).
+		Where("status = ? AND finished_at >= ?", enums.StatusCompleted, todayStart).
+		Count(&stats.CompletedToday)
+
+	Global.DB.Model(&entities.Job{}).
+		Where("status = ? AND created_at >= ?", enums.StatusFailed, weekAgo).
+		Count(&stats.Failed)
+
+	Global.DB.Model(&entities.Job{}).Count(&stats.Total)
+
+	type avgRow struct {
+		AvgSeconds float64
+	}
+	var row avgRow
+	err := Global.DB.Model(&entities.Job{}).
+		Select("AVG(CAST((julianday(finished_at) - julianday(started_at)) * 86400 AS INTEGER)) as avg_seconds").
+		Where("status = ? AND finished_at >= ? AND started_at > '0001-01-02'", enums.StatusCompleted, weekAgo).
+		Scan(&row).Error
+	if err == nil && row.AvgSeconds > 0 {
+		stats.AvgEncodeSeconds = int64(row.AvgSeconds)
+	}
+
+	return stats, err
+}
+
 func GetStatsByUser(userID string) (JobStats, error) {
 	var stats JobStats
 	now := time.Now()
