@@ -3,6 +3,7 @@
 
   var PAGE_SIZE = 20;
   var POLL_INTERVAL_MS = 10000;
+  var FILTER_STORAGE_KEY = "adminDashboard.jobFilters";
 
   var OUTPUT_TYPE_LABELS = {
     splits: "Splits",
@@ -60,6 +61,8 @@
     var errorModalRetry = document.getElementById("errorModalRetry");
     if (errorModalRetry) errorModalRetry.hidden = true;
 
+    readFiltersFromURL();
+
     els.filterPeriod.addEventListener("change", applyFiltersFromUI);
     els.filterStatus.addEventListener("change", applyFiltersFromUI);
     els.filterType.addEventListener("change", applyFiltersFromUI);
@@ -68,12 +71,14 @@
     els.pagePrev.addEventListener("click", function () {
       if (state.filters.page > 1) {
         state.filters.page--;
+        writeFiltersToURL();
         loadHistory();
       }
     });
     els.pageNext.addEventListener("click", function () {
       if (els.pageNext.disabled) return;
       state.filters.page++;
+      writeFiltersToURL();
       loadHistory();
     });
 
@@ -86,11 +91,88 @@
     loadDashboard();
   }
 
+  function readFiltersFromURL() {
+    var params = new URLSearchParams(window.location.search);
+    var hasURLFilters =
+      params.has("period") || params.has("status") || params.has("type") || params.has("page");
+
+    if (hasURLFilters) {
+      state.filters.period = params.get("period") || "7d";
+      state.filters.status = params.get("status") || "";
+      state.filters.type = params.get("type") || "";
+      state.filters.page = Math.max(1, parseInt(params.get("page") || "1", 10));
+      writeFiltersToStorage();
+    } else {
+      readFiltersFromStorage();
+    }
+
+    els.filterPeriod.value = state.filters.period;
+    els.filterStatus.value = state.filters.status;
+    els.filterType.value = state.filters.type;
+  }
+
+  function readFiltersFromStorage() {
+    try {
+      var raw = localStorage.getItem(FILTER_STORAGE_KEY);
+      if (raw) {
+        var saved = JSON.parse(raw);
+        state.filters.period = saved.period || "7d";
+        state.filters.status = saved.status || "";
+        state.filters.type = saved.type || "";
+        state.filters.page = 1;
+        return;
+      }
+    } catch (e) {
+      /* ignore corrupt storage */
+    }
+    state.filters = { period: "7d", status: "", type: "", page: 1 };
+  }
+
+  function writeFiltersToStorage() {
+    try {
+      localStorage.setItem(
+        FILTER_STORAGE_KEY,
+        JSON.stringify({
+          period: state.filters.period,
+          status: state.filters.status,
+          type: state.filters.type,
+        })
+      );
+    } catch (e) {
+      /* ignore quota / private mode */
+    }
+  }
+
+  function writeFiltersToURL() {
+    var params = new URLSearchParams();
+    if (state.filters.period && state.filters.period !== "7d") {
+      params.set("period", state.filters.period);
+    }
+    if (state.filters.status) {
+      params.set("status", state.filters.status);
+    }
+    if (state.filters.type) {
+      params.set("type", state.filters.type);
+    }
+    if (state.filters.page > 1) {
+      params.set("page", String(state.filters.page));
+    }
+    var qs = params.toString();
+    var url = qs ? "?" + qs : window.location.pathname;
+    history.replaceState(null, "", url);
+  }
+
+  function persistFilters() {
+    writeFiltersToStorage();
+    writeFiltersToURL();
+  }
+
   function applyFiltersFromUI() {
     state.filters.period = els.filterPeriod.value;
     state.filters.status = els.filterStatus.value;
     state.filters.type = els.filterType.value;
     state.filters.page = 1;
+    persistFilters();
     loadHistory();
   }
 
