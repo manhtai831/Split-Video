@@ -26,6 +26,8 @@ type PageData struct {
 	NoIndex       bool
 	Breadcrumbs   []BreadcrumbItem
 	FAQItems      []FAQItem
+
+	UploadChunkSizeBytes int
 }
 
 func (p *PageData) Finalize() {

@@ -10,7 +10,7 @@
     action="/video/gif"
     enctype="multipart/form-data"
     method="post"
-    onsubmit="return handleGifSubmit(this)"
+    onsubmit="return handleGifSubmit(event, this)"
   >
     <input type="hidden" id="segmentsJson" name="segments_json" value="" />
 
@@ -226,13 +226,15 @@
 {{template "jobModals" .}}
 
 <script src="{{asset "js/job-ui.js"}}"></script>
+{{template "chunk_upload" .}}
 <script src="{{asset "js/gif-jobs-panel.js"}}"></script>
 <script src="{{asset "js/gif-file-preview.js"}}"></script>
 <script src="{{asset "js/gif-timeline.js"}}"></script>
 <script src="{{asset "js/gif-segments.js"}}"></script>
 <script src="{{asset "js/gif-estimate.js"}}"></script>
 <script>
-  function handleGifSubmit(form) {
+  function handleGifSubmit(event, form) {
+    event.preventDefault();
     if (typeof window.syncGifSegmentsForSubmit === "function") {
       var ok = window.syncGifSegmentsForSubmit();
       if (!ok) return false;
@@ -242,12 +244,14 @@
       alert("Cần chọn một file video.");
       return false;
     }
-    var btn = form.querySelector('button[type=submit]');
-    if (btn) {
-      btn.disabled = true;
-      btn.innerText = "Processing...";
+    if (!window.ChunkUpload) {
+      alert("Upload module chưa sẵn sàng. Vui lòng thử lại.");
+      return false;
     }
-    return true;
+    window.ChunkUpload.submitFormWithChunks(form, fileInput).catch(function (err) {
+      alert(err.message || "Upload thất bại");
+    });
+    return false;
   }
 
   document.addEventListener("DOMContentLoaded", function () {

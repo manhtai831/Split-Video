@@ -3,6 +3,7 @@ package router
 import (
 	apijobs "app/router/api/jobs"
 	apieditor "app/router/api/editor"
+	apiupload "app/router/api/upload"
 	"app/router/about"
 	"app/router/admin"
 	"app/router/editor"
@@ -29,6 +30,7 @@ func Bootstrap() {
 	routerseo.Bootstrap()
 	apijobs.Bootstrap()
 	apieditor.Bootstrap()
+	apiupload.Bootstrap()
 	job.Bootstrap()
 	split.Bootstrap()
 	merge.Bootstrap()

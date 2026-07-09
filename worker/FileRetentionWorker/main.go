@@ -5,6 +5,7 @@ import (
 	"app/config"
 	"app/entities"
 	"app/enums"
+	"app/services/ChunkUploadService"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -22,6 +23,7 @@ func Start() {
 }
 
 func runCleanup() {
+	cleanupOrphanChunks()
 	cutoff := time.Now().AddDate(0, 0, -config.FileRetentionDays)
 	statuses := []enums.Status{
 		enums.StatusCompleted,
@@ -74,4 +76,10 @@ func purgeJob(job entities.Job) error {
 		return err
 	}
 	return Global.DB.Delete(&job).Error
+}
+
+func cleanupOrphanChunks() {
+	if err := ChunkUploadService.CleanupOrphanChunks(); err != nil {
+		fmt.Printf("[FileRetentionWorker] cleanup orphan chunks: %v\n", err)
+	}
 }

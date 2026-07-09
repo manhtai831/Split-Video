@@ -1,20 +1,15 @@
 package gif
 
 import (
+	"app/config"
 	"app/entities"
 	"app/middleware"
+	"app/router/uploadutil"
 	"app/services/GifService"
 	"app/structs"
 	"app/templates"
 	"app/worker/channels"
-	"crypto/md5"
-	"encoding/hex"
-	"io"
 	"net/http"
-	"os"
-	"path"
-	"strconv"
-	"time"
 )
 
 func Bootstrap() {
@@ -27,13 +22,14 @@ func Bootstrap() {
 func handleGif(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(w, r)
 	data := structs.PageData{
-		Title:         "Tạo GIF từ Video — GIF, WebP, APNG",
-		Description:   "Chuyển đoạn video thành GIF, WebP động hoặc APNG. Chọn thời gian, kích thước, chất lượng và FPS. Nhiều đoạn từ một video.",
-		DescriptionEN: "Convert video clips to GIF, animated WebP or APNG. Pick time range, size, quality and FPS. Multiple segments from one video.",
-		ActivePage:    "gif",
-		Result:        "",
-		UserID:        userID,
-		Breadcrumbs:   structs.ToolBreadcrumbs("Tạo GIF từ Video", "/video/gif"),
+		Title:                "Tạo GIF từ Video — GIF, WebP, APNG",
+		Description:          "Chuyển đoạn video thành GIF, WebP động hoặc APNG. Chọn thời gian, kích thước, chất lượng và FPS. Nhiều đoạn từ một video.",
+		DescriptionEN:        "Convert video clips to GIF, animated WebP or APNG. Pick time range, size, quality and FPS. Multiple segments from one video.",
+		ActivePage:           "gif",
+		Result:               "",
+		UserID:               userID,
+		Breadcrumbs:          structs.ToolBreadcrumbs("Tạo GIF từ Video", "/video/gif"),
+		UploadChunkSizeBytes: config.UploadChunkSizeBytes,
 	}
 	data.Finalize()
 
@@ -54,55 +50,19 @@ func handleGifPost(w http.ResponseWriter, r *http.Request, userID string) {
 		return
 	}
 
-	var uploadedPath, uploadedName string
-	formFields := make(map[string]string)
-
-	for part, err := reader.NextPart(); err != io.EOF; part, err = reader.NextPart() {
-		if part.FileName() != "" {
-			if uploadedPath != "" {
-				http.Error(w, "Chỉ hỗ trợ một video mỗi lần", http.StatusBadRequest)
-				return
-			}
-			rawFileName := part.FileName()
-			fileNameHash := md5.Sum([]byte(rawFileName))
-			fileName := hex.EncodeToString(fileNameHash[:]) + strconv.FormatInt(time.Now().UnixNano(), 10) + path.Ext(rawFileName)
-
-			dst, err := os.Create(path.Join("uploads", fileName))
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			_, err = io.Copy(dst, part)
-			dst.Close()
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			uploadedPath = dst.Name()
-			uploadedName = rawFileName
-			continue
-		}
-
-		name := part.FormName()
-		if name == "" {
-			continue
-		}
-		body, err := io.ReadAll(part)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		formFields[name] = string(body)
+	resolved, err := uploadutil.ResolveMultipart(reader)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	if uploadedPath == "" {
+	if len(resolved.Files) != 1 {
 		http.Error(w, "Cần chọn một file video", http.StatusBadRequest)
 		return
 	}
 
-	extrasDto, err := structs.ParseGifForm(formFields)
+	uploaded := resolved.Files[0]
+	extrasDto, err := structs.ParseGifForm(resolved.FormFields)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -113,7 +73,7 @@ func handleGifPost(w http.ResponseWriter, r *http.Request, userID string) {
 		return
 	}
 
-	job, err := GifService.CreateJob(uploadedPath, uploadedName, extrasJSON, userID)
+	job, err := GifService.CreateJob(uploaded.Path, uploaded.Name, extrasJSON, userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

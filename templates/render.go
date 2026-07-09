@@ -17,6 +17,7 @@ var layoutFiles = []string{
 	"templates/partials/seo-jsonld.html",
 	"templates/partials/seo-tool-content.html",
 	"templates/partials/job_modals.html",
+	"templates/partials/chunk_upload.html",
 }
 
 func Render(w http.ResponseWriter, page string, data any) error {

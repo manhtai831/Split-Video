@@ -1,0 +1,6 @@
+{{define "chunk_upload"}}
+{{if .UploadChunkSizeBytes}}
+<script>window.__UPLOAD_CHUNK_SIZE = {{.UploadChunkSizeBytes}};</script>
+{{end}}
+<script type="module" src="{{asset "js/chunk-upload-bridge.js"}}"></script>
+{{end}}

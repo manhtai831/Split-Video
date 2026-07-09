@@ -10,7 +10,7 @@
     action="/video/merge"
     enctype="multipart/form-data"
     method="post"
-    onsubmit="return handleMergeSubmit(this)"
+    onsubmit="return handleMergeSubmit(event, this)"
   >
     <input type="hidden" id="fileOrder" name="file_order" value="" />
     <input type="hidden" id="itemsMeta" name="items_meta" value="" />
@@ -248,11 +248,13 @@
 </dialog>
 
 <script src="{{asset "js/job-ui.js"}}"></script>
+{{template "chunk_upload" .}}
 <script src="{{asset "js/merge-jobs-panel.js"}}"></script>
 <script src="{{asset "js/merge-estimate.js"}}"></script>
 <script src="{{asset "js/merge-file-preview.js"}}"></script>
 <script>
-  function handleMergeSubmit(form) {
+  function handleMergeSubmit(event, form) {
+    event.preventDefault();
     var fileInput = document.getElementById("file");
     if (!fileInput || !fileInput.files || fileInput.files.length < 2) {
       alert("Cần ít nhất 2 clip (video hoặc ảnh) để ghép.");
@@ -272,20 +274,22 @@
       }
       if (!meta) continue;
       if (meta.kind === "image" && meta.holdDuration < 0.5) {
-        alert("Ảnh \"" + fileInput.files[i].name + "\": thời lượng tối thiểu 0.5 giây.");
+        alert('Ảnh "' + fileInput.files[i].name + '": thời lượng tối thiểu 0.5 giây.');
         return false;
       }
       if (meta.kind === "gif" && meta.holdDuration < 0) {
-        alert("GIF \"" + fileInput.files[i].name + "\": thời lượng không được âm.");
+        alert('GIF "' + fileInput.files[i].name + '": thời lượng không được âm.');
         return false;
       }
     }
-    var btn = form.querySelector('button[type=submit]');
-    if (btn) {
-      btn.disabled = true;
-      btn.innerText = "Processing...";
+    if (!window.ChunkUpload) {
+      alert("Upload module chưa sẵn sàng. Vui lòng thử lại.");
+      return false;
     }
-    return true;
+    window.ChunkUpload.submitFormWithChunks(form, fileInput).catch(function (err) {
+      alert(err.message || "Upload thất bại");
+    });
+    return false;
   }
 
   document.addEventListener("DOMContentLoaded", function () {

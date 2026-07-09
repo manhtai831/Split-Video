@@ -10,6 +10,9 @@ const (
 	defaultRetentionDays           = 30
 	defaultOGImage                 = "/static/logo_hoz.svg"
 	defaultStorageScanIntervalMins = 5
+	defaultUploadChunkSizeMB       = 5
+	defaultUploadChunkTTLHours     = 24
+	defaultMaxUploadParts          = 10000
 )
 
 var (
@@ -19,6 +22,9 @@ var (
 	AdminUsername              string
 	AdminPassword              string
 	DefaultOGImagePath         = defaultOGImage
+	UploadChunkSizeBytes       int
+	UploadChunkTTLHours        int
+	MaxUploadParts             int
 )
 
 func init() {
@@ -42,6 +48,30 @@ func init() {
 
 	AdminUsername = strings.TrimSpace(os.Getenv("ADMIN_USERNAME"))
 	AdminPassword = os.Getenv("ADMIN_PASSWORD")
+
+	chunkMB := defaultUploadChunkSizeMB
+	if raw := strings.TrimSpace(os.Getenv("UPLOAD_CHUNK_SIZE_MB")); raw != "" {
+		if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 {
+			chunkMB = parsed
+		}
+	}
+	UploadChunkSizeBytes = chunkMB * 1024 * 1024
+
+	ttlHours := defaultUploadChunkTTLHours
+	if raw := strings.TrimSpace(os.Getenv("UPLOAD_CHUNK_TTL_HOURS")); raw != "" {
+		if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 {
+			ttlHours = parsed
+		}
+	}
+	UploadChunkTTLHours = ttlHours
+
+	maxParts := defaultMaxUploadParts
+	if raw := strings.TrimSpace(os.Getenv("UPLOAD_MAX_PARTS")); raw != "" {
+		if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 {
+			maxParts = parsed
+		}
+	}
+	MaxUploadParts = maxParts
 }
 
 func AbsURL(path string) string {

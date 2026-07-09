@@ -1,20 +1,15 @@
 package split
 
 import (
+	"app/config"
 	"app/entities"
 	"app/middleware"
+	"app/router/uploadutil"
 	"app/services/SplitService"
 	"app/structs"
 	"app/templates"
 	"app/worker/channels"
-	"crypto/md5"
-	"encoding/hex"
-	"io"
 	"net/http"
-	"os"
-	"path"
-	"strconv"
-	"time"
 )
 
 func Bootstrap() {
@@ -29,13 +24,14 @@ func handleLegacySplit(w http.ResponseWriter, r *http.Request) {
 func handleSplit(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(w, r)
 	data := structs.PageData{
-		Title:         "Chia Video Online — Cắt Theo Dung Lượng & Thời Gian",
-		Description:   "Chia video lớn theo dung lượng (MB/GB) hoặc thời gian. Hỗ trợ MP4, MKV, MOV — 4K, 1080P, 720P hoặc giữ chất lượng gốc. Tải ZIP.",
-		DescriptionEN: "Split large videos by file size (MB/GB) or duration (seconds, minutes, hours). Supports MP4, MKV, MOV — choose 4K, 1080P, 720P or keep original quality. One-click ZIP download.",
-		ActivePage:    "split",
-		Result:        "",
-		UserID:        userID,
-		Breadcrumbs:   structs.ToolBreadcrumbs("Chia Video Online", "/video/split"),
+		Title:                "Chia Video Online — Cắt Theo Dung Lượng & Thời Gian",
+		Description:          "Chia video lớn theo dung lượng (MB/GB) hoặc thời gian. Hỗ trợ MP4, MKV, MOV — 4K, 1080P, 720P hoặc giữ chất lượng gốc. Tải ZIP.",
+		DescriptionEN:        "Split large videos by file size (MB/GB) or duration (seconds, minutes, hours). Supports MP4, MKV, MOV — choose 4K, 1080P, 720P or keep original quality. One-click ZIP download.",
+		ActivePage:           "split",
+		Result:               "",
+		UserID:               userID,
+		Breadcrumbs:          structs.ToolBreadcrumbs("Chia Video Online", "/video/split"),
+		UploadChunkSizeBytes: config.UploadChunkSizeBytes,
 	}
 	data.Finalize()
 
@@ -46,55 +42,16 @@ func handleSplit(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		type uploadedFile struct {
-			path string
-			name string
+		resolved, err := uploadutil.ResolveMultipart(reader)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
-
-		var uploadedFiles []uploadedFile
-		formFields := make(map[string]string)
-		for part, err := reader.NextPart(); err != io.EOF; part, err = reader.NextPart() {
-			if part.FileName() != "" {
-				rawFileName := part.FileName()
-				fileNameHash := md5.Sum([]byte(rawFileName))
-				fileName := hex.EncodeToString(fileNameHash[:]) + strconv.FormatInt(time.Now().UnixNano(), 10) + path.Ext(rawFileName)
-
-				dst, err := os.Create(path.Join("uploads", fileName))
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-
-				_, err = io.Copy(dst, part)
-				dst.Close()
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-
-				uploadedFiles = append(uploadedFiles, uploadedFile{
-					path: dst.Name(),
-					name: rawFileName,
-				})
-				continue
-			}
-
-			name := part.FormName()
-			if name == "" {
-				continue
-			}
-			body, err := io.ReadAll(part)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			formFields[name] = string(body)
-		}
-		if len(uploadedFiles) == 0 {
+		if len(resolved.Files) == 0 {
 			return
 		}
 
-		extrasDto, err := structs.ParseSplitForm(formFields)
+		extrasDto, err := structs.ParseSplitForm(resolved.FormFields)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -105,8 +62,8 @@ func handleSplit(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		for _, uploaded := range uploadedFiles {
-			job, err := SplitService.CreateJob(uploaded.path, uploaded.name, extrasJSON, userID)
+		for _, uploaded := range resolved.Files {
+			job, err := SplitService.CreateJob(uploaded.Path, uploaded.Name, extrasJSON, userID)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return

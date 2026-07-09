@@ -1,30 +1,21 @@
 package merge
 
 import (
+	"app/config"
 	"app/entities"
 	"app/middleware"
+	"app/router/uploadutil"
 	"app/services/MergeService"
 	"app/structs"
 	"app/templates"
 	"app/worker/channels"
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
-	"io"
 	"net/http"
-	"os"
-	"path"
 	"strconv"
 	"strings"
-	"time"
 )
 
 const maxMergeClips = structs.MaxMergeClips
-
-type uploadedFile struct {
-	path string
-	name string
-}
 
 func Bootstrap() {
 	http.HandleFunc("/video/merge", handleMerge)
@@ -36,13 +27,14 @@ func Bootstrap() {
 func handleMerge(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(w, r)
 	data := structs.PageData{
-		Title:         "Ghép Video Online — Nối Nhiều Clip Thành Một",
-		Description:   "Ghép nhiều video thành một file. Sắp xếp thứ tự clip, chọn độ phân giải và định dạng đầu ra. Hỗ trợ MP4, MKV, MOV.",
-		DescriptionEN: "Merge multiple videos into one file. Reorder clips, choose output resolution and format. Supports MP4, MKV, MOV.",
-		ActivePage:    "merge",
-		Result:        "",
-		UserID:        userID,
-		Breadcrumbs:   structs.ToolBreadcrumbs("Ghép Video Online", "/video/merge"),
+		Title:                "Ghép Video Online — Nối Nhiều Clip Thành Một",
+		Description:          "Ghép nhiều video thành một file. Sắp xếp thứ tự clip, chọn độ phân giải và định dạng đầu ra. Hỗ trợ MP4, MKV, MOV.",
+		DescriptionEN:        "Merge multiple videos into one file. Reorder clips, choose output resolution and format. Supports MP4, MKV, MOV.",
+		ActivePage:           "merge",
+		Result:               "",
+		UserID:               userID,
+		Breadcrumbs:          structs.ToolBreadcrumbs("Ghép Video Online", "/video/merge"),
+		UploadChunkSizeBytes: config.UploadChunkSizeBytes,
 	}
 	data.Finalize()
 
@@ -63,47 +55,13 @@ func handleMergePost(w http.ResponseWriter, r *http.Request, userID string) {
 		return
 	}
 
-	var uploadedFiles []uploadedFile
-	formFields := make(map[string]string)
-
-	for part, err := reader.NextPart(); err != io.EOF; part, err = reader.NextPart() {
-		if part.FileName() != "" {
-			rawFileName := part.FileName()
-			fileNameHash := md5.Sum([]byte(rawFileName))
-			fileName := hex.EncodeToString(fileNameHash[:]) + strconv.FormatInt(time.Now().UnixNano(), 10) + path.Ext(rawFileName)
-
-			dst, err := os.Create(path.Join("uploads", fileName))
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			_, err = io.Copy(dst, part)
-			dst.Close()
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			uploadedFiles = append(uploadedFiles, uploadedFile{
-				path: dst.Name(),
-				name: rawFileName,
-			})
-			continue
-		}
-
-		name := part.FormName()
-		if name == "" {
-			continue
-		}
-		body, err := io.ReadAll(part)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		formFields[name] = string(body)
+	resolved, err := uploadutil.ResolveMultipart(reader)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
+	uploadedFiles := resolved.Files
 	if len(uploadedFiles) < 2 {
 		http.Error(w, "Cần ít nhất 2 clip (video hoặc ảnh) để ghép", http.StatusBadRequest)
 		return
@@ -113,13 +71,13 @@ func handleMergePost(w http.ResponseWriter, r *http.Request, userID string) {
 		return
 	}
 
-	itemsMeta, err := structs.ParseItemsMeta(formFields["items_meta"], len(uploadedFiles))
+	itemsMeta, err := structs.ParseItemsMeta(resolved.FormFields["items_meta"], len(uploadedFiles))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	extrasDto, err := structs.ParseMergeForm(formFields)
+	extrasDto, err := structs.ParseMergeForm(resolved.FormFields)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -131,7 +89,7 @@ func handleMergePost(w http.ResponseWriter, r *http.Request, userID string) {
 		return
 	}
 
-	ordered := orderUploadedFiles(uploadedFiles, formFields["file_order"])
+	ordered := orderUploadedFiles(uploadedFiles, resolved.FormFields["file_order"])
 	inputs := make([]MergeService.InputFile, len(ordered))
 	for i, uploaded := range ordered {
 		kind := "video"
@@ -141,8 +99,8 @@ func handleMergePost(w http.ResponseWriter, r *http.Request, userID string) {
 			holdDuration = itemsMeta[i].HoldDuration
 		}
 		inputs[i] = MergeService.InputFile{
-			Path:         uploaded.path,
-			Name:         uploaded.name,
+			Path:         uploaded.Path,
+			Name:         uploaded.Name,
 			SortOrder:    i,
 			Kind:         kind,
 			HoldDuration: holdDuration,
@@ -159,13 +117,13 @@ func handleMergePost(w http.ResponseWriter, r *http.Request, userID string) {
 	http.Redirect(w, r, "/video/merge", http.StatusSeeOther)
 }
 
-func orderUploadedFiles(files []uploadedFile, orderRaw string) []uploadedFile {
+func orderUploadedFiles(files []uploadutil.UploadedFile, orderRaw string) []uploadutil.UploadedFile {
 	if orderRaw == "" {
 		return files
 	}
 
 	parts := strings.Split(orderRaw, ",")
-	ordered := make([]uploadedFile, 0, len(parts))
+	ordered := make([]uploadutil.UploadedFile, 0, len(parts))
 	seen := make(map[int]bool)
 
 	for _, part := range parts {

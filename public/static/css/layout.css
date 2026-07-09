@@ -89,7 +89,7 @@ body.sidebar-open .hamburger-line:nth-child(3) {
 
 .app-shell {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1.5fr 1fr;
   height: 100vh;
   overflow: hidden;
 }

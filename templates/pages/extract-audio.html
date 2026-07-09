@@ -10,7 +10,7 @@
     action="/video/extract-audio"
     enctype="multipart/form-data"
     method="post"
-    onsubmit="this.querySelector('button[type=submit]').disabled = true; this.querySelector('button[type=submit]').innerText = 'Processing...'"
+    onsubmit="return handleExtractAudioSubmit(event, this)"
   >
     <div class="form-field">
       <label for="file">Video file</label>
@@ -173,10 +173,28 @@
 </dialog>
 
 <script src="{{asset "js/job-ui.js"}}"></script>
+{{template "chunk_upload" .}}
 <script src="{{asset "js/extract-audio-jobs-panel.js"}}"></script>
 <script src="{{asset "js/extract-audio-estimate.js"}}"></script>
 <script src="{{asset "js/extract-audio-file-preview.js"}}"></script>
 <script>
+  function handleExtractAudioSubmit(event, form) {
+    event.preventDefault();
+    var fileInput = document.getElementById("file");
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+      alert("Cần chọn ít nhất một file video.");
+      return false;
+    }
+    if (!window.ChunkUpload) {
+      alert("Upload module chưa sẵn sàng. Vui lòng thử lại.");
+      return false;
+    }
+    window.ChunkUpload.submitFormWithChunks(form, fileInput).catch(function (err) {
+      alert(err.message || "Upload thất bại");
+    });
+    return false;
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     if (typeof initExtractAudioEstimate === "function") {
       initExtractAudioEstimate();
