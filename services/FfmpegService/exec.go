@@ -13,6 +13,10 @@ import (
 )
 
 func runCommand(ctx context.Context, name string, args ...string) ([]byte, error) {
+	if name == "ffmpeg" {
+		args = prependFFmpegThreadArgs(args)
+	}
+
 	cmd := exec.CommandContext(ctx, name, args...)
 	var stderr bytes.Buffer
 
