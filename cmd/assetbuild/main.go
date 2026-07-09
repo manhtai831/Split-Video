@@ -5,10 +5,17 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/tdewolff/minify/v2"
+	"github.com/tdewolff/minify/v2/css"
+	"github.com/tdewolff/minify/v2/js"
 )
 
 const (
@@ -18,7 +25,16 @@ const (
 	hashLen    = 8
 )
 
-var assetDirs = []string{"css", "js"}
+var (
+	assetDirs  = []string{"css", "js"}
+	jsImportRe = regexp.MustCompile(`(from\s+["']|import\s+["'])(\./[^"']+)(["'])`)
+	jsMimeRe   = regexp.MustCompile(`^(application|text)/(x-)?(java|ecma)script$`)
+)
+
+type assetFile struct {
+	srcPath     string
+	logicalPath string
+}
 
 func main() {
 	prod := false
@@ -47,36 +63,31 @@ func run(prod bool) error {
 		return fmt.Errorf("clean output: %w", err)
 	}
 
-	manifestEntries := make(map[string]string)
+	var files []assetFile
 
 	for _, dir := range assetDirs {
-		pattern := filepath.Join(sourceRoot, dir, "*")
-		matches, err := filepath.Glob(pattern)
+		srcDir := filepath.Join(sourceRoot, dir)
+		matches, err := collectFiles(srcDir)
 		if err != nil {
-			return fmt.Errorf("glob %s: %w", pattern, err)
+			return err
 		}
 
 		for _, srcPath := range matches {
-			info, err := os.Stat(srcPath)
+			rel, err := filepath.Rel(sourceRoot, srcPath)
 			if err != nil {
-				return err
-			}
-			if info.IsDir() {
-				continue
+				return fmt.Errorf("rel path %s: %w", srcPath, err)
 			}
 
-			logicalPath, hashedName, err := hashAsset(srcPath, dir)
-			if err != nil {
-				return err
-			}
-
-			dstPath := filepath.Join(outputRoot, dir, hashedName)
-			if err := copyFile(srcPath, dstPath); err != nil {
-				return err
-			}
-
-			manifestEntries[logicalPath] = filepath.ToSlash(filepath.Join(dir, hashedName))
+			files = append(files, assetFile{
+				srcPath:     srcPath,
+				logicalPath: filepath.ToSlash(rel),
+			})
 		}
+	}
+
+	manifestEntries := make(map[string]string, len(files))
+	if err := buildProdAssets(files, manifestEntries); err != nil {
+		return err
 	}
 
 	if err := copySVGAssets(); err != nil {
@@ -111,22 +122,191 @@ func copySVGAssets() error {
 	return nil
 }
 
-func hashAsset(srcPath, dir string) (logicalPath, hashedName string, err error) {
-	content, err := os.ReadFile(srcPath)
+func collectFiles(root string) ([]string, error) {
+	var files []string
+	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		files = append(files, p)
+		return nil
+	})
 	if err != nil {
-		return "", "", fmt.Errorf("read %s: %w", srcPath, err)
+		return nil, fmt.Errorf("walk %s: %w", root, err)
+	}
+	return files, nil
+}
+
+func buildProdAssets(files []assetFile, manifest map[string]string) error {
+	logicalSet := make(map[string]assetFile, len(files))
+	for _, f := range files {
+		logicalSet[f.logicalPath] = f
 	}
 
+	minifier := newMinifier()
+	pending := append([]assetFile(nil), files...)
+
+	for len(pending) > 0 {
+		progress := false
+		next := make([]assetFile, 0, len(pending))
+
+		for _, f := range pending {
+			content, err := os.ReadFile(f.srcPath)
+			if err != nil {
+				return fmt.Errorf("read %s: %w", f.srcPath, err)
+			}
+
+			if !jsImportsReady(f.logicalPath, content, logicalSet, manifest) {
+				next = append(next, f)
+				continue
+			}
+
+			content, err = processAsset(content, f.logicalPath, manifest, minifier)
+			if err != nil {
+				return err
+			}
+
+			hashedPath := hashContent(content, f.logicalPath)
+			dstPath := filepath.Join(outputRoot, filepath.FromSlash(hashedPath))
+			if err := writeFile(dstPath, content); err != nil {
+				return err
+			}
+
+			manifest[f.logicalPath] = hashedPath
+			progress = true
+		}
+
+		if !progress {
+			return fmt.Errorf("unresolved js imports (possible circular dependency)")
+		}
+		pending = next
+	}
+
+	return nil
+}
+
+func newMinifier() *minify.M {
+	m := minify.New()
+	m.AddFunc("text/css", css.Minify)
+	m.AddFuncRegexp(jsMimeRe, js.Minify)
+	return m
+}
+
+func processAsset(content []byte, logicalPath string, manifest map[string]string, m *minify.M) ([]byte, error) {
+	ext := strings.ToLower(filepath.Ext(logicalPath))
+	switch ext {
+	case ".js":
+		content = rewriteJSImports(content, logicalPath, manifest)
+		out, err := m.Bytes("application/javascript", content)
+		if err != nil {
+			return nil, fmt.Errorf("minify js %s: %w", logicalPath, err)
+		}
+		return out, nil
+	case ".css":
+		out, err := m.Bytes("text/css", content)
+		if err != nil {
+			return nil, fmt.Errorf("minify css %s: %w", logicalPath, err)
+		}
+		return out, nil
+	default:
+		return content, nil
+	}
+}
+
+func hashContent(content []byte, logicalPath string) string {
 	sum := sha256.Sum256(content)
 	hash := hex.EncodeToString(sum[:])[:hashLen]
 
-	base := filepath.Base(srcPath)
+	base := filepath.Base(logicalPath)
 	ext := filepath.Ext(base)
 	name := strings.TrimSuffix(base, ext)
-	hashedName = fmt.Sprintf("%s.%s%s", name, hash, ext)
-	logicalPath = filepath.ToSlash(filepath.Join(dir, base))
+	hashedBase := fmt.Sprintf("%s.%s%s", name, hash, ext)
+	return filepath.ToSlash(path.Join(path.Dir(logicalPath), hashedBase))
+}
 
-	return logicalPath, hashedName, nil
+func jsImportsReady(logicalPath string, content []byte, logicalSet map[string]assetFile, manifest map[string]string) bool {
+	if !strings.HasSuffix(strings.ToLower(logicalPath), ".js") {
+		return true
+	}
+
+	for _, importPath := range extractJSImports(content) {
+		target := resolveRelativeImport(logicalPath, importPath)
+		if target == "" {
+			continue
+		}
+		if _, ok := logicalSet[target]; !ok {
+			continue
+		}
+		if _, ok := manifest[target]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func extractJSImports(content []byte) []string {
+	matches := jsImportRe.FindAllSubmatch(content, -1)
+	imports := make([]string, 0, len(matches))
+	for _, sub := range matches {
+		if len(sub) >= 3 {
+			imports = append(imports, string(sub[2]))
+		}
+	}
+	return imports
+}
+
+func writeFile(dst string, content []byte) error {
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return fmt.Errorf("mkdir %s: %w", filepath.Dir(dst), err)
+	}
+	if err := os.WriteFile(dst, content, 0o644); err != nil {
+		return fmt.Errorf("write %s: %w", dst, err)
+	}
+	return nil
+}
+
+func rewriteJSImports(content []byte, logicalPath string, manifest map[string]string) []byte {
+	return jsImportRe.ReplaceAllFunc(content, func(match []byte) []byte {
+		sub := jsImportRe.FindSubmatch(match)
+		if len(sub) < 4 {
+			return match
+		}
+
+		importPath := string(sub[2])
+		targetLogical := resolveRelativeImport(logicalPath, importPath)
+		hashedTarget, ok := manifest[targetLogical]
+		if !ok {
+			return match
+		}
+
+		newImport := relativeImportPath(logicalPath, hashedTarget)
+		return []byte(string(sub[1]) + newImport + string(sub[3]))
+	})
+}
+
+func resolveRelativeImport(currentLogical, importPath string) string {
+	if !strings.HasPrefix(importPath, "./") && !strings.HasPrefix(importPath, "../") {
+		return ""
+	}
+	dir := path.Dir(currentLogical)
+	return path.Clean(path.Join(dir, importPath))
+}
+
+func relativeImportPath(fromLogical, toHashed string) string {
+	fromDir := filepath.FromSlash(path.Dir(fromLogical))
+	toPath := filepath.FromSlash(toHashed)
+	rel, err := filepath.Rel(fromDir, toPath)
+	if err != nil {
+		return "./" + path.Base(toHashed)
+	}
+	rel = filepath.ToSlash(rel)
+	if !strings.HasPrefix(rel, ".") {
+		rel = "./" + rel
+	}
+	return rel
 }
 
 func copyFile(src, dst string) error {
