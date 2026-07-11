@@ -2,6 +2,7 @@ services:
   split_video_service:
     build: .
     restart: always
+    container_name: split_video_service
     env_file:
       - .env
     volumes:

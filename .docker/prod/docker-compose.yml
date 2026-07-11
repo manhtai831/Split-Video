@@ -1,6 +1,7 @@
 services:
   split_video_service:
     build: .
+    container_name: video_split_service
     restart: always
     env_file:
       - .env
