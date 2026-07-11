@@ -1489,6 +1489,7 @@
   border-radius: 10px;
   padding: 6px;
   background: #fafafa;
+  transition: opacity 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
 
 .yt-playlist__item.is-active {
@@ -1504,6 +1505,65 @@
 .yt-playlist__item.is-playing.is-active {
   border-color: #86efac;
   background: #f0fdf4;
+}
+
+.yt-playlist__item.is-dragging {
+  opacity: 0.4;
+  border-style: dashed;
+  border-color: #a5b4fc;
+}
+
+.yt-playlist__item.is-drag-over-before {
+  box-shadow: inset 0 3px 0 #6366f1;
+}
+
+.yt-playlist__item.is-drag-over-after {
+  box-shadow: inset 0 -3px 0 #6366f1;
+}
+
+.yt-playlist__item.is-playing.is-drag-over-before {
+  box-shadow: inset 3px 0 0 #22c55e, inset 0 3px 0 #6366f1;
+}
+
+.yt-playlist__item.is-playing.is-drag-over-after {
+  box-shadow: inset 3px 0 0 #22c55e, inset 0 -3px 0 #6366f1;
+}
+
+.yt-playlist__drag {
+  flex-shrink: 0;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.yt-playlist__drag svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+  pointer-events: none;
+}
+
+.yt-playlist__drag:hover {
+  color: #64748b;
+  background: #e2e8f0;
+}
+
+.yt-playlist__drag:active,
+.yt-playlist__item.is-dragging .yt-playlist__drag {
+  cursor: grabbing;
+  color: #4f46e5;
 }
 
 .yt-playlist__select {

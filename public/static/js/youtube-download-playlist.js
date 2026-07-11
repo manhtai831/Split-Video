@@ -14,6 +14,18 @@
     formatFilter: "all",
   };
 
+  var dragFromIndex = null;
+  var dragOverIndex = null;
+  var dragInsertBefore = true;
+  var listDragBound = false;
+  var reorderPending = false;
+
+  var ICON_DRAG =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/>' +
+    '<circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/>' +
+    "</svg>";
+
   function $(id) {
     return document.getElementById(id);
   }
@@ -165,6 +177,181 @@
     window.YoutubeDownloadFormats.render(state.formats, state.selectedFormatId, state.formatFilter);
   }
 
+  function clearDragIndicators() {
+    var list = $("ytPlaylist");
+    if (!list) return;
+    Array.prototype.forEach.call(list.querySelectorAll(".yt-playlist__item"), function (li) {
+      li.classList.remove("is-drag-over-before", "is-drag-over-after", "is-dragging");
+    });
+    dragOverIndex = null;
+  }
+
+  function resolveDropIndex(fromIndex, targetIndex, insertBefore) {
+    var to = insertBefore ? targetIndex : targetIndex + 1;
+    if (fromIndex < to) to -= 1;
+    return to;
+  }
+
+  function findDropTarget(list, clientY) {
+    var items = list.querySelectorAll(".yt-playlist__item:not(.is-dragging)");
+    if (!items.length) return null;
+
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      var index = parseInt(item.getAttribute("data-index"), 10);
+      var rect = item.getBoundingClientRect();
+      var mid = rect.top + rect.height / 2;
+
+      if (clientY < mid) {
+        return { item: item, index: index, insertBefore: true };
+      }
+      if (clientY <= rect.bottom) {
+        return { item: item, index: index, insertBefore: false };
+      }
+    }
+
+    var last = items[items.length - 1];
+    return {
+      item: last,
+      index: parseInt(last.getAttribute("data-index"), 10),
+      insertBefore: false,
+    };
+  }
+
+  function updateDragIndicators(list, clientY) {
+    if (dragFromIndex === null) return;
+    var target = findDropTarget(list, clientY);
+    clearDragIndicators();
+    var dragging = list.querySelector('.yt-playlist__item[data-index="' + dragFromIndex + '"]');
+    if (dragging) dragging.classList.add("is-dragging");
+    if (!target) return;
+
+    var toIndex = resolveDropIndex(dragFromIndex, target.index, target.insertBefore);
+    if (toIndex === dragFromIndex) return;
+
+    dragOverIndex = target.index;
+    dragInsertBefore = target.insertBefore;
+    target.item.classList.add(target.insertBefore ? "is-drag-over-before" : "is-drag-over-after");
+  }
+
+  function moveItem(fromIndex, toIndex) {
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0) return Promise.resolve();
+    if (fromIndex >= state.items.length || toIndex >= state.items.length) return Promise.resolve();
+    if (reorderPending) return Promise.resolve();
+
+    var items = state.items.slice();
+    var moved = items.splice(fromIndex, 1)[0];
+    items.splice(toIndex, 0, moved);
+    items.forEach(function (it, i) {
+      it.position = i;
+    });
+    state.items = items;
+
+    if (window.YoutubeDownloadPlayer) {
+      window.YoutubeDownloadPlayer.setPlaylist(state.items);
+    }
+    renderPlaylist();
+
+    reorderPending = true;
+    return fetchJSON(API_BASE + "/" + moved.id, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ position: toIndex }),
+    })
+      .then(function (updated) {
+        if (updated && typeof updated.position === "number") {
+          for (var i = 0; i < state.items.length; i++) {
+            if (state.items[i].id === updated.id) {
+              state.items[i] = Object.assign({}, state.items[i], updated);
+              break;
+            }
+          }
+        }
+      })
+      .catch(function (err) {
+        setText($("youtubeAddError"), err.message || "Sắp xếp thất bại", true);
+        return loadPlaylist();
+      })
+      .finally(function () {
+        reorderPending = false;
+      });
+  }
+
+  function bindItemDrag(li, index) {
+    li.setAttribute("data-index", String(index));
+    li.draggable = false;
+
+    var handle = li.querySelector(".yt-playlist__drag");
+    if (handle) {
+      handle.addEventListener("mousedown", function () {
+        li.draggable = true;
+      });
+      handle.addEventListener("touchstart", function () {
+        li.draggable = true;
+      }, { passive: true });
+    }
+
+    li.addEventListener("dragstart", function (e) {
+      if (!li.draggable) {
+        e.preventDefault();
+        return;
+      }
+      dragFromIndex = index;
+      li.classList.add("is-dragging");
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", String(index));
+      }
+    });
+
+    li.addEventListener("dragend", function () {
+      dragFromIndex = null;
+      li.draggable = false;
+      clearDragIndicators();
+    });
+
+    li.addEventListener("mouseup", function () {
+      if (dragFromIndex === null) li.draggable = false;
+    });
+  }
+
+  function bindListDragReorder(list) {
+    if (listDragBound) return;
+    listDragBound = true;
+
+    list.addEventListener("dragover", function (e) {
+      if (dragFromIndex === null) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+      updateDragIndicators(list, e.clientY);
+    });
+
+    list.addEventListener("drop", function (e) {
+      e.preventDefault();
+      if (dragFromIndex === null) return;
+      var from = dragFromIndex;
+      var to = from;
+      if (dragOverIndex !== null) {
+        to = resolveDropIndex(from, dragOverIndex, dragInsertBefore);
+      }
+      dragFromIndex = null;
+      clearDragIndicators();
+      if (from !== to) {
+        moveItem(from, to);
+      }
+    });
+
+    list.addEventListener("dragleave", function (e) {
+      if (!list.contains(e.relatedTarget)) {
+        clearDragIndicators();
+        if (dragFromIndex !== null) {
+          var dragging = list.querySelector('.yt-playlist__item[data-index="' + dragFromIndex + '"]');
+          if (dragging) dragging.classList.add("is-dragging");
+        }
+      }
+    });
+  }
+
   function renderPlaylist() {
     var list = $("ytPlaylist");
     var empty = $("ytPlaylistEmpty");
@@ -180,7 +367,7 @@
     empty.hidden = true;
     list.hidden = false;
     list.innerHTML = state.items
-      .map(function (item) {
+      .map(function (item, index) {
         var classes = "yt-playlist__item";
         if (item.id === state.selectedId) classes += " is-active";
         if (item.id === state.playingId) {
@@ -199,7 +386,12 @@
           classes +
           '" data-id="' +
           item.id +
+          '" data-index="' +
+          index +
           '" role="listitem">' +
+          '<span class="yt-playlist__drag" title="Kéo để sắp xếp" aria-label="Kéo để sắp xếp">' +
+          ICON_DRAG +
+          "</span>" +
           '<button type="button" class="yt-playlist__select" data-action="select" data-id="' +
           item.id +
           '">' +
@@ -225,6 +417,11 @@
         );
       })
       .join("");
+
+    Array.prototype.forEach.call(list.querySelectorAll(".yt-playlist__item"), function (li, index) {
+      bindItemDrag(li, index);
+    });
+    bindListDragReorder(list);
   }
 
   function onPlayingChange(item, mediaPlaying) {

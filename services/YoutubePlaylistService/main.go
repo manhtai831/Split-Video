@@ -126,15 +126,58 @@ func DeleteForUser(id int, userID string) error {
 }
 
 func UpdatePosition(id int, userID string, position int) (entities.YoutubePlaylistItem, error) {
-	item, err := GetByIDForUser(id, userID)
+	items, err := ListByUser(userID)
 	if err != nil {
 		return entities.YoutubePlaylistItem{}, err
 	}
-	item.Position = position
-	if err := Global.DB.Save(&item).Error; err != nil {
+
+	fromIdx := -1
+	for i := range items {
+		if items[i].ID == id {
+			fromIdx = i
+			break
+		}
+	}
+	if fromIdx < 0 {
+		return entities.YoutubePlaylistItem{}, gorm.ErrRecordNotFound
+	}
+
+	n := len(items)
+	if position < 0 {
+		position = 0
+	}
+	if position >= n {
+		position = n - 1
+	}
+	if fromIdx == position {
+		return items[fromIdx], nil
+	}
+
+	moved := items[fromIdx]
+	rest := append([]entities.YoutubePlaylistItem{}, items[:fromIdx]...)
+	rest = append(rest, items[fromIdx+1:]...)
+	ordered := append([]entities.YoutubePlaylistItem{}, rest[:position]...)
+	ordered = append(ordered, moved)
+	ordered = append(ordered, rest[position:]...)
+
+	err = Global.DB.Transaction(func(tx *gorm.DB) error {
+		for i := range ordered {
+			if ordered[i].Position == i {
+				continue
+			}
+			if err := tx.Model(&entities.YoutubePlaylistItem{}).
+				Where("id = ? AND user_id = ?", ordered[i].ID, userID).
+				Update("position", i).Error; err != nil {
+				return err
+			}
+			ordered[i].Position = i
+		}
+		return nil
+	})
+	if err != nil {
 		return entities.YoutubePlaylistItem{}, err
 	}
-	return item, nil
+	return ordered[position], nil
 }
 
 func GetFormats(ctx context.Context, id int, userID string) (entities.YoutubePlaylistItem, []structs.YoutubeFormatDto, error) {
