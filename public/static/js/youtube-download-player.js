@@ -384,7 +384,7 @@
           function (err) {
             setPlayPauseLabel(false);
             setStatus(
-              "Không phát được trong trình duyệt (có thể do CORS). Thử Mở / tải link. " +
+              "Không phát được trong trình duyệt. Thử Mở / tải link. " +
                 (err && err.message ? err.message : ""),
               true
             );

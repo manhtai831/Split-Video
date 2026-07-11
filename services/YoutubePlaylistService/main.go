@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -199,20 +200,58 @@ func ResolveFormat(ctx context.Context, id int, userID, formatID string) (struct
 		return structs.YoutubeResolveResponseDto{}, fmt.Errorf("cần chọn format_id")
 	}
 
-	_, formats, err := GetFormats(ctx, id, userID)
+	item, formats, err := GetFormats(ctx, id, userID)
+	if err != nil {
+		return structs.YoutubeResolveResponseDto{}, err
+	}
+	resolved, err := getItemUrl(formats, formatID)
 	if err != nil {
 		return structs.YoutubeResolveResponseDto{}, err
 	}
 
+	if isResolvedURLExpired(resolved.URL) {
+		item, formats, err = refreshFormats(ctx, item)
+		if err != nil {
+			return structs.YoutubeResolveResponseDto{}, err
+		}
+		resolved, err = getItemUrl(formats, formatID)
+		if err != nil {
+			return structs.YoutubeResolveResponseDto{}, err
+		}
+	}
+	return resolved, nil
+}
+
+// isResolvedURLExpired reports whether a googlevideo (or similar) URL has passed
+// its expire query param. Missing/invalid expire is treated as expired.
+func isResolvedURLExpired(rawURL string) bool {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return true
+	}
+	expireStr := parsed.Query().Get("expire")
+	if expireStr == "" {
+		return true
+	}
+	expire, err := strconv.ParseInt(expireStr, 10, 64)
+	if err != nil {
+		return true
+	}
+	return expire < time.Now().Unix()
+}
+
+func getItemUrl(formats []structs.YoutubeFormatDto, formatID string) (structs.YoutubeResolveResponseDto, error) {
 	for _, f := range formats {
 		if f.FormatID == formatID {
 			if f.URL == "" {
 				return structs.YoutubeResolveResponseDto{}, fmt.Errorf("format không có URL")
 			}
+
 			return structs.YoutubeResolveResponseDto{
-				URL:  f.URL,
-				Ext:  f.Ext,
-				Kind: f.Kind,
+				URL:         f.URL,
+				Ext:         f.Ext,
+				Kind:        f.Kind,
+				AvailableAt: f.AvailableAt,
 			}, nil
 		}
 	}

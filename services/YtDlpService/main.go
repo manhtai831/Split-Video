@@ -27,17 +27,19 @@ type rawFormat struct {
 	FormatNote     string   `json:"format_note"`
 	URL            string   `json:"url"`
 	Protocol       string   `json:"protocol"`
+	AvailableAt    int64    `json:"available_at"`
 }
 
 type rawProbe struct {
-	ID         string      `json:"id"`
-	Title      string      `json:"title"`
-	Thumbnail  string      `json:"thumbnail"`
-	Duration   float64     `json:"duration"`
-	Channel    string      `json:"channel"`
-	WebpageURL string      `json:"webpage_url"`
-	OriginalURL string     `json:"original_url"`
-	Formats    []rawFormat `json:"formats"`
+	ID          string      `json:"id"`
+	AvailableAt int64       `json:"available_at"`
+	Title       string      `json:"title"`
+	Thumbnail   string      `json:"thumbnail"`
+	Duration    float64     `json:"duration"`
+	Channel     string      `json:"channel"`
+	WebpageURL  string      `json:"webpage_url"`
+	OriginalURL string      `json:"original_url"`
+	Formats     []rawFormat `json:"formats"`
 }
 
 func Probe(ctx context.Context, pageURL string) (structs.YoutubeProbeDto, error) {
@@ -110,17 +112,18 @@ func mapFormats(raw []rawFormat) []structs.YoutubeFormatDto {
 			fps = *f.FPS
 		}
 		out = append(out, structs.YoutubeFormatDto{
-			FormatID:   f.FormatID,
-			Ext:        f.Ext,
-			Resolution: f.Resolution,
-			FPS:        fps,
-			Abr:        pickBitrate(f.Abr, f.Tbr),
-			VCodec:     normalizeCodec(f.VCodec),
-			ACodec:     normalizeCodec(f.ACodec),
-			Filesize:   filesize,
-			FormatNote: f.FormatNote,
-			URL:        f.URL,
-			Kind:       classifyKind(f.VCodec, f.ACodec),
+			FormatID:    f.FormatID,
+			Ext:         f.Ext,
+			Resolution:  f.Resolution,
+			FPS:         fps,
+			Abr:         pickBitrate(f.Abr, f.Tbr),
+			VCodec:      normalizeCodec(f.VCodec),
+			ACodec:      normalizeCodec(f.ACodec),
+			Filesize:    filesize,
+			FormatNote:  f.FormatNote,
+			AvailableAt: f.AvailableAt,
+			URL:         f.URL,
+			Kind:        classifyKind(f.VCodec, f.ACodec),
 		})
 	}
 	return out

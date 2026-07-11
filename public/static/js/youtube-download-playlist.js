@@ -352,20 +352,29 @@
     });
   }
 
+  function updatePanelsVisibility() {
+    var playlistPanel = $("ytPlaylistPanel");
+    var formatsPanel = $("ytFormatsPanel");
+    var playerBar = $("ytPlayerBar");
+    var hasItems = state.items.length > 0;
+    var hasSelection = !!state.selectedId && hasItems;
+
+    if (playlistPanel) playlistPanel.hidden = !hasItems;
+    if (formatsPanel) formatsPanel.hidden = !hasSelection;
+    if (playerBar) playerBar.hidden = !hasSelection;
+  }
+
   function renderPlaylist() {
     var list = $("ytPlaylist");
-    var empty = $("ytPlaylistEmpty");
-    if (!list || !empty) return;
+    if (!list) return;
+
+    updatePanelsVisibility();
 
     if (!state.items.length) {
-      list.hidden = true;
       list.innerHTML = "";
-      empty.hidden = false;
       return;
     }
 
-    empty.hidden = true;
-    list.hidden = false;
     list.innerHTML = state.items
       .map(function (item, index) {
         var classes = "yt-playlist__item";
@@ -489,6 +498,7 @@
     state.selectedFormatId = null;
     savePrefs({ selectedItemId: id || null });
     renderPlaylist();
+    updatePanelsVisibility();
 
     var item = state.items.find(function (it) {
       return it.id === id;
@@ -588,6 +598,7 @@
           if (window.YoutubeDownloadFormats) {
             window.YoutubeDownloadFormats.reset();
           }
+          updatePanelsVisibility();
           if (state.items.length) {
             return selectItem(state.items[0].id);
           }

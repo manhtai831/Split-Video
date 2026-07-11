@@ -27,15 +27,14 @@
   </form>
 
   <div class="yt-layout">
-    <section class="yt-panel yt-panel--playlist" aria-labelledby="ytPlaylistHeading">
+    <section id="ytPlaylistPanel" class="yt-panel yt-panel--playlist" aria-labelledby="ytPlaylistHeading" hidden>
       <h2 id="ytPlaylistHeading" class="jobs-section__title">Playlist</h2>
-      <div id="ytPlaylistEmpty" class="yt-empty">Chưa có video. Thêm link YouTube ở trên.</div>
-      <ul id="ytPlaylist" class="yt-playlist" role="list" hidden></ul>
+      <ul id="ytPlaylist" class="yt-playlist" role="list"></ul>
     </section>
 
-    <section class="yt-panel yt-panel--formats" aria-labelledby="ytFormatsHeading">
+    <section id="ytFormatsPanel" class="yt-panel yt-panel--formats" aria-labelledby="ytFormatsHeading" hidden>
       <h2 id="ytFormatsHeading" class="jobs-section__title">Formats</h2>
-      <p id="ytFormatsHint" class="field-hint">Chọn một mục trong playlist để xem danh sách format.</p>
+      <p id="ytFormatsHint" class="field-hint" hidden>Chọn một mục trong playlist để xem danh sách format.</p>
       <button type="button" id="ytFormatPreview" class="yt-format-preview" hidden title="Mở trên YouTube">
         <img id="ytFormatPreviewThumb" class="yt-format-preview__thumb" alt="" hidden />
         <div class="yt-format-preview__body">
@@ -73,7 +72,7 @@
     </section>
   </div>
 
-  <section class="yt-player-bar" aria-label="Player">
+  <section id="ytPlayerBar" class="yt-player-bar" aria-label="Player" hidden>
     <div class="yt-player-bar__meta">
       <img id="ytPlayerThumb" class="yt-player-bar__thumb" alt="" hidden />
       <div>

@@ -1867,6 +1867,10 @@
   gap: 12px;
 }
 
+.yt-player-bar[hidden] {
+  display: none;
+}
+
 .yt-player-bar__meta {
   display: flex;
   align-items: center;

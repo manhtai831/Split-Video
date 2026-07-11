@@ -17,17 +17,18 @@ const (
 )
 
 type YoutubeFormatDto struct {
-	FormatID   string            `json:"format_id"`
-	Ext        string            `json:"ext"`
-	Resolution string            `json:"resolution"`
-	FPS        float64           `json:"fps,omitempty"`
-	Abr        float64           `json:"abr,omitempty"`
-	VCodec     string            `json:"vcodec"`
-	ACodec     string            `json:"acodec"`
-	Filesize   int64             `json:"filesize,omitempty"`
-	FormatNote string            `json:"format_note"`
-	URL        string            `json:"url"`
-	Kind       YoutubeFormatKind `json:"kind"`
+	FormatID    string            `json:"format_id"`
+	AvailableAt int64             `json:"available_at"`
+	Ext         string            `json:"ext"`
+	Resolution  string            `json:"resolution"`
+	FPS         float64           `json:"fps,omitempty"`
+	Abr         float64           `json:"abr,omitempty"`
+	VCodec      string            `json:"vcodec"`
+	ACodec      string            `json:"acodec"`
+	Filesize    int64             `json:"filesize,omitempty"`
+	FormatNote  string            `json:"format_note"`
+	URL         string            `json:"url"`
+	Kind        YoutubeFormatKind `json:"kind"`
 }
 
 type YoutubeProbeDto struct {
@@ -72,9 +73,10 @@ type YoutubeFormatsResponseDto struct {
 }
 
 type YoutubeResolveResponseDto struct {
-	URL  string            `json:"url"`
-	Ext  string            `json:"ext"`
-	Kind YoutubeFormatKind `json:"kind"`
+	URL         string            `json:"url"`
+	Ext         string            `json:"ext"`
+	Kind        YoutubeFormatKind `json:"kind"`
+	AvailableAt int64             `json:"available_at"`
 }
 
 type YoutubeReorderRequestDto struct {
