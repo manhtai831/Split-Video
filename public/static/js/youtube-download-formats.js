@@ -175,7 +175,7 @@
   }
 
   function actionButtonsHtml(f) {
-    var canPlay = f.kind === "audio" || f.kind === "muxed";
+    var canPlay = true;
     var parts = [];
     if (canPlay) {
       parts.push(iconButtonHtml("play", "Phát", ICON_PLAY, false));

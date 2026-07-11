@@ -350,13 +350,13 @@
       setStatus("Chọn một format trước khi phát.", true);
       return;
     }
-    if (format.kind === "video") {
-      setStatus(
-        "Format video-only không có audio trong trình duyệt — chọn muxed/audio hoặc dùng Mở link.",
-        true
-      );
-      return;
-    }
+    // if (format.kind === "video") {
+    //   setStatus(
+    //     "Format video-only không có audio trong trình duyệt — chọn muxed/audio hoặc dùng Mở link.",
+    //     true
+    //   );
+    //   return;
+    // }
     if (resolving) return;
     resolving = true;
     setStatus("Đang lấy URL phát…", false);
