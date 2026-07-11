@@ -54,6 +54,8 @@ func pageCanonicalPath(activePage string) string {
 		return "/video/gif"
 	case "extract-audio":
 		return "/video/extract-audio"
+	case "youtube-download":
+		return "/video/youtube-download"
 	case "editor":
 		return "/video/editor"
 	case "about":

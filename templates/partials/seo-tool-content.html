@@ -45,6 +45,17 @@
     <li>Tùy chỉnh bitrate, âm lượng và tốc độ phát</li>
   </ul>
   <p>Mỗi video tạo một job riêng. Tham khảo <a href="/video/merge">ghép video</a> và <a href="/about">chính sách lưu trữ file</a>.</p>
+{{else if eq .ActivePage "youtube-download"}}
+  <h2>YouTube Download &amp; Playlist</h2>
+  <p>Thêm link YouTube vào playlist cá nhân, xem danh sách format audio/video từ yt-dlp, rồi phát trực tiếp trên web hoặc mở URL tải. Metadata được lưu trên server; file media không được lưu.</p>
+  <h3>Cách dùng</h3>
+  <ul>
+    <li>Dán URL YouTube và thêm vào playlist</li>
+    <li>Chọn format (muxed / audio / video)</li>
+    <li>Phát trong trình duyệt hoặc mở link tải trực tiếp</li>
+    <li>Điều khiển play/pause, next/prev và chế độ lặp</li>
+  </ul>
+  <p>Kết hợp với <a href="/video/extract-audio">tách audio</a> nếu bạn đã có file video trên máy.</p>
 {{else if eq .ActivePage "editor"}}
   <h2>Video Editor online — chỉnh sửa trên trình duyệt</h2>
   <p>Tạo project chỉnh sửa video với layer video, ảnh và text. Lưu draft, mở lại để tiếp tục, rồi xuất bản để render file hoàn chỉnh.</p>

@@ -6,6 +6,7 @@ import (
 	"app/router"
 	"app/services/StorageService"
 	"app/worker/FileRetentionWorker"
+	"app/worker/YtDlpUpdaterWorker"
 	"app/worker/channels"
 	"net/http"
 )
@@ -15,6 +16,7 @@ func main() {
 	router.Bootstrap()
 	channels.Initialize()
 	FileRetentionWorker.Start()
+	YtDlpUpdaterWorker.Start()
 	StorageService.Start()
 	http.ListenAndServe(":3000", middleware.Apply(http.DefaultServeMux))
 }

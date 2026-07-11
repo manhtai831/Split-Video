@@ -1,0 +1,115 @@
+{{define "content"}}
+<link href="{{asset "css/jobs-ui.css"}}" rel="stylesheet" />
+<div class="container">
+  <div class="page-header">
+    <h1>YouTube Download &amp; Playlist <span class="page-header__subtitle" lang="en">/ Play &amp; Download</span></h1>
+    <p class="page-description--en">{{.Description}}</p>
+  </div>
+
+  <form id="youtubeAddForm" class="yt-add-form" action="#" method="post">
+    <div class="form-field">
+      <label for="youtube_url">URL YouTube</label>
+      <div class="input-row">
+        <input
+          id="youtube_url"
+          name="url"
+          type="url"
+          placeholder="https://www.youtube.com/watch?v=..."
+          required
+          autocomplete="off"
+        />
+        <button type="submit" id="youtubeAddBtn" class="btn btn--primary">Thêm vào playlist</button>
+      </div>
+      <p class="field-hint">Dán link YouTube.</p>
+      <p id="youtubeAddError" class="yt-status yt-status--error" hidden></p>
+      <p id="youtubeAddStatus" class="yt-status" hidden></p>
+    </div>
+  </form>
+
+  <div class="yt-layout">
+    <section class="yt-panel yt-panel--playlist" aria-labelledby="ytPlaylistHeading">
+      <h2 id="ytPlaylistHeading" class="jobs-section__title">Playlist</h2>
+      <div id="ytPlaylistEmpty" class="yt-empty">Chưa có video. Thêm link YouTube ở trên.</div>
+      <ul id="ytPlaylist" class="yt-playlist" role="list" hidden></ul>
+    </section>
+
+    <section class="yt-panel yt-panel--formats" aria-labelledby="ytFormatsHeading">
+      <h2 id="ytFormatsHeading" class="jobs-section__title">Formats</h2>
+      <p id="ytFormatsHint" class="field-hint">Chọn một mục trong playlist để xem danh sách format.</p>
+      <button type="button" id="ytFormatPreview" class="yt-format-preview" hidden title="Mở trên YouTube">
+        <img id="ytFormatPreviewThumb" class="yt-format-preview__thumb" alt="" hidden />
+        <div class="yt-format-preview__body">
+          <div id="ytFormatPreviewTitle" class="yt-format-preview__title">—</div>
+          <div id="ytFormatPreviewSub" class="yt-format-preview__sub">—</div>
+        </div>
+      </button>
+      <div id="ytFormatFilters" class="yt-format-filters" hidden>
+        <button type="button" class="btn btn--sm btn--secondary yt-filter-btn is-active" data-filter="all">Tất cả</button>
+        <button type="button" class="btn btn--sm btn--secondary yt-filter-btn" data-filter="muxed">Muxed</button>
+        <button type="button" class="btn btn--sm btn--secondary yt-filter-btn" data-filter="audio">Audio</button>
+        <button type="button" class="btn btn--sm btn--secondary yt-filter-btn" data-filter="video">Video</button>
+      </div>
+      <p id="ytFormatsStatus" class="yt-status" hidden></p>
+      <div id="ytFormatsWrap" class="yt-formats-wrap" hidden>
+        <table class="yt-formats-table">
+          <thead>
+            <tr>
+              <th scope="col">Res / Bitrate</th>
+              <th scope="col">Size</th>
+              <th scope="col">Note</th>
+              <th class="cell-actions" scope="col" aria-label="Thao tác">
+                <span class="cell-actions__header-icon" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
+                  </svg>
+                </span>
+                <span class="sr-only">Thao tác</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="ytFormatsBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <section class="yt-player-bar" aria-label="Player">
+    <div class="yt-player-bar__meta">
+      <img id="ytPlayerThumb" class="yt-player-bar__thumb" alt="" hidden />
+      <div>
+        <div id="ytPlayerTitle" class="yt-player-bar__title">Chưa phát bài nào</div>
+        <div id="ytPlayerSub" class="yt-player-bar__sub">—</div>
+      </div>
+    </div>
+    <div class="yt-player-bar__media">
+      <video id="ytMediaVideo" class="yt-media" controls playsinline hidden></video>
+      <audio id="ytMediaAudio" class="yt-media" controls hidden></audio>
+    </div>
+    <div class="yt-player-bar__controls">
+      <button type="button" id="ytPrevBtn" class="btn btn--secondary btn--sm" title="Previous">Prev</button>
+      <button type="button" id="ytPlayPauseBtn" class="btn btn--primary btn--sm" title="Play/Pause">Play</button>
+      <button type="button" id="ytNextBtn" class="btn btn--secondary btn--sm" title="Next">Next</button>
+      <button type="button" id="ytLoopBtn" class="btn btn--ghost btn--sm" title="Loop" data-loop="off">Loop: Off</button>
+    </div>
+    <div id="ytContinuePrompt" class="yt-continue-prompt" hidden role="alertdialog" aria-labelledby="ytContinuePromptTitle">
+      <p id="ytContinuePromptTitle" class="yt-continue-prompt__text">Bạn đã nghe khoảng 2 giờ. Tiếp tục phát?</p>
+      <div class="yt-continue-prompt__actions">
+        <button type="button" id="ytContinueYes" class="btn btn--primary btn--sm">Tiếp tục</button>
+        <button type="button" id="ytContinueNo" class="btn btn--secondary btn--sm">Dừng</button>
+      </div>
+    </div>
+    <p id="ytPlayerStatus" class="yt-status" hidden></p>
+  </section>
+
+  {{template "seo-tool-content" .}}
+</div>
+
+<script src="{{asset "js/youtube-download-formats.js"}}"></script>
+<script src="{{asset "js/youtube-download-player.js"}}"></script>
+<script src="{{asset "js/youtube-download-playlist.js"}}"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    if (window.initYoutubeDownloadPlaylist) window.initYoutubeDownloadPlaylist();
+  });
+</script>
+{{end}}

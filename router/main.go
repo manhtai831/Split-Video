@@ -15,6 +15,7 @@ import (
 	routerseo "app/router/seo"
 	staticfiles "app/router/static"
 	"app/router/split"
+	"app/router/youtubedownload"
 	"app/middleware"
 	"app/structs"
 	"app/templates"
@@ -37,6 +38,7 @@ func Bootstrap() {
 	gif.Bootstrap()
 	extractaudio.Bootstrap()
 	editor.Bootstrap()
+	youtubedownload.Bootstrap()
 	about.Bootstrap()
 	faq.Bootstrap()
 	admin.Bootstrap()

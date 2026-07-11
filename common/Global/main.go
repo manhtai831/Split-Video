@@ -17,6 +17,7 @@ func Bootstrap() {
 	db.AutoMigrate(
 		&entities.Job{},
 		&entities.JobFileData{},
+		&entities.YoutubePlaylistItem{},
 	)
 	DB = db
 }

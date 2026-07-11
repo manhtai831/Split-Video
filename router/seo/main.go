@@ -19,6 +19,7 @@ var sitemapPages = []sitemapEntry{
 	{Path: "/video/merge", Priority: "0.8"},
 	{Path: "/video/gif", Priority: "0.8"},
 	{Path: "/video/extract-audio", Priority: "0.8"},
+	{Path: "/video/youtube-download", Priority: "0.8"},
 	{Path: "/video/editor", Priority: "0.8"},
 	{Path: "/about", Priority: "0.6"},
 	{Path: "/faq", Priority: "0.6"},

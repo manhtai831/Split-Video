@@ -13,17 +13,20 @@ ENV CGO_ENABLED=1
 COPY . .
 
 RUN go run ./cmd/assetbuild prod
-RUN mkdir -p dist && go build  -o ./dist/main .
+RUN mkdir -p dist && go build -o ./dist/main . && go build -o ./dist/ytdlp-updater ./cmd/ytdlp-updater
 
 FROM alpine:3.24 AS runner
 
 WORKDIR /app
 
-RUN apk add ffmpeg
+RUN apk add ffmpeg python3 ca-certificates
 
 COPY --from=builder /app/dist/main ./dist/main
+COPY --from=builder /app/dist/ytdlp-updater /usr/local/bin/ytdlp-updater
 COPY --from=builder /app/dist/static ./dist/static
 COPY templates ./templates
+
+RUN ytdlp-updater
 
 EXPOSE 3000
 

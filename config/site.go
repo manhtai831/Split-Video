@@ -7,12 +7,13 @@ import (
 )
 
 const (
-	defaultRetentionDays           = 30
-	defaultOGImage                 = "/static/logo_hoz.svg"
-	defaultStorageScanIntervalMins = 5
-	defaultUploadChunkSizeMB       = 5
-	defaultUploadChunkTTLHours     = 24
-	defaultMaxUploadParts          = 10000
+	defaultRetentionDays              = 30
+	defaultOGImage                    = "/static/logo_hoz.svg"
+	defaultStorageScanIntervalMins    = 5
+	defaultUploadChunkSizeMB          = 5
+	defaultUploadChunkTTLHours        = 24
+	defaultMaxUploadParts             = 10000
+	defaultYoutubeFormatsCacheMinutes = 1440 // 1 day
 )
 
 var (
@@ -25,6 +26,7 @@ var (
 	UploadChunkSizeBytes       int
 	UploadChunkTTLHours        int
 	MaxUploadParts             int
+	YoutubeFormatsCacheMinutes int
 )
 
 func init() {
@@ -72,6 +74,14 @@ func init() {
 		}
 	}
 	MaxUploadParts = maxParts
+
+	ytCacheMins := defaultYoutubeFormatsCacheMinutes
+	if raw := strings.TrimSpace(os.Getenv("YOUTUBE_FORMATS_CACHE_MINUTES")); raw != "" {
+		if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 {
+			ytCacheMins = parsed
+		}
+	}
+	YoutubeFormatsCacheMinutes = ytCacheMins
 }
 
 func AbsURL(path string) string {

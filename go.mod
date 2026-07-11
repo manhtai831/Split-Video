@@ -5,6 +5,7 @@ go 1.26.4
 require (
 	github.com/fogleman/gg v1.3.0
 	github.com/google/uuid v1.6.0
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/tdewolff/minify/v2 v2.24.13
 	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.31.2
