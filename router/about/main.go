@@ -18,9 +18,9 @@ func handleAbout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := structs.PageData{
-		Title:         "Về Video Tools — Công cụ xử lý video online miễn phí",
-		Description:   "Video Tools — bộ công cụ chia, ghép, tạo GIF, tách audio và chỉnh sửa video online miễn phí. Xử lý trên server tự host, file tự xóa sau 30 ngày.",
-		DescriptionEN: "Video Tools — free online video split, merge, GIF, audio extract and editor. Self-hosted processing; files auto-deleted after 30 days.",
+		Title:         "Về Chúng Tôi — Bộ Công Cụ Xử Lý Video Online Miễn Phí",
+		Description:   "Video Tools là bộ công cụ video online miễn phí: cắt chia video, ghép clip, tạo GIF, tách MP3, video editor. Free online video tools — tự host, file tự xóa sau 30 ngày.",
+		DescriptionEN: "About Video Tools — free online video tools for split, merge, GIF, extract audio (MP3) and browser video editor. Self-hosted; files auto-deleted after 30 days.",
 		ActivePage:    "about",
 		UserID:        middleware.GetUserID(w, r),
 	}

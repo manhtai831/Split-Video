@@ -22,9 +22,9 @@ func Bootstrap() {
 func handleGif(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(w, r)
 	data := structs.PageData{
-		Title:                "Tạo GIF từ Video — GIF, WebP, APNG",
-		Description:          "Chuyển đoạn video thành GIF, WebP động hoặc APNG. Chọn thời gian, kích thước, chất lượng và FPS. Nhiều đoạn từ một video.",
-		DescriptionEN:        "Convert video clips to GIF, animated WebP or APNG. Pick time range, size, quality and FPS. Multiple segments from one video.",
+		Title:                "Tạo GIF từ Video — Video to GIF, WebP, APNG Online",
+		Description:          "Tạo GIF từ video online miễn phí. Chuyển video thành GIF, WebP động hoặc APNG — video to GIF maker: chọn đoạn, kích thước, FPS, chất lượng. Nhiều clip từ một file.",
+		DescriptionEN:        "Free video to GIF converter online — make GIF, animated WebP or APNG from video. Pick time range, size, FPS and quality. Multiple segments from one clip.",
 		ActivePage:           "gif",
 		Result:               "",
 		UserID:               userID,

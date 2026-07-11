@@ -7,6 +7,34 @@
   var LOOP_ALL = "all";
   var CONTINUE_MS = 2 * 60 * 60 * 1000;
 
+  var ICON_PLAY =
+    '<svg class="btn__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<polygon points="6 3 20 12 6 21 6 3"/>' +
+    "</svg>";
+
+  var ICON_PAUSE =
+    '<svg class="btn__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<rect x="14" y="4" width="4" height="16" rx="1"/>' +
+    '<rect x="6" y="4" width="4" height="16" rx="1"/>' +
+    "</svg>";
+
+  var ICON_LOOP =
+    '<svg class="btn__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="m17 2 4 4-4 4"/>' +
+    '<path d="M3 11V9a4 4 0 0 1 4-4h14"/>' +
+    '<path d="m7 22-4-4 4-4"/>' +
+    '<path d="M21 13v2a4 4 0 0 1-4 4H3"/>' +
+    "</svg>";
+
+  var ICON_LOOP_ONE =
+    '<svg class="btn__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="m17 2 4 4-4 4"/>' +
+    '<path d="M3 11V9a4 4 0 0 1 4-4h14"/>' +
+    '<path d="m7 22-4-4 4-4"/>' +
+    '<path d="M21 13v2a4 4 0 0 1-4 4H3"/>' +
+    '<path d="M11 10h1v4"/>' +
+    "</svg>";
+
   var api = {
     getSelectedFormat: null,
     getSelectedItem: null,
@@ -64,9 +92,16 @@
     var btn = $("ytLoopBtn");
     if (!btn) return;
     var label = "Loop: Off";
-    if (loopMode === LOOP_ONE) label = "Loop: One";
-    if (loopMode === LOOP_ALL) label = "Loop: All";
-    btn.textContent = label;
+    var icon = ICON_LOOP;
+    if (loopMode === LOOP_ONE) {
+      label = "Loop: One";
+      icon = ICON_LOOP_ONE;
+    } else if (loopMode === LOOP_ALL) {
+      label = "Loop: All";
+    }
+    btn.innerHTML = icon;
+    btn.title = label;
+    btn.setAttribute("aria-label", label);
     btn.setAttribute("data-loop", loopMode);
     btn.classList.toggle("is-active", loopMode !== LOOP_OFF);
   }
@@ -108,7 +143,12 @@
 
   function setPlayPauseLabel(playing) {
     var btn = $("ytPlayPauseBtn");
-    if (btn) btn.textContent = playing ? "Pause" : "Play";
+    if (btn) {
+      var label = playing ? "Pause" : "Play";
+      btn.innerHTML = playing ? ICON_PAUSE : ICON_PLAY;
+      btn.title = label;
+      btn.setAttribute("aria-label", label);
+    }
     isMediaPlaying = !!playing;
     syncPlayingIndicator();
   }

@@ -22,9 +22,9 @@ func Bootstrap() {
 func handleExtractAudio(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(w, r)
 	data := structs.PageData{
-		Title:                "Tách Âm Thanh Khỏi Video — MP3, M4A, WAV, FLAC, OGG",
-		Description:          "Trích xuất audio từ video MP4, MOV, MKV. Chọn định dạng, bitrate, âm lượng và tốc độ phát. Mỗi video một job riêng.",
-		DescriptionEN:        "Extract audio from MP4, MOV, MKV videos. Choose format, bitrate, volume, playback speed and metadata. Multiple videos — one job per file.",
+		Title:                "Tách Âm Thanh từ Video — Video to MP3, M4A, WAV Online",
+		Description:          "Tách âm thanh khỏi video online miễn phí. Chuyển video thành MP3 / extract audio from video — hỗ trợ M4A, WAV, FLAC, OGG. Chọn bitrate, âm lượng, tốc độ phát.",
+		DescriptionEN:        "Extract audio from video online free — convert video to MP3, M4A, WAV, FLAC or OGG. Adjust bitrate, volume, speed and metadata. One job per file.",
 		ActivePage:           "extract-audio",
 		Result:               "",
 		UserID:               userID,

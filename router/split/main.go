@@ -24,9 +24,9 @@ func handleLegacySplit(w http.ResponseWriter, r *http.Request) {
 func handleSplit(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(w, r)
 	data := structs.PageData{
-		Title:                "Chia Video Online — Cắt Theo Dung Lượng & Thời Gian",
-		Description:          "Chia video lớn theo dung lượng (MB/GB) hoặc thời gian. Hỗ trợ MP4, MKV, MOV — 4K, 1080P, 720P hoặc giữ chất lượng gốc. Tải ZIP.",
-		DescriptionEN:        "Split large videos by file size (MB/GB) or duration (seconds, minutes, hours). Supports MP4, MKV, MOV — choose 4K, 1080P, 720P or keep original quality. One-click ZIP download.",
+		Title:                "Chia Video Online — Cắt Video MP4 Theo Dung Lượng, Thời Gian",
+		Description:          "Chia video online, cắt video MP4 miễn phí theo dung lượng (MB/GB) hoặc thời gian. Split video online / video cutter — hỗ trợ MKV, MOV, 4K–720P, tải ZIP ngay.",
+		DescriptionEN:        "Split video online free — cut MP4 by file size (MB/GB) or duration. Video cutter for MKV, MOV; choose 4K, 1080P, 720P or original quality. Download ZIP in one click.",
 		ActivePage:           "split",
 		Result:               "",
 		UserID:               userID,

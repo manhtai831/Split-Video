@@ -18,9 +18,9 @@ func handleFAQ(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := structs.PageData{
-		Title:         "Câu hỏi thường gặp — Video Tools",
-		Description:   "FAQ về Video Tools: lưu trữ file trên server, thời gian giữ 30 ngày, định dạng hỗ trợ, chia ghép video, GIF, tách audio và editor.",
-		DescriptionEN: "Video Tools FAQ — file storage, 30-day retention, supported formats, split, merge, GIF, audio and editor.",
+		Title:         "FAQ — Câu Hỏi Thường Gặp về Công Cụ Video Online",
+		Description:   "FAQ Video Tools: lưu trữ file, giữ 30 ngày, định dạng MP4/MKV/MOV, cách chia cắt video, ghép video, tạo GIF, tách audio MP3 và video editor online.",
+		DescriptionEN: "Video Tools FAQ — file storage, 30-day retention, supported formats, how to split/cut video, merge, GIF, extract audio to MP3 and online video editor.",
 		ActivePage:    "faq",
 		FAQItems:      structs.DefaultFAQItems(),
 		UserID:        middleware.GetUserID(w, r),

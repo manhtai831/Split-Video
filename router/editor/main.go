@@ -24,8 +24,9 @@ func handleEditor(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(w, r)
 	jobID := r.URL.Query().Get("job")
 
-	title := "Video Editor Online — Chỉnh sửa video trên trình duyệt"
-	description := "Tạo draft, thêm layer video/ảnh/text, chỉnh timeline và xuất bản. Quản lý project chỉnh sửa video online miễn phí."
+	title := "Chỉnh Sửa Video Online — Video Editor Trên Trình Duyệt"
+	description := "Chỉnh sửa video online miễn phí ngay trên trình duyệt. Online video editor: thêm layer video/ảnh/text, timeline, lưu draft và xuất bản — không cần cài phần mềm."
+	descriptionEN := "Free online video editor in your browser — add video, image & text layers, edit timeline, save drafts and publish. No install required."
 
 	if jobID != "" {
 		job, err := JobService.GetJobByIdentifierForUser(jobID, userID)
@@ -33,13 +34,14 @@ func handleEditor(w http.ResponseWriter, r *http.Request) {
 			name := editorProjectName(job.ID)
 			title = fmt.Sprintf("Chỉnh sửa project %s", name)
 			description = fmt.Sprintf("Tiếp tục chỉnh sửa project video %s — draft, layer, timeline và xuất bản.", name)
+			descriptionEN = fmt.Sprintf("Continue editing video project %s — drafts, layers, timeline and publish.", name)
 		}
 	}
 
 	data := structs.PageData{
 		Title:         title,
 		Description:   description,
-		DescriptionEN: "Manage video editor projects: create drafts, publish, and reopen to continue editing.",
+		DescriptionEN: descriptionEN,
 		ActivePage:    "editor",
 		UserID:        userID,
 		Result:        jobID,

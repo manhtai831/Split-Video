@@ -27,9 +27,9 @@ func Bootstrap() {
 func handleMerge(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(w, r)
 	data := structs.PageData{
-		Title:                "Ghép Video Online — Nối Nhiều Clip Thành Một",
-		Description:          "Ghép nhiều video thành một file. Sắp xếp thứ tự clip, chọn độ phân giải và định dạng đầu ra. Hỗ trợ MP4, MKV, MOV.",
-		DescriptionEN:        "Merge multiple videos into one file. Reorder clips, choose output resolution and format. Supports MP4, MKV, MOV.",
+		Title:                "Ghép Video Online — Nối Nhiều Clip Thành Một File",
+		Description:          "Ghép video online miễn phí: nối nhiều clip, ảnh thành một video. Merge video / join videos online — kéo thả thứ tự, chọn độ phân giải, xuất MP4, MKV, MOV.",
+		DescriptionEN:        "Merge video online free — combine & join multiple clips or images into one file. Reorder by drag-and-drop, pick resolution, export MP4, MKV or MOV.",
 		ActivePage:           "merge",
 		Result:               "",
 		UserID:               userID,

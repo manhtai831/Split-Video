@@ -53,9 +53,9 @@ func handleHome(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := structs.PageData{
-		Title:         "Chia & Cắt Video Online Miễn Phí",
-		Description:   "Công cụ chia, cắt và nén video online miễn phí — không cần cài đặt. Hỗ trợ MP4, MKV, MOV. Theo dõi job real-time, tải ZIP ngay.",
-		DescriptionEN: "Free online video splitter & cutter — no install required. Supports MP4, MKV, MOV. Track jobs in real time and download ZIP when done.",
+		Title:         "Công Cụ Video Online Miễn Phí — Cắt, Ghép, GIF, MP3",
+		Description:   "Video tools online miễn phí: chia cắt video, ghép clip, tạo GIF, tách audio MP3, chỉnh sửa video. Không cài app — hỗ trợ MP4, MKV, MOV. Free online video splitter, merger & editor.",
+		DescriptionEN: "Free online video tools — split & cut video, merge clips, video to GIF, extract audio to MP3, browser video editor. No install. MP4, MKV, MOV supported.",
 		ActivePage:    "home",
 		UserID:        middleware.GetUserID(w, r),
 	}

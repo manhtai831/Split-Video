@@ -86,10 +86,26 @@
       <audio id="ytMediaAudio" class="yt-media" controls hidden></audio>
     </div>
     <div class="yt-player-bar__controls">
-      <button type="button" id="ytPrevBtn" class="btn btn--secondary btn--sm" title="Previous">Prev</button>
-      <button type="button" id="ytPlayPauseBtn" class="btn btn--primary btn--sm" title="Play/Pause">Play</button>
-      <button type="button" id="ytNextBtn" class="btn btn--secondary btn--sm" title="Next">Next</button>
-      <button type="button" id="ytLoopBtn" class="btn btn--ghost btn--sm" title="Loop" data-loop="off">Loop: Off</button>
+      <button type="button" id="ytPrevBtn" class="btn btn--icon btn--secondary btn--sm" title="Previous" aria-label="Previous">
+        <svg class="btn__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/>
+        </svg>
+      </button>
+      <button type="button" id="ytPlayPauseBtn" class="btn btn--icon btn--primary btn--sm" title="Play" aria-label="Play">
+        <svg class="btn__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polygon points="6 3 20 12 6 21 6 3"/>
+        </svg>
+      </button>
+      <button type="button" id="ytNextBtn" class="btn btn--icon btn--secondary btn--sm" title="Next" aria-label="Next">
+        <svg class="btn__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/>
+        </svg>
+      </button>
+      <button type="button" id="ytLoopBtn" class="btn btn--icon btn--ghost btn--sm" title="Loop: Off" aria-label="Loop: Off" data-loop="off">
+        <svg class="btn__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m17 2 4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+        </svg>
+      </button>
     </div>
     <div id="ytContinuePrompt" class="yt-continue-prompt" hidden role="alertdialog" aria-labelledby="ytContinuePromptTitle">
       <p id="ytContinuePromptTitle" class="yt-continue-prompt__text">Bạn đã nghe khoảng 2 giờ. Tiếp tục phát?</p>
