@@ -8,6 +8,7 @@ services:
       - ./:/app
       - ./data/database:/app/database
       - ./data/uploads:/app/uploads
+      - ./data/logs:/app/logs
     ports:
       - 8002:3000
       - 2345:2345

@@ -7,6 +7,7 @@ services:
     volumes:
       - ./data/database:/app/database
       - ./data/uploads:/app/uploads
+      - ./data/logs:/app/logs
     networks:
       card:
         ipv4_address: 172.21.0.72
