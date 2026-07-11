@@ -70,6 +70,7 @@ func handlePlaylistCollection(w http.ResponseWriter, r *http.Request) {
 		}
 		item, formats, err := YoutubePlaylistService.AddFromURL(r.Context(), userID, req.URL)
 		if err != nil {
+			YoutubePlaylistService.LogError(userID, "add_from_url", req.URL, err.Error())
 			status := http.StatusBadRequest
 			if strings.Contains(err.Error(), "không lấy được") || strings.Contains(err.Error(), "yt-dlp") {
 				status = http.StatusBadGateway

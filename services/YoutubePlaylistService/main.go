@@ -34,6 +34,15 @@ func ListByUser(userID string) ([]entities.YoutubePlaylistItem, error) {
 	return items, err
 }
 
+func LogError(userID string, action string, pageURL string, message string) {
+	_ = Global.DB.Create(&entities.YoutubePlaylistError{
+		UserID:  userID,
+		Action:  action,
+		URL:     pageURL,
+		Message: message,
+	}).Error
+}
+
 func GetByIDForUser(id int, userID string) (entities.YoutubePlaylistItem, error) {
 	var item entities.YoutubePlaylistItem
 	err := Global.DB.Where("id = ? AND user_id = ?", id, userID).First(&item).Error
@@ -43,6 +52,7 @@ func GetByIDForUser(id int, userID string) (entities.YoutubePlaylistItem, error)
 func AddFromURL(ctx context.Context, userID, pageURL string) (entities.YoutubePlaylistItem, []structs.YoutubeFormatDto, error) {
 	validated, err := structs.ValidateYoutubeURL(pageURL)
 	if err != nil {
+		LogError(userID, "AddFromURL-ValidateYoutubeURL", pageURL, err.Error())
 		return entities.YoutubePlaylistItem{}, nil, err
 	}
 
@@ -64,11 +74,13 @@ func AddFromURL(ctx context.Context, userID, pageURL string) (entities.YoutubePl
 
 	probe, err := YtDlpService.Probe(ctx, validated)
 	if err != nil {
+		LogError(userID, "AddFromURL-Probe", pageURL, err.Error())
 		return entities.YoutubePlaylistItem{}, nil, err
 	}
 
 	formatsJSON, err := structs.FormatsToJSON(probe.Formats)
 	if err != nil {
+		LogError(userID, "AddFromURL-FormatsToJSON", pageURL, err.Error())
 		return entities.YoutubePlaylistItem{}, nil, err
 	}
 
@@ -202,20 +214,24 @@ func ResolveFormat(ctx context.Context, id int, userID, formatID string) (struct
 
 	item, formats, err := GetFormats(ctx, id, userID)
 	if err != nil {
+		LogError(userID, "ResolveFormat-GetFormats", strings.Join([]string{"ID: ", strconv.Itoa(item.ID), ", FormatID: ", formatID}, " "), err.Error())
 		return structs.YoutubeResolveResponseDto{}, err
 	}
 	resolved, err := getItemUrl(formats, formatID)
 	if err != nil {
+		LogError(userID, "ResolveFormat-getItemUrl-1", strings.Join([]string{"ID: ", strconv.Itoa(item.ID), ", FormatID: ", formatID}, " "), err.Error())
 		return structs.YoutubeResolveResponseDto{}, err
 	}
 
 	if isResolvedURLExpired(resolved.URL) {
 		item, formats, err = refreshFormats(ctx, item)
 		if err != nil {
+			LogError(userID, "ResolveFormat-refreshFormats-1", strings.Join([]string{"ID: ", strconv.Itoa(item.ID), ", FormatID: ", formatID}, " "), err.Error())
 			return structs.YoutubeResolveResponseDto{}, err
 		}
 		resolved, err = getItemUrl(formats, formatID)
 		if err != nil {
+			LogError(userID, "ResolveFormat-getItemUrl-2", strings.Join([]string{"ID: ", strconv.Itoa(item.ID), ", FormatID: ", formatID}, " "), err.Error())
 			return structs.YoutubeResolveResponseDto{}, err
 		}
 	}

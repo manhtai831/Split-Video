@@ -18,6 +18,7 @@ func Bootstrap() {
 		&entities.Job{},
 		&entities.JobFileData{},
 		&entities.YoutubePlaylistItem{},
+		&entities.YoutubePlaylistError{},
 	)
 	DB = db
 }
