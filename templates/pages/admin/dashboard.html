@@ -9,8 +9,12 @@
   </div>
 
   <section class="home-section" aria-labelledby="jobStatsHeading">
-    <h2 id="jobStatsHeading" class="home-section__title">Tổng quan job</h2>
+    <h2 id="jobStatsHeading" class="home-section__title">Tổng quan</h2>
     <div id="jobStatsGrid" class="stats-grid">
+      <div class="stat-card stat-card--pending">
+        <span class="stat-card__value" data-stat="pending">—</span>
+        <span class="stat-card__label">Đang chờ</span>
+      </div>
       <div class="stat-card stat-card--processing">
         <span class="stat-card__value" data-stat="processing">—</span>
         <span class="stat-card__label">Đang xử lý</span>
@@ -26,6 +30,14 @@
       <div class="stat-card stat-card--total">
         <span class="stat-card__value" data-stat="total">—</span>
         <span class="stat-card__label">Tổng job</span>
+      </div>
+      <div class="stat-card stat-card--yt-processed">
+        <span class="stat-card__value" data-stat="youtube_processed">—</span>
+        <span class="stat-card__label">YouTube đã xử lý (7 ngày)</span>
+      </div>
+      <div class="stat-card stat-card--yt-failed">
+        <span class="stat-card__value" data-stat="youtube_failed">—</span>
+        <span class="stat-card__label">YouTube lỗi (7 ngày)</span>
       </div>
       <div class="stat-card stat-card--avg stat-card--optional">
         <span class="stat-card__value" data-stat="avg_encode">—</span>
@@ -68,6 +80,45 @@
     </div>
     <p id="storageDiskInfo" class="admin-section-meta"></p>
     <div id="storageBreakdown" class="storage-breakdown"></div>
+  </section>
+
+  <section class="home-section" aria-labelledby="ytErrorsHeading">
+    <h2 id="ytErrorsHeading" class="home-section__title">Lỗi YouTube</h2>
+
+    <div id="ytErrorsEmpty" class="home-empty" hidden>
+      <p>Chưa có lỗi link YouTube nào.</p>
+    </div>
+
+    <div id="ytErrorsTableWrap" class="history-table-wrap">
+      <table class="history-table" aria-label="Lỗi YouTube">
+        <thead>
+          <tr>
+            <th>URL</th>
+            <th>Action</th>
+            <th>Message</th>
+            <th>User ID</th>
+            <th>Thời gian</th>
+          </tr>
+        </thead>
+        <tbody id="ytErrorsTableBody"></tbody>
+      </table>
+      <div id="ytErrorsCardList" class="history-card-list"></div>
+    </div>
+
+    <div id="ytErrorsSkeleton" class="history-skeleton" hidden>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+    </div>
+
+    <div id="ytErrorsPagination" class="history-pagination" hidden>
+      <span id="ytErrorsRange" class="history-pagination__range"></span>
+      <div class="history-pagination__controls">
+        <button type="button" id="ytErrorsPagePrev" class="btn btn--secondary btn--sm" disabled>« Trước</button>
+        <span id="ytErrorsPageInfo" class="history-pagination__info"></span>
+        <button type="button" id="ytErrorsPageNext" class="btn btn--secondary btn--sm">Sau »</button>
+      </div>
+    </div>
   </section>
 
   <section class="home-section" aria-labelledby="historyHeading">

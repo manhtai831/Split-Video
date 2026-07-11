@@ -43,6 +43,45 @@ func LogError(userID string, action string, pageURL string, message string) {
 	}).Error
 }
 
+func CountItemsSince(since time.Time) (int64, error) {
+	var count int64
+	err := Global.DB.Model(&entities.YoutubePlaylistItem{}).
+		Where("created_at >= ?", since).
+		Count(&count).Error
+	return count, err
+}
+
+func CountErrorsSince(since time.Time) (int64, error) {
+	var count int64
+	err := Global.DB.Model(&entities.YoutubePlaylistError{}).
+		Where("created_at >= ?", since).
+		Count(&count).Error
+	return count, err
+}
+
+func ListErrors(page, limit int) ([]entities.YoutubePlaylistError, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 20
+	}
+
+	var total int64
+	if err := Global.DB.Model(&entities.YoutubePlaylistError{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var items []entities.YoutubePlaylistError
+	offset := (page - 1) * limit
+	err := Global.DB.
+		Order("created_at DESC").
+		Offset(offset).
+		Limit(limit).
+		Find(&items).Error
+	return items, total, err
+}
+
 func GetByIDForUser(id int, userID string) (entities.YoutubePlaylistItem, error) {
 	var item entities.YoutubePlaylistItem
 	err := Global.DB.Where("id = ? AND user_id = ?", id, userID).First(&item).Error

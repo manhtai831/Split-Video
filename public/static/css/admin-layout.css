@@ -102,6 +102,22 @@
 .stat-card--storage-output .stat-card__value { color: #059669; }
 .stat-card--storage-tmp .stat-card__value { color: #d97706; }
 
+.admin-dashboard .stats-grid {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
+.stat-card--pending .stat-card__value { color: #d97706; }
+.stat-card--yt-processed .stat-card__value { color: #0891b2; }
+.stat-card--yt-failed .stat-card__value { color: #dc2626; }
+
+.history-table .cell-url,
+.history-table .cell-message {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @media (max-width: 767px) {
   .admin-header__inner,
   .admin-main {

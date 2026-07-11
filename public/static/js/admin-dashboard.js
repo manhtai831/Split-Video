@@ -15,6 +15,7 @@
 
   var state = {
     filters: { period: "7d", status: "", type: "", page: 1 },
+    ytErrorsPage: 1,
     pollTimer: null,
     loading: false,
   };
@@ -49,6 +50,16 @@
       pageInfo: document.getElementById("pageInfo"),
       pagePrev: document.getElementById("pagePrev"),
       pageNext: document.getElementById("pageNext"),
+      ytErrorsEmpty: document.getElementById("ytErrorsEmpty"),
+      ytErrorsTableWrap: document.getElementById("ytErrorsTableWrap"),
+      ytErrorsTableBody: document.getElementById("ytErrorsTableBody"),
+      ytErrorsCardList: document.getElementById("ytErrorsCardList"),
+      ytErrorsSkeleton: document.getElementById("ytErrorsSkeleton"),
+      ytErrorsPagination: document.getElementById("ytErrorsPagination"),
+      ytErrorsRange: document.getElementById("ytErrorsRange"),
+      ytErrorsPageInfo: document.getElementById("ytErrorsPageInfo"),
+      ytErrorsPagePrev: document.getElementById("ytErrorsPagePrev"),
+      ytErrorsPageNext: document.getElementById("ytErrorsPageNext"),
     };
 
     JobUI.init({
@@ -80,6 +91,18 @@
       state.filters.page++;
       writeFiltersToURL();
       loadHistory();
+    });
+
+    els.ytErrorsPagePrev.addEventListener("click", function () {
+      if (state.ytErrorsPage > 1) {
+        state.ytErrorsPage--;
+        loadYoutubeErrors();
+      }
+    });
+    els.ytErrorsPageNext.addEventListener("click", function () {
+      if (els.ytErrorsPageNext.disabled) return;
+      state.ytErrorsPage++;
+      loadYoutubeErrors();
     });
 
     document.addEventListener("visibilitychange", function () {
@@ -180,12 +203,17 @@
     setLoading(true);
     hideError();
 
-    Promise.all([fetchStats(), fetchJobs(buildJobsQuery())])
+    Promise.all([
+      fetchStats(),
+      fetchJobs(buildJobsQuery()),
+      fetchYoutubeErrors(state.ytErrorsPage),
+    ])
       .then(function (results) {
         setLoading(false);
         renderStats(results[0]);
         renderStorage(results[0].storage);
         renderHistory(results[1]);
+        renderYoutubeErrors(results[2]);
         startPolling();
       })
       .catch(function (err) {
@@ -204,11 +232,28 @@
     fetchJobs(buildJobsQuery())
       .then(function (data) {
         els.historySkeleton.style.display = "none";
-        renderHistory(data);    
+        renderHistory(data);
       })
       .catch(function (err) {
         els.historySkeleton.style.display = "none";
         showError(err.message || "Không thể tải danh sách job.");
+      });
+  }
+
+  function loadYoutubeErrors() {
+    els.ytErrorsSkeleton.style.display = "block";
+    els.ytErrorsTableWrap.style.display = "none";
+    els.ytErrorsEmpty.style.display = "none";
+    els.ytErrorsPagination.style.display = "none";
+
+    fetchYoutubeErrors(state.ytErrorsPage)
+      .then(function (data) {
+        els.ytErrorsSkeleton.style.display = "none";
+        renderYoutubeErrors(data);
+      })
+      .catch(function (err) {
+        els.ytErrorsSkeleton.style.display = "none";
+        showError(err.message || "Không thể tải danh sách lỗi YouTube.");
       });
   }
 
@@ -252,6 +297,10 @@
     els.historySkeleton.style.display = loading ? "block" : "none";
     els.historyEmpty.style.display = loading ? "none" : "block";
     els.historyPagination.style.display = loading ? "none" : "flex";
+    els.ytErrorsTableWrap.style.display = loading ? "none" : "block";
+    els.ytErrorsSkeleton.style.display = loading ? "block" : "none";
+    els.ytErrorsEmpty.style.display = loading ? "none" : "block";
+    els.ytErrorsPagination.style.display = loading ? "none" : "flex";
   }
 
   function showError(msg) {
@@ -287,6 +336,17 @@
       });
   }
 
+  function fetchYoutubeErrors(page) {
+    var qs = new URLSearchParams();
+    qs.set("page", String(page || 1));
+    qs.set("limit", String(PAGE_SIZE));
+    return fetch("/admin/api/youtube/errors?" + qs, { credentials: "same-origin" })
+      .then(function (res) {
+        if (!res.ok) throw new Error("Lỗi tải danh sách lỗi YouTube (" + res.status + ")");
+        return res.json();
+      });
+  }
+
   function periodToDateRange(period) {
     var now = new Date();
     var to = now.toISOString();
@@ -305,10 +365,13 @@
   }
 
   function renderStats(stats) {
+    setStatValue("pending", stats.pending);
     setStatValue("processing", stats.processing);
     setStatValue("completed_today", stats.completed_today);
     setStatValue("failed", stats.failed);
     setStatValue("total", stats.total);
+    setStatValue("youtube_processed", stats.youtube_processed_7d);
+    setStatValue("youtube_failed", stats.youtube_failed_7d);
     var avgEl = document.querySelector('[data-stat="avg_encode"]');
     if (avgEl) {
       avgEl.textContent = stats.avg_encode_seconds
@@ -396,6 +459,101 @@
         state.filters.page = page;
       }
     );
+  }
+
+  function renderYoutubeErrors(data) {
+    var items = data.items || [];
+
+    els.ytErrorsTableBody.innerHTML = "";
+    els.ytErrorsCardList.innerHTML = "";
+
+    if (items.length === 0) {
+      els.ytErrorsEmpty.style.display = "block";
+      els.ytErrorsTableWrap.style.display = "none";
+      els.ytErrorsPagination.style.display = "none";
+      return;
+    }
+
+    els.ytErrorsEmpty.style.display = "none";
+    els.ytErrorsTableWrap.style.display = "block";
+
+    items.forEach(function (err) {
+      els.ytErrorsTableBody.appendChild(buildYoutubeErrorRow(err));
+      els.ytErrorsCardList.appendChild(buildYoutubeErrorCard(err));
+    });
+
+    updateYoutubeErrorsPagination(data);
+  }
+
+  function updateYoutubeErrorsPagination(data) {
+    var total = data.total || 0;
+    var page = data.page || 1;
+    var limit = data.limit || PAGE_SIZE;
+    var totalPages = data.total_pages || Math.max(1, Math.ceil(total / limit));
+
+    state.ytErrorsPage = page;
+
+    if (total === 0) {
+      els.ytErrorsPagination.style.display = "none";
+      return;
+    }
+
+    els.ytErrorsPagination.style.display = "flex";
+    var start = (page - 1) * limit + 1;
+    var end = Math.min(page * limit, total);
+    els.ytErrorsRange.textContent = "Hiển thị " + start + "–" + end + " / " + total + " lỗi";
+    els.ytErrorsPageInfo.textContent = "Trang " + page + " / " + totalPages;
+    els.ytErrorsPagePrev.disabled = page <= 1;
+    els.ytErrorsPageNext.disabled = page >= totalPages;
+  }
+
+  function buildYoutubeErrorRow(err) {
+    var tr = document.createElement("tr");
+    tr.innerHTML =
+      '<td class="cell-url" title="' + JobUI.escapeHtml(err.url) + '">' +
+        JobUI.escapeHtml(truncateText(err.url, 60)) +
+      "</td>" +
+      "<td>" + JobUI.escapeHtml(err.action || "—") + "</td>" +
+      '<td class="cell-message" title="' + JobUI.escapeHtml(err.message) + '">' +
+        JobUI.escapeHtml(truncateText(err.message, 80)) +
+      "</td>" +
+      '<td class="cell-user-id" title="' + JobUI.escapeHtml(err.user_id) + '">' +
+        JobUI.escapeHtml(truncateUserId(err.user_id)) +
+      "</td>" +
+      "<td>" + JobUI.formatRelativeTime(err.created_at) + "</td>";
+    return tr;
+  }
+
+  function buildYoutubeErrorCard(err) {
+    var card = document.createElement("div");
+    card.className = "history-card";
+    card.innerHTML =
+      '<div class="history-card__filename" title="' + JobUI.escapeHtml(err.url) + '">' +
+        JobUI.escapeHtml(truncateText(err.url, 80) || "—") +
+      "</div>" +
+      '<div class="history-card__row">' +
+        '<span class="history-card__label">Action</span>' +
+        "<span>" + JobUI.escapeHtml(err.action || "—") + "</span>" +
+      "</div>" +
+      '<div class="history-card__row">' +
+        '<span class="history-card__label">Message</span>' +
+        "<span>" + JobUI.escapeHtml(truncateText(err.message, 120) || "—") + "</span>" +
+      "</div>" +
+      '<div class="history-card__row">' +
+        '<span class="history-card__label">User ID</span>' +
+        "<span>" + JobUI.escapeHtml(truncateUserId(err.user_id)) + "</span>" +
+      "</div>" +
+      '<div class="history-card__row">' +
+        '<span class="history-card__label">Thời gian</span>' +
+        "<span>" + JobUI.formatRelativeTime(err.created_at) + "</span>" +
+      "</div>";
+    return card;
+  }
+
+  function truncateText(text, max) {
+    if (!text) return "";
+    if (text.length <= max) return text;
+    return text.slice(0, max - 1) + "…";
   }
 
   function buildTableRow(job) {

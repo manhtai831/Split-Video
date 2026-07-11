@@ -21,6 +21,7 @@ type ListJobsOptions struct {
 }
 
 type JobStats struct {
+	Pending          int64
 	Processing       int64
 	CompletedToday   int64
 	Failed           int64
@@ -167,7 +168,11 @@ func GetGlobalStats() (JobStats, error) {
 	weekAgo := now.Add(-7 * 24 * time.Hour)
 
 	Global.DB.Model(&entities.Job{}).
-		Where("status IN ?", []enums.Status{enums.StatusPending, enums.StatusProcessing}).
+		Where("status = ?", enums.StatusPending).
+		Count(&stats.Pending)
+
+	Global.DB.Model(&entities.Job{}).
+		Where("status = ?", enums.StatusProcessing).
 		Count(&stats.Processing)
 
 	Global.DB.Model(&entities.Job{}).
@@ -202,7 +207,11 @@ func GetStatsByUser(userID string) (JobStats, error) {
 	weekAgo := now.Add(-7 * 24 * time.Hour)
 
 	userScopeQuery(userID).Model(&entities.Job{}).
-		Where("status IN ?", []enums.Status{enums.StatusPending, enums.StatusProcessing}).
+		Where("status = ?", enums.StatusPending).
+		Count(&stats.Pending)
+
+	userScopeQuery(userID).Model(&entities.Job{}).
+		Where("status = ?", enums.StatusProcessing).
 		Count(&stats.Processing)
 
 	userScopeQuery(userID).Model(&entities.Job{}).

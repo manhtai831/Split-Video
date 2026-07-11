@@ -40,8 +40,9 @@ func handleStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Home dashboard "Đang xử lý" still means pending + processing.
 	writeJSON(w, structs.JobStatsResponseDto{
-		Processing:       stats.Processing,
+		Processing:       stats.Pending + stats.Processing,
 		CompletedToday:   stats.CompletedToday,
 		Failed:           stats.Failed,
 		Total:            stats.Total,
