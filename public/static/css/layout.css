@@ -95,8 +95,8 @@ body.sidebar-open .hamburger-line:nth-child(3) {
 }
 
 .sidebar {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  justify-content: end;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -143,7 +143,9 @@ body.sidebar-open .hamburger-line:nth-child(3) {
 }
 
 .sidebar-nav a {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 10px 14px;
   border-radius: 10px;
   text-decoration: none;
@@ -152,6 +154,24 @@ body.sidebar-open .hamburger-line:nth-child(3) {
   font-weight: 500;
   letter-spacing: 0.01em;
   transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+  width: min(250px, 100vw);
+}
+
+.sidebar-nav__icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  background-color: currentColor;
+  -webkit-mask: var(--icon) no-repeat center / contain;
+  mask: var(--icon) no-repeat center / contain;
+  opacity: 0.85;
+  transition: opacity 0.18s ease;
+}
+
+.sidebar-nav a:hover .sidebar-nav__icon,
+.sidebar-nav a.active .sidebar-nav__icon {
+  opacity: 1;
 }
 
 .sidebar-nav a:hover {

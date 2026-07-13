@@ -1,20 +1,62 @@
 {{define "sidebar"}}
 <aside class="sidebar">
  
-  <div class="sidebar-part sidebar-part--content">
-    {{block "sidebar-content" .}}{{end}}
-  </div>
   <div class="sidebar-part sidebar-part--nav">
     <ul class="sidebar-nav">
-      <li><a href="/" class="{{if eq .ActivePage "home"}}active{{end}}">Dashboard</a></li>
-      <li><a href="/video/split" class="{{if eq .ActivePage "split"}}active{{end}}">Split Video</a></li>
-      <li><a href="/video/merge" class="{{if eq .ActivePage "merge"}}active{{end}}">Merge Video</a></li>
-      <li><a href="/video/gif" class="{{if eq .ActivePage "gif"}}active{{end}}">GIF from Video</a></li>
-      <li><a href="/video/extract-audio" class="{{if eq .ActivePage "extract-audio"}}active{{end}}">Extract Audio</a></li>
-      <li><a href="/video/youtube-download" class="{{if eq .ActivePage "youtube-download"}}active{{end}}">YouTube Download</a></li>
-      <li><a href="/video/editor" class="{{if eq .ActivePage "editor"}}active{{end}}">Video Editor</a></li>
-      <li><a href="/about" class="{{if eq .ActivePage "about"}}active{{end}}">About</a></li>
-      <li><a href="/faq" class="{{if eq .ActivePage "faq"}}active{{end}}">FAQ</a></li>
+      <li>
+        <a href="/" class="{{if eq .ActivePage "home"}}active{{end}}">
+          <span class="sidebar-nav__icon" style="--icon: url('/static/icons/dashboard.svg')" aria-hidden="true"></span>
+          Dashboard
+        </a>
+      </li>
+      <li>
+        <a href="/video/split" class="{{if eq .ActivePage "split"}}active{{end}}">
+          <span class="sidebar-nav__icon" style="--icon: url('/static/icons/split.svg')" aria-hidden="true"></span>
+          Split Video
+        </a>
+      </li>
+      <li>
+        <a href="/video/merge" class="{{if eq .ActivePage "merge"}}active{{end}}">
+          <span class="sidebar-nav__icon" style="--icon: url('/static/icons/merge.svg')" aria-hidden="true"></span>
+          Merge Video
+        </a>
+      </li>
+      <li>
+        <a href="/video/gif" class="{{if eq .ActivePage "gif"}}active{{end}}">
+          <span class="sidebar-nav__icon" style="--icon: url('/static/icons/gif.svg')" aria-hidden="true"></span>
+          GIF from Video
+        </a>
+      </li>
+      <li>
+        <a href="/video/extract-audio" class="{{if eq .ActivePage "extract-audio"}}active{{end}}">
+          <span class="sidebar-nav__icon" style="--icon: url('/static/icons/audio.svg')" aria-hidden="true"></span>
+          Extract Audio
+        </a>
+      </li>
+      <li>
+        <a href="/video/youtube-download" class="{{if eq .ActivePage "youtube-download"}}active{{end}}">
+          <span class="sidebar-nav__icon" style="--icon: url('/static/icons/youtube.svg')" aria-hidden="true"></span>
+          YouTube Download
+        </a>
+      </li>
+      <li>
+        <a href="/video/editor" class="{{if eq .ActivePage "editor"}}active{{end}}">
+          <span class="sidebar-nav__icon" style="--icon: url('/static/icons/editor.svg')" aria-hidden="true"></span>
+          Video Editor
+        </a>
+      </li>
+      <li>
+        <a href="/about" class="{{if eq .ActivePage "about"}}active{{end}}">
+          <span class="sidebar-nav__icon" style="--icon: url('/static/icons/about.svg')" aria-hidden="true"></span>
+          About
+        </a>
+      </li>
+      <li>
+        <a href="/faq" class="{{if eq .ActivePage "faq"}}active{{end}}">
+          <span class="sidebar-nav__icon" style="--icon: url('/static/icons/faq.svg')" aria-hidden="true"></span>
+          FAQ
+        </a>
+      </li>
     </ul>
   </div>
 </aside>
