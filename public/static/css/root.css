@@ -250,6 +250,15 @@
   width: 100px;
 }
 
+.input-row > span {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  color: var(--muted, #64748b);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
 .advanced-options {
   margin: 16px 0;
   border: 1px solid var(--border);

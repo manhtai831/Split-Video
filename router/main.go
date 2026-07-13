@@ -1,22 +1,23 @@
 package router
 
 import (
-	apijobs "app/router/api/jobs"
-	apieditor "app/router/api/editor"
-	apiupload "app/router/api/upload"
+	"app/middleware"
 	"app/router/about"
 	"app/router/admin"
+	apieditor "app/router/api/editor"
+	apijobs "app/router/api/jobs"
+	apiupload "app/router/api/upload"
 	"app/router/editor"
 	"app/router/extractaudio"
 	"app/router/faq"
-	"app/router/job"
 	"app/router/gif"
+	"app/router/job"
 	"app/router/merge"
 	routerseo "app/router/seo"
-	staticfiles "app/router/static"
 	"app/router/split"
+	staticfiles "app/router/static"
+	"app/router/trimaudio"
 	"app/router/youtubedownload"
-	"app/middleware"
 	"app/structs"
 	"app/templates"
 	"net/http"
@@ -37,6 +38,7 @@ func Bootstrap() {
 	merge.Bootstrap()
 	gif.Bootstrap()
 	extractaudio.Bootstrap()
+	trimaudio.Bootstrap()
 	editor.Bootstrap()
 	youtubedownload.Bootstrap()
 	about.Bootstrap()

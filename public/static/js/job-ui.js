@@ -19,6 +19,7 @@
     merge: "Merge",
     gif: "GIF",
     extract_audio: "Tách audio",
+    trim_audio: "Cắt audio",
     editor: "Editor",
   };
 

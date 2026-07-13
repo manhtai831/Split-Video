@@ -136,6 +136,12 @@ func buildEncodeSummary(jobType enums.JobType, extrasJSON string) string {
 			return ""
 		}
 		return buildExtractAudioEncodeSummary(extras)
+	case enums.JobTypeTrimAudio:
+		extras, err := structs.ParseTrimAudioJobExtrasJSON(extrasJSON)
+		if err != nil {
+			return ""
+		}
+		return buildTrimAudioEncodeSummary(extras)
 	case enums.JobTypeEditor:
 		extras, err := structs.ParseEditorJobExtrasJSON(extrasJSON)
 		if err != nil {
@@ -199,6 +205,34 @@ func buildExtractAudioEncodeSummary(extras structs.ExtractAudioJobExtrasDto) str
 		parts = append(parts, extras.Metadata.Artist)
 	}
 	return strings.Join(parts, " · ")
+}
+
+func buildTrimAudioEncodeSummary(extras structs.TrimAudioJobExtrasDto) string {
+	parts := []string{
+		fmt.Sprintf("%ss–%ss", formatTrimSeconds(extras.Start), formatTrimSeconds(extras.End)),
+	}
+	if extras.FadeIn > 0 || extras.FadeOut > 0 {
+		if extras.FadeIn == extras.FadeOut {
+			parts = append(parts, fmt.Sprintf("fade %ss", formatTrimSeconds(extras.FadeIn)))
+		} else {
+			parts = append(parts, fmt.Sprintf(
+				"fade in %ss / out %ss",
+				formatTrimSeconds(extras.FadeIn),
+				formatTrimSeconds(extras.FadeOut),
+			))
+		}
+	}
+	return strings.Join(parts, " · ")
+}
+
+func formatTrimSeconds(v float64) string {
+	s := strconv.FormatFloat(v, 'f', 3, 64)
+	s = strings.TrimRight(s, "0")
+	s = strings.TrimRight(s, ".")
+	if s == "" {
+		return "0"
+	}
+	return s
 }
 
 func buildEncodeSummaryFromOptions(enc structs.FfmpegEncodeOptionsDto) string {
