@@ -8,5 +8,6 @@ const (
 	JobTypeGif          JobType = "gif"
 	JobTypeExtractAudio JobType = "extract_audio"
 	JobTypeTrimAudio    JobType = "trim_audio"
+	JobTypeMergeAudio   JobType = "merge_audio"
 	JobTypeEditor       JobType = "editor"
 )

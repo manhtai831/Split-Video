@@ -7,6 +7,7 @@ import (
 	"app/worker/EditorVideoWorker"
 	"app/worker/ExtractAudioWorker"
 	"app/worker/GifVideoWorker"
+	"app/worker/MergeAudioWorker"
 	"app/worker/MergeVideoWorker"
 	"app/worker/SplitVideoWorker"
 	"app/worker/TrimAudioWorker"
@@ -116,6 +117,14 @@ func processJob(job entities.Job) {
 		JobManagerInstance.JobMutex.Unlock()
 
 		err = TrimAudioWorker.Process(job, context)
+	case enums.JobTypeMergeAudio:
+		context, cancel := context.WithCancel(context.Background())
+
+		JobManagerInstance.JobMutex.Lock()
+		JobManagerInstance.JobCancelMap[job.Identifier] = cancel
+		JobManagerInstance.JobMutex.Unlock()
+
+		err = MergeAudioWorker.Process(job, context)
 	case enums.JobTypeEditor:
 		context, cancel := context.WithCancel(context.Background())
 

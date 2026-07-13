@@ -234,7 +234,7 @@
           escapeHtml(formatSize(f.filesize)) +
           "</td>" +
           "<td>" +
-          escapeHtml(f.format_note || f.kind || "") +
+          escapeHtml(f.format_note || "") + ` (${escapeHtml(f.ext || "")})` + 
           "</td>" +
           '<td class="cell-actions"><div class="cell-actions__inner">' +
           actionButtonsHtml(f) +

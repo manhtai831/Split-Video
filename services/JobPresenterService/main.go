@@ -44,8 +44,12 @@ func ToJobItemDto(job entities.Job) (structs.JobItemDto, error) {
 	}
 
 	if len(inputFiles) > 0 {
-		if job.Type == enums.JobTypeMerge {
-			dto.FileName = buildMergeFileName(inputFiles, job.Extras)
+		if job.Type == enums.JobTypeMerge || job.Type == enums.JobTypeMergeAudio {
+			if job.Type == enums.JobTypeMerge {
+				dto.FileName = buildMergeFileName(inputFiles, job.Extras)
+			} else {
+				dto.FileName = buildMergeAudioFileName(inputFiles)
+			}
 			var totalSize int64
 			var totalDuration float64
 			for _, f := range inputFiles {
@@ -142,6 +146,12 @@ func buildEncodeSummary(jobType enums.JobType, extrasJSON string) string {
 			return ""
 		}
 		return buildTrimAudioEncodeSummary(extras)
+	case enums.JobTypeMergeAudio:
+		extras, err := structs.ParseMergeAudioJobExtrasJSON(extrasJSON)
+		if err != nil {
+			return ""
+		}
+		return buildMergeAudioEncodeSummary(extras)
 	case enums.JobTypeEditor:
 		extras, err := structs.ParseEditorJobExtrasJSON(extrasJSON)
 		if err != nil {
@@ -285,6 +295,32 @@ func buildMergeFileName(inputFiles []entities.JobFileData, extrasJSON string) st
 		return labels[0] + " → " + labels[1]
 	}
 	return labels[0] + " → " + labels[len(labels)-1] + " (" + strconv.Itoa(len(labels)) + " clip)"
+}
+
+func buildMergeAudioFileName(inputFiles []entities.JobFileData) string {
+	if len(inputFiles) == 0 {
+		return ""
+	}
+	if len(inputFiles) == 1 {
+		return inputFiles[0].Name
+	}
+	if len(inputFiles) == 2 {
+		return inputFiles[0].Name + " → " + inputFiles[1].Name
+	}
+	return inputFiles[0].Name + " → " + inputFiles[len(inputFiles)-1].Name +
+		" (" + strconv.Itoa(len(inputFiles)) + " file)"
+}
+
+func buildMergeAudioEncodeSummary(extras structs.MergeAudioJobExtrasDto) string {
+	parts := []string{strings.ToUpper(extras.OutputFormat)}
+	if extras.OutputFormat != "wav" && extras.OutputFormat != "flac" {
+		if extras.AudioBitrate == "" || extras.AudioBitrate == "original" {
+			parts = append(parts, "Original")
+		} else {
+			parts = append(parts, extras.AudioBitrate)
+		}
+	}
+	return strings.Join(parts, " · ")
 }
 
 func itemMetaAt(items []structs.MergeItemMetaDto, index int) structs.MergeItemMetaDto {

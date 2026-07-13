@@ -13,6 +13,7 @@ import (
 	"app/router/gif"
 	"app/router/job"
 	"app/router/merge"
+	"app/router/mergeaudio"
 	routerseo "app/router/seo"
 	"app/router/split"
 	staticfiles "app/router/static"
@@ -39,6 +40,7 @@ func Bootstrap() {
 	gif.Bootstrap()
 	extractaudio.Bootstrap()
 	trimaudio.Bootstrap()
+	mergeaudio.Bootstrap()
 	editor.Bootstrap()
 	youtubedownload.Bootstrap()
 	about.Bootstrap()

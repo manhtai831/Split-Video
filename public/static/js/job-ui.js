@@ -20,6 +20,7 @@
     gif: "GIF",
     extract_audio: "Tách audio",
     trim_audio: "Cắt audio",
+    merge_audio: "Ghép audio",
     editor: "Editor",
   };
 

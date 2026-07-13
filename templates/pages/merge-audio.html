@@ -1,0 +1,221 @@
+{{define "content"}}
+<link href="{{asset "css/jobs-ui.css"}}" rel="stylesheet" />
+<div class="container">
+  <div class="page-header">
+    <h1>Ghép Audio <span class="page-header__subtitle" lang="en">/ Merge Audio</span></h1>
+    <p class="page-description--en">{{.Description}}</p>
+  </div>
+  <form
+    id="mergeAudioForm"
+    action="/video/merge-audio"
+    enctype="multipart/form-data"
+    method="post"
+    onsubmit="return handleMergeAudioSubmit(event, this)"
+  >
+    <input type="hidden" id="fileOrder" name="file_order" value="" />
+
+    <div class="form-field">
+      <label for="file">Audio files</label>
+      <input id="file" type="file" name="files" accept="audio/*" required multiple />
+      <input id="fileAddMore" type="file" accept="audio/*" multiple hidden aria-hidden="true" tabindex="-1" />
+      <p class="field-hint">Chọn ít nhất 2 file audio. Kéo-thả để sắp xếp thứ tự. Hỗ trợ MP3, M4A, WAV, FLAC, OGG. Tối đa 200 file mỗi lần ghép.</p>
+      <div id="filePreviewSection" class="file-preview-section" hidden>
+        <div class="file-preview-section__header">
+          <span id="filePreviewLabel" class="file-preview-section__label">File đã chọn</span>
+          <div class="file-preview-section__actions">
+            <button type="button" id="filePreviewAddMore" class="btn btn--ghost btn--sm">Thêm file</button>
+            <button type="button" id="filePreviewClearAll" class="btn btn--ghost btn--sm file-preview-section__clear">Xóa tất cả</button>
+          </div>
+        </div>
+        <div id="filePreviewList" class="file-preview-list file-preview-list--sortable" role="list"></div>
+      </div>
+    </div>
+
+    <div id="mergeAudioConfig" class="trim-audio-config" hidden>
+      <div class="form-field">
+        <label for="output_format">Định dạng đầu ra</label>
+        <select id="output_format" name="output_format">
+          <option value="mp3" selected>MP3 — phổ biến nhất</option>
+          <option value="m4a">M4A (AAC) — tương thích Apple</option>
+          <option value="wav">WAV — lossless, không nén</option>
+          <option value="flac">FLAC — lossless, nén nhẹ</option>
+          <option value="ogg">OGG (Vorbis) — mã nguồn mở</option>
+        </select>
+        <p class="field-hint">Tự đề xuất theo định dạng xuất hiện nhiều nhất trong danh sách file. Bạn có thể đổi thủ công.</p>
+      </div>
+
+      <div class="form-field" id="audioBitrateField">
+        <label for="audio_bitrate">Audio bitrate</label>
+        <select id="audio_bitrate" name="audio_bitrate">
+          <option value="original" selected>Original — giữ bitrate gốc / copy stream</option>
+          <option value="64k">64 kbps — tiết kiệm</option>
+          <option value="96k">96 kbps</option>
+          <option value="128k">128 kbps</option>
+          <option value="192k">192 kbps — chất lượng tốt</option>
+          <option value="256k">256 kbps</option>
+          <option value="320k">320 kbps — cao nhất</option>
+        </select>
+        <p class="field-hint"><strong>Original</strong> nhanh nhất khi tất cả file cùng codec và khớp định dạng xuất. Không áp dụng cho WAV/FLAC.</p>
+      </div>
+
+      <div id="estimateBox" class="estimate-box" hidden>
+        <p>Thời gian xử lý ước tính: <strong id="estimateTime">—</strong></p>
+        <p id="estimateDuration" class="estimate-disclaimer" hidden></p>
+      </div>
+
+      <div class="form-field">
+        <label>Nghe thử bản ghép</label>
+        <div class="trim-audio-player" id="mergeAudioPlayer">
+          <button
+            type="button"
+            id="mergePreviewToggle"
+            class="btn btn--secondary btn--icon trim-audio-player__toggle"
+            aria-label="Phát"
+            aria-pressed="false"
+          >
+            <svg class="btn__icon trim-audio-player__icon-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+            <svg class="btn__icon trim-audio-player__icon-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M6 5h4v14H6zm8 0h4v14h-4z"/>
+            </svg>
+          </button>
+          <input
+            id="mergePreviewSeek"
+            class="trim-audio-player__seek"
+            type="range"
+            min="0"
+            max="0"
+            step="0.01"
+            value="0"
+            aria-label="Thanh tua bản ghép"
+          />
+          <span id="mergePreviewTime" class="trim-audio-player__time" aria-live="polite">0:00 / 0:00</span>
+        </div>
+        <p id="mergePreviewStatus" class="field-hint" hidden></p>
+      </div>
+
+      <button type="submit" name="myButton">Ghép &amp; Download</button>
+    </div>
+  </form>
+
+  <div style="height: 32px;"></div>
+
+  <section class="home-section" aria-labelledby="mergeAudioJobsHeading">
+    <h2 id="mergeAudioJobsHeading" class="home-section__title">Lịch sử ghép audio</h2>
+
+    <div id="mergeAudioJobsEmpty" class="job-empty" hidden>
+      <p>Chưa có job ghép audio nào.</p>
+    </div>
+
+    <div id="mergeAudioJobsTableWrap" class="history-table-wrap">
+      <table class="history-table" aria-label="Lịch sử job ghép audio">
+        <thead>
+          <tr>
+            <th>File</th>
+            <th>Trạng thái</th>
+            <th>Tiến độ</th>
+            <th>Tạo lúc</th>
+            <th>Hoàn thành</th>
+            <th class="cell-actions" scope="col" aria-label="Thao tác">
+              <span class="cell-actions__header-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
+                </svg>
+              </span>
+              <span class="sr-only">Thao tác</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody id="mergeAudioJobsTableBody"></tbody>
+      </table>
+      <div id="mergeAudioJobsCardList" class="history-card-list"></div>
+    </div>
+
+    <div id="mergeAudioJobsSkeleton" class="history-skeleton" hidden>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+    </div>
+
+    <div id="mergeAudioJobsPagination" class="history-pagination" hidden>
+      <span id="mergeAudioJobsRange" class="history-pagination__range"></span>
+      <div class="history-pagination__controls">
+        <button type="button" id="mergeAudioJobsPagePrev" class="btn btn--secondary btn--sm" disabled>« Trước</button>
+        <span id="mergeAudioJobsPageInfo" class="history-pagination__info"></span>
+        <button type="button" id="mergeAudioJobsPageNext" class="btn btn--secondary btn--sm">Sau »</button>
+      </div>
+    </div>
+  </section>
+
+  {{template "seo-tool-content" .}}
+</div>
+
+{{template "jobModals" .}}
+
+<dialog id="audioPreviewModal" class="video-preview-modal" aria-labelledby="audioPreviewTitle">
+  <div class="video-preview-modal__header">
+    <div class="video-preview-modal__info">
+      <h3 id="audioPreviewTitle" class="video-preview-modal__title"></h3>
+      <p id="audioPreviewMeta" class="video-preview-modal__meta"></p>
+    </div>
+    <button type="button" id="audioPreviewClose" class="video-preview-modal__close" aria-label="Đóng">×</button>
+  </div>
+  <audio id="audioPreviewPlayer" class="video-preview-modal__player" controls></audio>
+</dialog>
+
+<script src="{{asset "js/job-ui.js"}}"></script>
+{{template "chunk_upload" .}}
+<script src="{{asset "js/merge-audio-jobs-panel.js"}}"></script>
+<script src="{{asset "js/merge-audio-estimate.js"}}"></script>
+<script src="{{asset "js/merge-audio-file-preview.js"}}"></script>
+<script src="{{asset "js/merge-audio-preview.js"}}"></script>
+<script>
+  function handleMergeAudioSubmit(event, form) {
+    event.preventDefault();
+    if (typeof window.stopMergeAudioPreview === "function") {
+      window.stopMergeAudioPreview();
+    }
+    var fileInput = document.getElementById("file");
+    if (!fileInput || !fileInput.files || fileInput.files.length < 2) {
+      alert("Cần ít nhất 2 file audio để ghép.");
+      return false;
+    }
+    if (typeof window.syncMergeAudioFileOrder === "function") {
+      window.syncMergeAudioFileOrder();
+    }
+    if (!window.ChunkUpload) {
+      alert("Upload module chưa sẵn sàng. Vui lòng thử lại.");
+      return false;
+    }
+    if (typeof window.clearMergeAudioPersistedOptions === "function") {
+      window.clearMergeAudioPersistedOptions();
+    }
+    window.ChunkUpload.submitFormWithChunks(form, fileInput)
+      .then(function () {
+        if (typeof window.resetMergeAudioForm === "function") {
+          window.resetMergeAudioForm();
+        }
+      })
+      .catch(function (err) {
+        alert(err.message || "Upload thất bại");
+      });
+    return false;
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    if (typeof initMergeAudioEstimate === "function") {
+      initMergeAudioEstimate();
+    }
+    if (typeof initMergeAudioJobsPanel === "function") {
+      initMergeAudioJobsPanel();
+    }
+    if (typeof initMergeAudioFilePreview === "function") {
+      initMergeAudioFilePreview();
+    }
+    if (typeof initMergeAudioPreview === "function") {
+      initMergeAudioPreview();
+    }
+  });
+</script>
+{{end}}
