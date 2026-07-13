@@ -108,7 +108,7 @@ body.sidebar-open .hamburger-line:nth-child(3) {
   flex-direction: column;
   justify-content: center;
   align-items: end;
-  padding: 24px 12px;
+  padding: 12px;
 }
 
 .sidebar-part--content {
@@ -142,6 +142,7 @@ body.sidebar-open .hamburger-line:nth-child(3) {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   width: min(250px, 100%);
+  overflow-y: scroll;
 }
 
 .sidebar-nav a {
