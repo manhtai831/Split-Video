@@ -26,7 +26,7 @@ const (
 )
 
 var (
-	assetDirs  = []string{"css", "js"}
+	assetDirs  = []string{"css", "js", "icons"}
 	jsImportRe = regexp.MustCompile(`(from\s+["']|import\s+["'])(\./[^"']+)(["'])`)
 	jsMimeRe   = regexp.MustCompile(`^(application|text)/(x-)?(java|ecma)script$`)
 )
