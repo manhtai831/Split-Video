@@ -26,7 +26,7 @@ const (
 )
 
 var (
-	assetDirs  = []string{"css", "js", "icons"}
+	assetDirs  = []string{"css", "js"}
 	jsImportRe = regexp.MustCompile(`(from\s+["']|import\s+["'])(\./[^"']+)(["'])`)
 	jsMimeRe   = regexp.MustCompile(`^(application|text)/(x-)?(java|ecma)script$`)
 )
@@ -94,6 +94,10 @@ func run(prod bool) error {
 		return err
 	}
 
+	if err := copySVGAssets("icons"); err != nil {
+		return err
+	}
+
 	return writeManifest(manifestEntries)
 }
 
@@ -105,15 +109,18 @@ func resetManifest() error {
 	return nil
 }
 
-func copySVGAssets() error {
-	pattern := filepath.Join(sourceRoot, "*.svg")
+func copySVGAssets(items ...string) error {
+	parts := append([]string{sourceRoot}, items...)
+	parts = append(parts, "*.svg")
+	pattern := filepath.Join(parts...)
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
 		return fmt.Errorf("glob svg: %w", err)
 	}
 
 	for _, srcPath := range matches {
-		dstPath := filepath.Join(outputRoot, filepath.Base(srcPath))
+		dstPath := strings.Replace(srcPath, "public", "dist", 1)
+		fmt.Println(srcPath, dstPath)
 		if err := copyFile(srcPath, dstPath); err != nil {
 			return err
 		}
