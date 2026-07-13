@@ -15,3 +15,5 @@ tmp/
 /docker-compose.yml
 
 .gomodcache
+
+/logs

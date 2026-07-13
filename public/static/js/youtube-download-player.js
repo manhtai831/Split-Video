@@ -40,6 +40,7 @@
     getSelectedItem: null,
     resolveFormat: null,
     streamUrl: null,
+    downloadUrl: null,
     selectItemById: null,
     getItems: null,
     onPlayingChange: null,
@@ -414,30 +415,30 @@
   }
 
   function downloadSelectedLink() {
-    if (!api.getSelectedFormat || !api.resolveFormat) return;
+    if (!api.getSelectedFormat || !api.downloadUrl || !api.getSelectedItem) return;
     var format = api.getSelectedFormat();
     if (!format) {
       setStatus("Chọn một format trước.", true);
       return;
     }
-    setStatus("Đang lấy URL tải…", false);
-    api
-      .resolveFormat(format.format_id)
-      .then(function (resolved) {
-        if (!resolved || !resolved.url) throw new Error("Không có URL");
-        setStatus("", false);
-        var a = document.createElement("a");
-        a.href = resolved.url;
-        a.target = "_blank";
-        a.rel = "noopener noreferrer";
-        a.download = "";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      })
-      .catch(function (err) {
-        setStatus(err.message || "Không lấy được URL", true);
-      });
+    var item = api.getSelectedItem();
+    if (!item || !item.id) {
+      setStatus("Chọn một video trước.", true);
+      return;
+    }
+    var url = api.downloadUrl(item.id, format.format_id);
+    if (!url) {
+      setStatus("Không tạo được URL tải.", true);
+      return;
+    }
+    setStatus("Đang tải xuống…", false);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setStatus("", false);
   }
 
   function togglePlayPause() {
@@ -520,6 +521,7 @@
     api.getSelectedItem = options && options.getSelectedItem;
     api.resolveFormat = options && options.resolveFormat;
     api.streamUrl = options && options.streamUrl;
+    api.downloadUrl = options && options.downloadUrl;
     api.selectItemById = options && options.selectItemById;
     api.getItems = options && options.getItems;
     api.onPlayingChange = options && options.onPlayingChange;

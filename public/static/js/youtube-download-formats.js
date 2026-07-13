@@ -181,7 +181,7 @@
       parts.push(iconButtonHtml("play", "Phát", ICON_PLAY, false));
     }
     parts.push(iconButtonHtml("download", "Tải xuống", ICON_DOWNLOAD, false));
-    parts.push(iconButtonHtml("open", "Mở link", ICON_OPEN, false));
+    // parts.push(iconButtonHtml("open", "Mở link", ICON_OPEN, false));
     return parts.join("");
   }
 

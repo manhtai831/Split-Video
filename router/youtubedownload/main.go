@@ -175,6 +175,11 @@ func handlePlaylistItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(parts) == 2 && parts[1] == "download" {
+		handleDownload(w, r, id, userID)
+		return
+	}
+
 	http.NotFound(w, r)
 }
 

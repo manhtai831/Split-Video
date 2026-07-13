@@ -26,6 +26,9 @@ var streamHTTPClient = &http.Client{
 		Proxy:                 http.ProxyFromEnvironment,
 		ResponseHeaderTimeout: 30 * time.Second,
 		IdleConnTimeout:       90 * time.Second,
+		MaxIdleConns:          100,
+		MaxIdleConnsPerHost:   16,
+		ForceAttemptHTTP2:     true,
 	},
 }
 

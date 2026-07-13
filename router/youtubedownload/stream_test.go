@@ -10,12 +10,12 @@ func TestChunkSizeFromBitrate(t *testing.T) {
 	}{
 		{name: "unknown", abr: 0, want: streamDefaultChunk},
 		{name: "negative", abr: -1, want: streamDefaultChunk},
-		// 128 kbps * 125 * 8s = 128000 → clamp to min 256KiB
-		{name: "audioLow", abr: 128, want: streamMinChunk},
-		// 500 kbps * 125 * 8 = 500000
+		// 64 kbps * 125 * 20s = 160000 → clamp to min 256KiB
+		{name: "audioLow", abr: 64, want: streamMinChunk},
+		// 500 kbps * 125 * 20s
 		{name: "mid", abr: 500, want: 500 * 125 * streamBufferSeconds},
-		// 5000 kbps * 125 * 8 = 5_000_000 → clamp to max 1MiB
-		{name: "videoHigh", abr: 5000, want: streamMaxChunk},
+		// 10000 kbps * 125 * 20s = 25_000_000 → clamp to max 20MiB
+		{name: "videoHigh", abr: 10000, want: streamMaxChunk},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
