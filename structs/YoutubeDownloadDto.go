@@ -77,6 +77,8 @@ type YoutubeResolveResponseDto struct {
 	Ext         string            `json:"ext"`
 	Kind        YoutubeFormatKind `json:"kind"`
 	AvailableAt int64             `json:"available_at"`
+	Abr         float64           `json:"abr,omitempty"`
+	Filesize    int64             `json:"filesize,omitempty"`
 }
 
 type YoutubeReorderRequestDto struct {

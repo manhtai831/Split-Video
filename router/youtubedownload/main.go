@@ -170,6 +170,11 @@ func handlePlaylistItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(parts) == 2 && parts[1] == "stream" {
+		handleStream(w, r, id, userID)
+		return
+	}
+
 	http.NotFound(w, r)
 }
 

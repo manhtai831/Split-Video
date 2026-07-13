@@ -307,6 +307,8 @@ func getItemUrl(formats []structs.YoutubeFormatDto, formatID string) (structs.Yo
 				Ext:         f.Ext,
 				Kind:        f.Kind,
 				AvailableAt: f.AvailableAt,
+				Abr:         f.Abr,
+				Filesize:    f.Filesize,
 			}, nil
 		}
 	}

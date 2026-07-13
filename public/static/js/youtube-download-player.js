@@ -39,6 +39,7 @@
     getSelectedFormat: null,
     getSelectedItem: null,
     resolveFormat: null,
+    streamUrl: null,
     selectItemById: null,
     getItems: null,
     onPlayingChange: null,
@@ -344,59 +345,52 @@
 
   function playSelectedFormat() {
     if (awaitingContinue) return;
-    if (!api.getSelectedFormat || !api.resolveFormat) return;
+    if (!api.getSelectedFormat || !api.streamUrl) return;
     var format = api.getSelectedFormat();
     if (!format) {
       setStatus("Chọn một format trước khi phát.", true);
       return;
     }
-    // if (format.kind === "video") {
-    //   setStatus(
-    //     "Format video-only không có audio trong trình duyệt — chọn muxed/audio hoặc dùng Mở link.",
-    //     true
-    //   );
-    //   return;
-    // }
     if (resolving) return;
     resolving = true;
-    setStatus("Đang lấy URL phát…", false);
+    setStatus("Đang phát…", false);
     var itemToPlay = api.getSelectedItem ? api.getSelectedItem() : null;
-    api
-      .resolveFormat(format.format_id)
-      .then(function (resolved) {
-        if (!resolved || !resolved.url) {
-          throw new Error("Không có URL media");
+    if (!itemToPlay || !itemToPlay.id) {
+      resolving = false;
+      setStatus("Chưa chọn video trong playlist.", true);
+      return;
+    }
+    try {
+      var src = api.streamUrl(itemToPlay.id, format.format_id);
+      if (!src) throw new Error("Không có URL stream");
+      hideMedia();
+      var useAudio = format.kind === "audio";
+      var el = useAudio ? $("ytMediaAudio") : $("ytMediaVideo");
+      if (!el) throw new Error("Thiếu media element");
+      setPlayingItem(itemToPlay);
+      el.hidden = false;
+      el.src = src;
+      el.load();
+      el.play().then(
+        function () {
+          setPlayPauseLabel(true);
+          setStatus("", false);
+          startContinueTimer(false);
+        },
+        function (err) {
+          setPlayPauseLabel(false);
+          setStatus(
+            "Không phát được trong trình duyệt. Thử Mở / tải link. " +
+              (err && err.message ? err.message : ""),
+            true
+          );
         }
-        hideMedia();
-        var useAudio = resolved.kind === "audio";
-        var el = useAudio ? $("ytMediaAudio") : $("ytMediaVideo");
-        if (!el) throw new Error("Thiếu media element");
-        if (itemToPlay) setPlayingItem(itemToPlay);
-        el.hidden = false;
-        el.src = resolved.url;
-        el.load();
-        return el.play().then(
-          function () {
-            setPlayPauseLabel(true);
-            setStatus("", false);
-            startContinueTimer(false);
-          },
-          function (err) {
-            setPlayPauseLabel(false);
-            setStatus(
-              "Không phát được trong trình duyệt. Thử Mở / tải link. " +
-                (err && err.message ? err.message : ""),
-              true
-            );
-          }
-        );
-      })
-      .catch(function (err) {
-        setStatus(err.message || "Không lấy được URL", true);
-      })
-      .finally(function () {
-        resolving = false;
-      });
+      );
+    } catch (err) {
+      setStatus((err && err.message) || "Không phát được", true);
+    } finally {
+      resolving = false;
+    }
   }
 
   function openSelectedLink() {
@@ -525,6 +519,7 @@
     api.getSelectedFormat = options && options.getSelectedFormat;
     api.getSelectedItem = options && options.getSelectedItem;
     api.resolveFormat = options && options.resolveFormat;
+    api.streamUrl = options && options.streamUrl;
     api.selectItemById = options && options.selectItemById;
     api.getItems = options && options.getItems;
     api.onPlayingChange = options && options.onPlayingChange;

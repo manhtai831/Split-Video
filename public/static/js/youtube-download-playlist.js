@@ -670,6 +670,11 @@
     );
   }
 
+  function streamUrl(itemId, formatId) {
+    if (!itemId || !formatId) return "";
+    return API_BASE + "/" + itemId + "/stream?format_id=" + encodeURIComponent(formatId);
+  }
+
   function getSelectedFormat() {
     var id = state.selectedFormatId;
     if (!id) return null;
@@ -759,6 +764,7 @@
         getSelectedFormat: getSelectedFormat,
         getSelectedItem: getSelectedItem,
         resolveFormat: resolveFormat,
+        streamUrl: streamUrl,
         selectItemById: function (id, options) {
           return selectItem(id, null, options);
         },
@@ -785,5 +791,6 @@
     },
     selectItem: selectItem,
     resolveFormat: resolveFormat,
+    streamUrl: streamUrl,
   };
 })();
