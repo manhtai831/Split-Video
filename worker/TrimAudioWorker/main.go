@@ -43,7 +43,7 @@ func Process(job entities.Job, ctx context.Context) error {
 		return errors.New("file không có track âm thanh")
 	}
 	if extras.End > probe.Duration && probe.Duration > 0 {
-		return fmt.Errorf("end (%.3f) vượt quá thời lượng file (%.3f)", extras.End, probe.Duration)
+		extras.End = probe.Duration
 	}
 
 	input.Duration = probe.Duration
