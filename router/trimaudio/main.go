@@ -38,7 +38,7 @@ func handleTrimAudio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := templates.Render(w, "templates/pages/trim-audio.html", data); err != nil {
+	if err := templates.Render(w, r, "templates/pages/trim-audio.html", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

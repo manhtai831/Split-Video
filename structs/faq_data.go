@@ -20,7 +20,7 @@ func DefaultFAQItems() []FAQItem {
 		},
 		{
 			Question: "Có cần đăng ký tài khoản không?",
-			Answer:   "Không. Bạn dùng ngay mà không cần đăng ký. Hệ thống gán một ID ẩn danh qua cookie trình duyệt.",
+			Answer:   "Không bắt buộc. Bạn có thể dùng ngay với định danh ẩn danh qua cookie. Đăng ký tài khoản (tùy chọn) giúp theo dõi job trên nhiều thiết bị và khôi phục mật khẩu qua email.",
 		},
 		{
 			Question: "Hỗ trợ những định dạng video nào?",

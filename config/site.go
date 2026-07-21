@@ -27,6 +27,9 @@ var (
 	UploadChunkTTLHours        int
 	MaxUploadParts             int
 	YoutubeFormatsCacheMinutes int
+	ResendAPIKey               string
+	ResendFromEmail            string
+	SessionSecret              string
 )
 
 func init() {
@@ -82,6 +85,10 @@ func init() {
 		}
 	}
 	YoutubeFormatsCacheMinutes = ytCacheMins
+
+	ResendAPIKey = strings.TrimSpace(os.Getenv("RESEND_API_KEY"))
+	ResendFromEmail = strings.TrimSpace(os.Getenv("RESEND_FROM_EMAIL"))
+	SessionSecret = strings.TrimSpace(os.Getenv("SESSION_SECRET"))
 }
 
 func AbsURL(path string) string {

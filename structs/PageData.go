@@ -19,6 +19,10 @@ type PageData struct {
 	ActivePage    string
 	Result        string
 	UserID        string
+	IsLoggedIn    bool
+	UserEmail     string
+	FlashError    string
+	FlashSuccess  string
 
 	CanonicalPath string
 	OGImage       string
@@ -62,6 +66,14 @@ func pageCanonicalPath(activePage string) string {
 		return "/about"
 	case "faq":
 		return "/faq"
+	case "login":
+		return "/login"
+	case "register":
+		return "/register"
+	case "forgot-password":
+		return "/forgot-password"
+	case "change-password":
+		return "/account/change-password"
 	default:
 		return "/"
 	}

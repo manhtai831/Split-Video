@@ -4,6 +4,7 @@ import (
 	"app/middleware"
 	"app/router/about"
 	"app/router/admin"
+	"app/router/auth"
 	apieditor "app/router/api/editor"
 	apijobs "app/router/api/jobs"
 	apiupload "app/router/api/upload"
@@ -45,6 +46,7 @@ func Bootstrap() {
 	youtubedownload.Bootstrap()
 	about.Bootstrap()
 	faq.Bootstrap()
+	auth.Bootstrap()
 	admin.Bootstrap()
 
 	http.HandleFunc("/", handleHome)
@@ -65,7 +67,7 @@ func handleHome(w http.ResponseWriter, r *http.Request) {
 	}
 	data.Finalize()
 
-	if err := templates.Render(w, "templates/pages/home.html", data); err != nil {
+	if err := templates.Render(w, r, "templates/pages/home.html", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

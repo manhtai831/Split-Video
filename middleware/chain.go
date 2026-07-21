@@ -28,6 +28,7 @@ func APINoIndexMiddleware(next http.Handler) http.Handler {
 func Apply(next http.Handler) http.Handler {
 	wrapped := Chain(
 		APINoIndexMiddleware,
+		SessionMiddleware,
 		AppendUserIDMiddleware,
 	)(next)
 

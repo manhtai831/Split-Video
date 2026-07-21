@@ -188,6 +188,34 @@ body.sidebar-open .hamburger-line:nth-child(3) {
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(79, 70, 229, 0.1);
 }
 
+.sidebar-nav form {
+  margin: 0;
+}
+
+.sidebar-nav__logout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-radius: 10px;
+  letter-spacing: 0.01em;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.sidebar-nav__logout:hover {
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--text-main);
+}
+
 .main {
   min-width: 0;
   min-height: 0;

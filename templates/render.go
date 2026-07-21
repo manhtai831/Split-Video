@@ -3,6 +3,8 @@ package templates
 import (
 	"app/assets"
 	"app/config"
+	"app/middleware"
+	"app/structs"
 	"encoding/json"
 	"html/template"
 	"net/http"
@@ -18,9 +20,34 @@ var layoutFiles = []string{
 	"templates/partials/seo-tool-content.html",
 	"templates/partials/job_modals.html",
 	"templates/partials/chunk_upload.html",
+	"templates/partials/password_toggle.html",
 }
 
-func Render(w http.ResponseWriter, page string, data any) error {
+func applyAuth(r *http.Request, data any) any {
+	if r == nil {
+		return data
+	}
+	user := middleware.UserFromContext(r.Context())
+	switch d := data.(type) {
+	case structs.PageData:
+		if user != nil {
+			d.IsLoggedIn = true
+			d.UserEmail = user.Email
+		}
+		return d
+	case *structs.PageData:
+		if user != nil {
+			d.IsLoggedIn = true
+			d.UserEmail = user.Email
+		}
+		return d
+	default:
+		return data
+	}
+}
+
+func Render(w http.ResponseWriter, r *http.Request, page string, data any) error {
+	data = applyAuth(r, data)
 	files := append(layoutFiles, page)
 	tmpl, err := template.New("root").Funcs(template.FuncMap{
 		"asset":  assets.URL,

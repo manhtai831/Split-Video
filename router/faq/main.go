@@ -27,7 +27,7 @@ func handleFAQ(w http.ResponseWriter, r *http.Request) {
 	}
 	data.Finalize()
 
-	if err := templates.Render(w, "templates/pages/faq.html", data); err != nil {
+	if err := templates.Render(w, r, "templates/pages/faq.html", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

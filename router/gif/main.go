@@ -38,7 +38,7 @@ func handleGif(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := templates.Render(w, "templates/pages/gif.html", data); err != nil {
+	if err := templates.Render(w, r, "templates/pages/gif.html", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

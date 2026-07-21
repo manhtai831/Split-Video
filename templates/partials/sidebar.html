@@ -69,6 +69,28 @@
           FAQ
         </a>
       </li>
+      {{if .IsLoggedIn}}
+      <li>
+        <a href="/account/change-password" class="{{if eq .ActivePage "change-password"}}active{{end}}">
+          <span class="sidebar-nav__icon" style="--icon: url('/static/icons/rotate-ccw-key.svg')" aria-hidden="true"></span>
+          Đổi mật khẩu
+        </a>
+      </li>
+      <li>
+        <form method="post" action="/logout">
+          <button type="submit" class="sidebar-nav__logout">
+          <span class="sidebar-nav__icon" style="--icon: url('/static/icons/log-out.svg')" aria-hidden="true"></span>
+          Đăng xuất</button>
+        </form>
+      </li>
+      {{else}}
+      <li>
+        <a href="/login" class="{{if or (eq .ActivePage "login") (eq .ActivePage "register") (eq .ActivePage "forgot-password")}}active{{end}}">
+          <span class="sidebar-nav__icon" style="--icon: url('/static/icons/key-round.svg')" aria-hidden="true"></span>
+          Đăng nhập / Đăng ký
+        </a>
+      </li>
+      {{end}}
     </ul>
   </div>
 </aside>
