@@ -5,6 +5,7 @@ import (
 	"app/middleware"
 	"app/router"
 	"app/services/StorageService"
+	"app/worker/ErrorAlertWorker"
 	"app/worker/FileRetentionWorker"
 	"app/worker/YtDlpUpdaterWorker"
 	"app/worker/channels"
@@ -17,6 +18,7 @@ func main() {
 	channels.Initialize()
 	FileRetentionWorker.Start()
 	YtDlpUpdaterWorker.Start()
+	ErrorAlertWorker.Start()
 	StorageService.Start()
 	http.ListenAndServe(":3000", middleware.Apply(http.DefaultServeMux))
 }

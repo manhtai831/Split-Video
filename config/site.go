@@ -30,6 +30,7 @@ var (
 	ResendAPIKey               string
 	ResendFromEmail            string
 	SessionSecret              string
+	DiscordWebhookURL          string
 )
 
 func init() {
@@ -89,6 +90,7 @@ func init() {
 	ResendAPIKey = strings.TrimSpace(os.Getenv("RESEND_API_KEY"))
 	ResendFromEmail = strings.TrimSpace(os.Getenv("RESEND_FROM_EMAIL"))
 	SessionSecret = strings.TrimSpace(os.Getenv("SESSION_SECRET"))
+	DiscordWebhookURL = strings.TrimSpace(os.Getenv("DISCORD_WEBHOOK_URL"))
 }
 
 func AbsURL(path string) string {
