@@ -33,12 +33,14 @@ func applyAuth(r *http.Request, data any) any {
 		if user != nil {
 			d.IsLoggedIn = true
 			d.UserEmail = user.Email
+			d.UserID = user.ID
 		}
 		return d
 	case *structs.PageData:
 		if user != nil {
 			d.IsLoggedIn = true
 			d.UserEmail = user.Email
+			d.UserID = user.ID
 		}
 		return d
 	default:

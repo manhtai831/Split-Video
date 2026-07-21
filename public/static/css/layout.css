@@ -108,6 +108,7 @@ body.sidebar-open .hamburger-line:nth-child(3) {
   flex-direction: column;
   justify-content: center;
   align-items: end;
+  gap: 10px;
   padding: 12px;
 }
 
@@ -188,32 +189,169 @@ body.sidebar-open .hamburger-line:nth-child(3) {
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(79, 70, 229, 0.1);
 }
 
-.sidebar-nav form {
-  margin: 0;
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: min(250px, 100%);
+  padding: 8px 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-sizing: border-box;
 }
 
-.sidebar-nav__logout {
+.sidebar-user__profile {
   display: flex;
   align-items: center;
   gap: 10px;
-  width: 100%;
-  text-align: left;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  padding: 10px 14px;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-muted);
+  min-width: 0;
+  flex: 1;
+  text-decoration: none;
+  color: inherit;
   border-radius: 10px;
-  letter-spacing: 0.01em;
+  padding: 2px 4px;
+  transition: background 0.18s ease;
+}
+
+.sidebar-user__profile:hover {
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.sidebar-user__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.sidebar-user__meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.sidebar-user__email {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user__id {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user__logout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
   transition: background 0.18s ease, color 0.18s ease;
 }
 
-.sidebar-nav__logout:hover {
-  background: rgba(255, 255, 255, 0.75);
+.sidebar-user__logout:hover {
+  background: rgba(255, 255, 255, 0.85);
   color: var(--text-main);
+}
+
+.logout-modal {
+  padding: 0;
+  border: none;
+  border-radius: 14px;
+  background: transparent;
+  max-width: calc(100vw - 32px);
+}
+
+.logout-modal::backdrop {
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.logout-modal__content {
+  width: min(360px, 100%);
+  padding: 20px 22px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+}
+
+.logout-modal__title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.logout-modal__message {
+  margin: 0 0 18px;
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.logout-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.logout-modal__btn {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.logout-modal__btn--secondary {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  color: var(--text-main);
+}
+
+.logout-modal__btn--secondary:hover {
+  background: #e5e7eb;
+}
+
+.logout-modal__btn--primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+.logout-modal__btn--primary:hover {
+  filter: brightness(0.95);
 }
 
 .main {
@@ -311,6 +449,23 @@ body.sidebar-open .hamburger-line:nth-child(3) {
   .sidebar-nav a.active {
     background: rgba(79, 70, 229, 0.08);
     box-shadow: none;
+  }
+
+  .sidebar-user {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    padding: 8px 0;
+  }
+
+  .sidebar-user__profile:hover {
+    background: rgba(79, 70, 229, 0.05);
+  }
+
+  .sidebar-user__logout:hover {
+    background: rgba(79, 70, 229, 0.05);
   }
 
   .sidebar-part--content {

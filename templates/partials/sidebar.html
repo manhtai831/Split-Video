@@ -69,21 +69,7 @@
           FAQ
         </a>
       </li>
-      {{if .IsLoggedIn}}
-      <li>
-        <a href="/account/change-password" class="{{if eq .ActivePage "change-password"}}active{{end}}">
-          <span class="sidebar-nav__icon" style="--icon: url('/static/icons/rotate-ccw-key.svg')" aria-hidden="true"></span>
-          Đổi mật khẩu
-        </a>
-      </li>
-      <li>
-        <form method="post" action="/logout">
-          <button type="submit" class="sidebar-nav__logout">
-          <span class="sidebar-nav__icon" style="--icon: url('/static/icons/log-out.svg')" aria-hidden="true"></span>
-          Đăng xuất</button>
-        </form>
-      </li>
-      {{else}}
+      {{if not .IsLoggedIn}}
       <li>
         <a href="/login" class="{{if or (eq .ActivePage "login") (eq .ActivePage "register") (eq .ActivePage "forgot-password")}}active{{end}}">
           <span class="sidebar-nav__icon" style="--icon: url('/static/icons/key-round.svg')" aria-hidden="true"></span>
@@ -92,6 +78,31 @@
       </li>
       {{end}}
     </ul>
+    {{if .IsLoggedIn}}
+    <div class="sidebar-user">
+      <a class="sidebar-user__profile" href="/account/change-password" title="Đổi mật khẩu">
+        <span class="sidebar-user__avatar" aria-hidden="true">{{printf "%.1s" .UserEmail}}</span>
+        <span class="sidebar-user__meta">
+          <span class="sidebar-user__email">{{.UserEmail}}</span>
+          <span class="sidebar-user__id" title="{{.UserID}}">{{.UserID}}</span>
+        </span>
+      </a>
+      <button type="button" class="sidebar-user__logout" id="sidebarLogoutBtn" aria-label="Đăng xuất" title="Đăng xuất">
+        <span class="sidebar-nav__icon" style="--icon: url('/static/icons/log-out.svg')" aria-hidden="true"></span>
+      </button>
+    </div>
+    <dialog id="logoutConfirmModal" class="logout-modal">
+      <div class="logout-modal__content">
+        <h3 class="logout-modal__title">Đăng xuất</h3>
+        <p class="logout-modal__message">Bạn có chắc muốn đăng xuất?</p>
+        <div class="logout-modal__actions">
+          <button type="button" class="logout-modal__btn logout-modal__btn--secondary" id="logoutConfirmCancel">Hủy</button>
+          <button type="submit" form="logoutForm" class="logout-modal__btn logout-modal__btn--primary" id="logoutConfirmSubmit">Đăng xuất</button>
+        </div>
+      </div>
+    </dialog>
+    <form id="logoutForm" method="post" action="/logout" hidden></form>
+    {{end}}
   </div>
 </aside>
 {{end}}
