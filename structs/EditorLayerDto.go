@@ -38,6 +38,11 @@ type EditorLayerDto struct {
 	Stroke        string
 	Fill          string
 	StrokeWidth   float64
+	HasArrowEnds  bool
+	X1            float64
+	Y1            float64
+	X2            float64
+	Y2            float64
 	Paths         []EditorDrawPathDto
 	BlurAmount    float64
 	Muted         bool
@@ -82,6 +87,14 @@ func ParseEditorLayer(raw map[string]interface{}) (EditorLayerDto, error) {
 		BlurAmount:    floatFieldDefault(raw, "blurAmount", 12),
 		Muted:         boolFieldDefault(raw, "muted", true),
 		Loop:          boolField(raw, "loop"),
+	}
+
+	if _, ok := raw["x1"]; ok {
+		layer.HasArrowEnds = true
+		layer.X1 = floatField(raw, "x1")
+		layer.Y1 = floatField(raw, "y1")
+		layer.X2 = floatField(raw, "x2")
+		layer.Y2 = floatField(raw, "y2")
 	}
 
 	paths, err := parseDrawPaths(raw["paths"])

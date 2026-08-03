@@ -137,13 +137,7 @@ func renderShapeLayer(dc *gg.Context, layer structs.EditorLayerDto, rect structs
 		}
 		drawPolygon(dc, points, sw, stroke, fill)
 	case "arrow":
-		head := math.Min(w, h) * 0.2
-		drawLine(dc, inset, h/2, w-inset-head, h/2, sw, stroke)
-		drawPolygon(dc, []gg.Point{
-			{X: w - inset - head, Y: h/2 - head},
-			{X: w - inset, Y: h / 2},
-			{X: w - inset - head, Y: h/2 + head},
-		}, 0, color.RGBA{}, stroke)
+		drawArrow(dc, layer, w, h, sw, stroke)
 	default:
 		drawRect(dc, inset, inset, w-sw, h-sw, sw, stroke, fill)
 	}
@@ -214,6 +208,42 @@ func drawLine(dc *gg.Context, x1, y1, x2, y2, sw float64, stroke color.RGBA) {
 	dc.SetLineCap(gg.LineCapRound)
 	dc.DrawLine(x1, y1, x2, y2)
 	dc.Stroke()
+}
+
+func arrowLocalEnds(layer structs.EditorLayerDto, w, h, sw float64) (x1, y1, x2, y2 float64) {
+	inset := sw / 2
+	if layer.HasArrowEnds && layer.Width > 0 && layer.Height > 0 {
+		return (layer.X1 - layer.X) / layer.Width * w,
+			(layer.Y1 - layer.Y) / layer.Height * h,
+			(layer.X2 - layer.X) / layer.Width * w,
+			(layer.Y2 - layer.Y) / layer.Height * h
+	}
+	return inset, h / 2, w - inset, h / 2
+}
+
+func drawArrow(dc *gg.Context, layer structs.EditorLayerDto, w, h, sw float64, stroke color.RGBA) {
+	ax1, ay1, ax2, ay2 := arrowLocalEnds(layer, w, h, sw)
+	dx := ax2 - ax1
+	dy := ay2 - ay1
+	length := math.Hypot(dx, dy)
+	if length < 1e-6 {
+		drawLine(dc, ax1, ay1, ax2, ay2, sw, stroke)
+		return
+	}
+	ux := dx / length
+	uy := dy / length
+	px := -uy
+	py := ux
+	headLen := math.Min(length*0.28, math.Max(sw*3.5, 14))
+	headHalf := headLen * 0.55
+	baseX := ax2 - ux*headLen
+	baseY := ay2 - uy*headLen
+	drawLine(dc, ax1, ay1, baseX, baseY, sw, stroke)
+	drawPolygon(dc, []gg.Point{
+		{X: baseX + px*headHalf, Y: baseY + py*headHalf},
+		{X: ax2, Y: ay2},
+		{X: baseX - px*headHalf, Y: baseY - py*headHalf},
+	}, 0, color.RGBA{}, stroke)
 }
 
 func drawPolygon(dc *gg.Context, points []gg.Point, sw float64, stroke, fill color.RGBA) {

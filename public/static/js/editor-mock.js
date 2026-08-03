@@ -659,12 +659,38 @@
       return l.id === id;
     });
     if (idx < 0) return;
-    var merged = Object.assign({}, state.layers[idx], changes);
+    var prev = state.layers[idx];
+    var merged = Object.assign({}, prev, changes);
+    if (
+      window.EditorDraw &&
+      window.EditorDraw.isArrowLayer(merged) &&
+      window.EditorDraw.hasArrowEndpoints(prev) &&
+      changes.x1 === undefined &&
+      changes.y1 === undefined &&
+      changes.x2 === undefined &&
+      changes.y2 === undefined &&
+      (changes.x !== undefined || changes.y !== undefined)
+    ) {
+      var dx = (merged.x != null ? merged.x : prev.x) - prev.x;
+      var dy = (merged.y != null ? merged.y : prev.y) - prev.y;
+      merged = window.EditorDraw.syncArrowBBox(
+        Object.assign({}, merged, {
+          x1: prev.x1 + dx,
+          y1: prev.y1 + dy,
+          x2: prev.x2 + dx,
+          y2: prev.y2 + dy,
+        })
+      );
+    }
     if (
       changes.x !== undefined ||
       changes.y !== undefined ||
       changes.width !== undefined ||
-      changes.height !== undefined
+      changes.height !== undefined ||
+      changes.x1 !== undefined ||
+      changes.y1 !== undefined ||
+      changes.x2 !== undefined ||
+      changes.y2 !== undefined
     ) {
       merged = window.EditorFrame.clampLayer(merged);
     }
@@ -1203,21 +1229,49 @@
       strokeWidth = window.EditorDraw.getDrawStrokeWidth();
     }
     window.EditorDraw.setDrawStrokeWidth(strokeWidth);
-    updateLayer(
-      layer.id,
-      {
-        stroke: window.EditorDraw.getDrawStroke(),
-        strokeWidth: strokeWidth,
-        fill: window.EditorDraw.getShapeFill(),
-      },
-      { live: true }
-    );
+    var changes = {
+      stroke: window.EditorDraw.getDrawStroke(),
+      strokeWidth: strokeWidth,
+      fill: window.EditorDraw.getShapeFill(),
+    };
+    if (
+      window.EditorDraw.isArrowLayer(layer) &&
+      window.EditorDraw.hasArrowEndpoints(layer)
+    ) {
+      var synced = window.EditorDraw.syncArrowBBox(
+        Object.assign({}, layer, changes)
+      );
+      changes.x = synced.x;
+      changes.y = synced.y;
+      changes.width = synced.width;
+      changes.height = synced.height;
+    }
+    updateLayer(layer.id, changes, { live: true });
   }
 
   function applyShapeStyleFromProperties(layerId, changes) {
+    var layer = state.layers.find(function (l) {
+      return l.id === layerId;
+    });
+    if (
+      layer &&
+      window.EditorDraw &&
+      window.EditorDraw.isArrowLayer(layer) &&
+      window.EditorDraw.hasArrowEndpoints(layer) &&
+      changes.strokeWidth != null
+    ) {
+      var synced = window.EditorDraw.syncArrowBBox(
+        Object.assign({}, layer, changes)
+      );
+      changes = Object.assign({}, changes, {
+        x: synced.x,
+        y: synced.y,
+        width: synced.width,
+        height: synced.height,
+      });
+    }
     updateLayer(layerId, changes, { live: true });
-    var layer = getSelectedLayer();
-    syncToolbarDrawFromLayer(layer);
+    syncToolbarDrawFromLayer(getSelectedLayer());
   }
 
   function bindLiveInput(el, handler) {
@@ -2107,11 +2161,21 @@
           dyNorm
         );
         if (nudged.moved) {
-          updateLayer(
-            moveLayer.id,
-            { x: nudged.layer.x, y: nudged.layer.y },
-            { live: true }
-          );
+          var nudgeChanges = { x: nudged.layer.x, y: nudged.layer.y };
+          if (
+            nudged.layer.x1 != null &&
+            nudged.layer.y1 != null &&
+            nudged.layer.x2 != null &&
+            nudged.layer.y2 != null
+          ) {
+            nudgeChanges.width = nudged.layer.width;
+            nudgeChanges.height = nudged.layer.height;
+            nudgeChanges.x1 = nudged.layer.x1;
+            nudgeChanges.y1 = nudged.layer.y1;
+            nudgeChanges.x2 = nudged.layer.x2;
+            nudgeChanges.y2 = nudged.layer.y2;
+          }
+          updateLayer(moveLayer.id, nudgeChanges, { live: true });
         }
       }
     });
@@ -2234,6 +2298,7 @@
     window.EditorTransform.init({
       frameEl: $("editorFrame"),
       transformBox: $("editorTransformBox"),
+      arrowHandles: $("editorArrowHandles"),
       getSelectedLayer: getSelectedLayer,
       updateLayer: updateLayer,
       onSelect: selectLayer,

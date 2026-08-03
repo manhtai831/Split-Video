@@ -78,3 +78,34 @@ func TestParseEditorLayer_drawPaths(t *testing.T) {
 		t.Fatalf("unexpected paths: %+v", layer.Paths)
 	}
 }
+
+func TestParseEditorLayer_arrowEnds(t *testing.T) {
+	raw := map[string]interface{}{
+		"id": "a1", "kind": "shape", "shape": "arrow",
+		"x": 0.1, "y": 0.2, "width": 0.3, "height": 0.1,
+		"x1": 0.12, "y1": 0.25, "x2": 0.35, "y2": 0.28,
+		"stroke": "#ff0000", "strokeWidth": 6.0,
+	}
+	layer, err := ParseEditorLayer(raw)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !layer.HasArrowEnds {
+		t.Fatal("expected HasArrowEnds")
+	}
+	if layer.X1 != 0.12 || layer.Y1 != 0.25 || layer.X2 != 0.35 || layer.Y2 != 0.28 {
+		t.Fatalf("unexpected ends: %+v", layer)
+	}
+
+	legacy := map[string]interface{}{
+		"id": "a2", "kind": "shape", "shape": "arrow",
+		"x": 0.1, "y": 0.2, "width": 0.3, "height": 0.1,
+	}
+	legacyLayer, err := ParseEditorLayer(legacy)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if legacyLayer.HasArrowEnds {
+		t.Fatal("legacy arrow should not have HasArrowEnds")
+	}
+}

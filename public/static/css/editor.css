@@ -624,7 +624,8 @@ body.editor-active .main {
 }
 
 .editor-frame--draw-tool .editor-layer,
-.editor-frame--draw-tool .editor-transform-box {
+.editor-frame--draw-tool .editor-transform-box,
+.editor-frame--draw-tool .editor-arrow-handles {
   pointer-events: none !important;
 }
 
@@ -1028,6 +1029,30 @@ body.editor-active .main {
   top: 100%;
   left: 0;
   transform: translate(calc(-50% - 14px), calc(-50% + 14px));
+}
+
+.editor-arrow-handles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10000;
+}
+
+.editor-arrow-handles__point {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border: 2px solid #6366f1;
+  border-radius: 50%;
+  pointer-events: auto;
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  z-index: 2;
+}
+
+.editor-arrow-handles__point:active {
+  cursor: grabbing;
 }
 
 /* Properties panel */
