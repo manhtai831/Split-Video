@@ -645,12 +645,13 @@ body.editor-active .main {
 .editor-layer-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  border-radius: 6px;
-  font-size: 13px;
+  gap: 2px;
+  padding: 6px 0px;
+  border-radius: 4px;
+  font-size: 12px;
   cursor: pointer;
   border: 1px solid transparent;
+  background: transparent;
   color: #e2e8f0;
   touch-action: none;
 }
@@ -662,7 +663,7 @@ body.editor-active .main {
 .editor-layer-row--bound {
   margin-top: 8px;
   border-top: 1px solid #334155;
-  padding-top: 10px;
+  padding-top: 8px;
 }
 
 .editor-layer-row--bound .editor-layer-row__drag-handle {
@@ -671,14 +672,22 @@ body.editor-active .main {
 }
 
 .editor-layer-row__drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  width: 14px;
-  font-size: 10px;
+  width: 12px;
+  height: 12px;
   color: #64748b;
   cursor: grab;
   user-select: none;
-  line-height: 1;
-  letter-spacing: -2px;
+  background: transparent;
+}
+
+.editor-layer-row__drag-handle .editor-layer-row__icon {
+  width: 10px;
+  height: 10px;
+  display: block;
 }
 
 .editor-layer-row__drag-handle:active {
@@ -695,11 +704,12 @@ body.editor-active .main {
 }
 
 .editor-layer-row:hover {
-  background: rgba(99, 102, 241, 0.12);
+  background: transparent;
+  color: #f1f5f9;
 }
 
 .editor-layer-row--selected {
-  background: rgba(99, 102, 241, 0.2);
+  background: transparent;
   border-color: #6366f1;
 }
 
@@ -712,15 +722,39 @@ body.editor-active .main {
 }
 
 .editor-layer-row__kind {
-  font-size: 10px;
-  text-transform: uppercase;
-  color: #64748b;
-  flex-shrink: 0;
+  display: none;
 }
 
 .editor-layer-row__actions {
   display: flex;
-  gap: 2px;
+  gap: 0;
+  flex-shrink: 0;
+}
+
+.editor-layer-row__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.editor-layer-row__action:hover {
+  background: transparent;
+  color: #e2e8f0;
+}
+
+.editor-layer-row__icon {
+  width: 10px;
+  height: 10px;
+  display: block;
   flex-shrink: 0;
 }
 
