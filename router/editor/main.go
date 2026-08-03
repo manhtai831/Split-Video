@@ -9,6 +9,7 @@ import (
 	"app/templates"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 func Bootstrap() {
@@ -31,7 +32,7 @@ func handleEditor(w http.ResponseWriter, r *http.Request) {
 	if jobID != "" {
 		job, err := JobService.GetJobByIdentifierForUser(jobID, userID)
 		if err == nil && job.Type == enums.JobTypeEditor {
-			name := editorProjectName(job.ID)
+			name := editorProjectName(job.ID, job.Extras)
 			title = fmt.Sprintf("Chỉnh sửa project %s", name)
 			description = fmt.Sprintf("Tiếp tục chỉnh sửa project video %s — draft, layer, timeline và xuất bản.", name)
 			descriptionEN = fmt.Sprintf("Continue editing video project %s — drafts, layers, timeline and publish.", name)
@@ -54,7 +55,13 @@ func handleEditor(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func editorProjectName(jobID int) string {
+func editorProjectName(jobID int, extrasJSON string) string {
+	if extras, err := structs.ParseEditorJobExtrasJSON(extrasJSON); err == nil {
+		name := strings.TrimSpace(extras.Name)
+		if name != "" {
+			return name
+		}
+	}
 	files, err := JobFileDataService.GetJobFileDataByJobId(jobID, enums.JobFileDataTypeInput)
 	if err != nil || len(files) == 0 {
 		return "Editor project"

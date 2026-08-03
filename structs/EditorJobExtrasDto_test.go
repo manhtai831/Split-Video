@@ -3,10 +3,13 @@ package structs
 import "testing"
 
 func TestParseEditorJobExtrasJSON(t *testing.T) {
-	raw := `{"frame":{"width":1920,"height":1080},"framePreset":"16:9","duration":30,"layers":[{"id":"layer-1","kind":"text"}]}`
+	raw := `{"name":"My Project","frame":{"width":1920,"height":1080},"framePreset":"16:9","duration":30,"layers":[{"id":"layer-1","kind":"text"}]}`
 	dto, err := ParseEditorJobExtrasJSON(raw)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if dto.Name != "My Project" {
+		t.Fatalf("unexpected name: %s", dto.Name)
 	}
 	if dto.Frame.Width != 1920 || dto.Frame.Height != 1080 {
 		t.Fatalf("unexpected frame: %+v", dto.Frame)

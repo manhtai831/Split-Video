@@ -3,8 +3,11 @@
 
   var DEFAULT_PROJECT_DURATION = 30;
   var DEFAULT_FRAME = { width: 1920, height: 1080 };
+  var DEFAULT_PROJECT_NAME = "Project mới";
+  var PROJECT_NAME_MAX_LEN = 80;
 
   var state = {
+    name: DEFAULT_PROJECT_NAME,
     frame: { width: DEFAULT_FRAME.width, height: DEFAULT_FRAME.height },
     framePreset: "16:9",
     layers: [],
@@ -110,6 +113,7 @@
 
   function buildConfigForSave() {
     return {
+      name: state.name || DEFAULT_PROJECT_NAME,
       frame: Object.assign({}, state.frame),
       framePreset: state.framePreset,
       duration: getDuration(),
@@ -127,6 +131,61 @@
           return copy;
         }),
     };
+  }
+
+  function normalizeProjectName(raw) {
+    var name = (raw || "").trim().slice(0, PROJECT_NAME_MAX_LEN);
+    return name || DEFAULT_PROJECT_NAME;
+  }
+
+  function updateProjectNameDisplay() {
+    var btn = $("editorProjectName");
+    if (!btn) return;
+    btn.textContent = state.name || DEFAULT_PROJECT_NAME;
+    btn.hidden = false;
+    var input = $("editorProjectNameInput");
+    if (input) input.hidden = true;
+  }
+
+  function syncProjectNameInputWidth() {
+    var input = $("editorProjectNameInput");
+    if (!input || input.hidden) return;
+    var len = Math.max((input.value || "").length, 4);
+    input.style.width = Math.min(len + 1, PROJECT_NAME_MAX_LEN) + "ch";
+  }
+
+  function beginRenameProject() {
+    if (isReadOnly) return;
+    var btn = $("editorProjectName");
+    var input = $("editorProjectNameInput");
+    if (!btn || !input) return;
+    input.value = state.name || DEFAULT_PROJECT_NAME;
+    btn.hidden = true;
+    input.hidden = false;
+    syncProjectNameInputWidth();
+    input.focus();
+    input.select();
+  }
+
+  function cancelRenameProject() {
+    updateProjectNameDisplay();
+  }
+
+  function commitRenameProject() {
+    var input = $("editorProjectNameInput");
+    if (!input || input.hidden) return;
+    var next = normalizeProjectName(input.value);
+    var prev = state.name || DEFAULT_PROJECT_NAME;
+    state.name = next;
+    updateProjectNameDisplay();
+    if (next === prev) return;
+    if (jobIdentifier) {
+      saveDraft({ silent: true }).catch(function (err) {
+        showToast(err.message || "Không thể lưu tên project");
+      });
+    } else {
+      markDirty();
+    }
   }
 
   function collectPendingFiles() {
@@ -190,12 +249,14 @@
     suppressDirty = true;
     jobIdentifier = resp.identifier;
     jobStatus = resp.status;
+    state.name = normalizeProjectName(resp.name);
     state.frame = resp.frame || state.frame;
     state.framePreset = resp.framePreset || state.framePreset;
     applyServerLayers(resp.layers);
     state.selectedId = window.EditorLayers.BOUND_LAYER_ID;
     isDirty = false;
     suppressDirty = false;
+    updateProjectNameDisplay();
     updateJobStatusDisplay();
     applyReadOnlyUI();
     syncStatusPolling();
@@ -232,13 +293,11 @@
     var saveBtn = $("editorSave");
     var dupBtn = $("editorDuplicate");
     var pubBtn = $("editorPublish");
-    var revertBtn = $("editorRevertDraft");
+    var nameBtn = $("editorProjectName");
     if (saveBtn) saveBtn.disabled = isReadOnly;
     if (dupBtn) dupBtn.disabled = isReadOnly;
     if (pubBtn) pubBtn.disabled = isReadOnly;
-    if (revertBtn) {
-      revertBtn.disabled = !(jobStatus === "pending" || jobStatus === "processing");
-    }
+    if (nameBtn) nameBtn.disabled = isReadOnly;
   }
 
   function stopStatusPolling() {
@@ -345,14 +404,6 @@
     });
   }
 
-  function revertDraft() {
-    if (!jobIdentifier) return Promise.resolve();
-    return window.EditorAPI.revertDraft(jobIdentifier).then(function (resp) {
-      syncJobFromResponse(resp);
-      showToast("Đã chuyển về draft");
-    });
-  }
-
   function resetProject() {
     stopStatusPolling();
     suppressDirty = true;
@@ -361,6 +412,7 @@
     isDirty = false;
     pendingFiles = {};
     clientKeyCounter = 0;
+    state.name = DEFAULT_PROJECT_NAME;
     state.frame = { width: DEFAULT_FRAME.width, height: DEFAULT_FRAME.height };
     state.framePreset = "16:9";
     state.layers = [window.EditorLayers.defaultBoundLayer()];
@@ -373,6 +425,7 @@
       window.EditorHistory.reset();
     }
     suppressDirty = false;
+    updateProjectNameDisplay();
     updateJobStatusDisplay();
     applyReadOnlyUI();
     syncStatusPolling();
@@ -431,12 +484,16 @@
 
   function applyHistoryState(snapshot) {
     isRestoringHistory = true;
+    if (snapshot.name != null) {
+      state.name = normalizeProjectName(snapshot.name);
+    }
     state.frame = Object.assign({}, snapshot.frame);
     state.framePreset = snapshot.framePreset;
     state.layers = JSON.parse(JSON.stringify(snapshot.layers));
     state.selectedId = snapshot.selectedId;
     window.EditorFrame.setDimensions(state.frame.width, state.frame.height);
     isRestoringHistory = false;
+    updateProjectNameDisplay();
     notify();
     window.EditorLayers.updateVisibilityForTime(state.currentTime);
     var layer = getSelectedLayer();
@@ -862,6 +919,8 @@
     if (!layer || layer.kind !== "shape") return;
     var drawStroke = $("editorDrawStroke");
     var drawStrokeWidth = $("editorDrawStrokeWidth");
+    var drawFill = $("editorDrawFill");
+    var drawFillOn = $("editorDrawFillOn");
     if (drawStroke && layer.stroke) drawStroke.value = layer.stroke;
     if (drawStrokeWidth && layer.strokeWidth != null) {
       drawStrokeWidth.value = String(layer.strokeWidth);
@@ -869,6 +928,65 @@
         window.EditorDraw.setDrawStrokeWidth(layer.strokeWidth);
       }
     }
+    if (drawFill && drawFillOn) {
+      var hasFill = !!(layer.fill && layer.fill !== "transparent");
+      drawFillOn.checked = hasFill;
+      if (hasFill) drawFill.value = layer.fill;
+      drawFill.disabled = !hasFill;
+    }
+  }
+
+  function syncSettingsDrawInputs() {
+    if (!window.EditorDraw) return;
+    var drawStroke = $("editorDrawStroke");
+    var drawStrokeWidth = $("editorDrawStrokeWidth");
+    var drawFill = $("editorDrawFill");
+    var drawFillOn = $("editorDrawFillOn");
+    if (drawStroke) drawStroke.value = window.EditorDraw.getDrawStroke();
+    if (drawStrokeWidth) {
+      drawStrokeWidth.value = String(window.EditorDraw.getDrawStrokeWidth());
+    }
+    if (drawFill && drawFillOn) {
+      var fill = window.EditorDraw.getShapeFill();
+      var hasFill = !!(fill && fill !== "transparent");
+      drawFillOn.checked = hasFill;
+      if (hasFill) drawFill.value = fill;
+      drawFill.disabled = !hasFill;
+    }
+    syncToolbarDrawFromLayer(getSelectedLayer());
+  }
+
+  function bindSettingsDialog() {
+    var dialog = $("editorSettingsDialog");
+    if (!dialog) return;
+
+    var settingsBtn = $("editorSettings");
+    if (settingsBtn) {
+      settingsBtn.addEventListener("click", function () {
+        closeEditorMenus();
+        syncSettingsDrawInputs();
+        dialog.showModal();
+      });
+    }
+
+    var closeBtn = $("editorSettingsClose");
+    if (closeBtn) {
+      closeBtn.addEventListener("click", function () {
+        dialog.close();
+      });
+    }
+
+    dialog.querySelectorAll("[data-settings-tab]").forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        var controlsId = tab.getAttribute("aria-controls");
+        dialog.querySelectorAll("[data-settings-tab]").forEach(function (t) {
+          t.setAttribute("aria-selected", t === tab ? "true" : "false");
+        });
+        dialog.querySelectorAll(".editor-settings-dialog__panel").forEach(function (panel) {
+          panel.hidden = panel.id !== controlsId;
+        });
+      });
+    });
   }
 
   function applyToolbarDrawToSelectedShape() {
@@ -924,6 +1042,7 @@
 
   function exportJSON() {
     var payload = {
+      name: state.name || DEFAULT_PROJECT_NAME,
       frame: Object.assign({}, state.frame),
       framePreset: state.framePreset,
       duration: getDuration(),
@@ -1409,6 +1528,7 @@
 
   function bindToolbar() {
     bindMenubar();
+    bindSettingsDialog();
 
     $("editorAddText").addEventListener("click", function () {
       closeEditorMenus();
@@ -1505,6 +1625,8 @@
     var saveBtn = $("editorSave");
     if (saveBtn) {
       saveBtn.addEventListener("click", function () {
+        if (saveBtn.disabled) return;
+        closeEditorMenus();
         saveBtn.disabled = true;
         saveDraft()
           .catch(function (err) {
@@ -1519,6 +1641,8 @@
     var dupBtn = $("editorDuplicate");
     if (dupBtn) {
       dupBtn.addEventListener("click", function () {
+        if (dupBtn.disabled) return;
+        closeEditorMenus();
         dupBtn.disabled = true;
         duplicateProject()
           .catch(function (err) {
@@ -1533,6 +1657,8 @@
     var pubBtn = $("editorPublish");
     if (pubBtn) {
       pubBtn.addEventListener("click", function () {
+        if (pubBtn.disabled) return;
+        closeEditorMenus();
         pubBtn.disabled = true;
         publishProject()
           .catch(function (err) {
@@ -1544,17 +1670,28 @@
       });
     }
 
-    var revertBtn = $("editorRevertDraft");
-    if (revertBtn) {
-      revertBtn.addEventListener("click", function () {
-        revertBtn.disabled = true;
-        revertDraft()
-          .catch(function (err) {
-            showToast(err.message || "Không thể lưu draft");
-          })
-          .finally(function () {
-            applyReadOnlyUI();
-          });
+    var nameBtn = $("editorProjectName");
+    if (nameBtn) {
+      nameBtn.addEventListener("click", function () {
+        beginRenameProject();
+      });
+    }
+
+    var nameInput = $("editorProjectNameInput");
+    if (nameInput) {
+      nameInput.addEventListener("input", syncProjectNameInputWidth);
+      nameInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commitRenameProject();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          cancelRenameProject();
+        }
+      });
+      nameInput.addEventListener("blur", function () {
+        commitRenameProject();
       });
     }
 
@@ -1775,6 +1912,7 @@
       window.EditorHistory.init({
         getState: function () {
           return {
+            name: state.name,
             frame: state.frame,
             framePreset: state.framePreset,
             layers: state.layers,

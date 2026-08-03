@@ -67,14 +67,11 @@
   <header class="editor-overlay__header">
     <div class="editor-overlay__brand">
       <button type="button" id="editorClose" class="editor-overlay__back" title="Đóng editor" aria-label="Đóng editor">←</button>
-      <h1 class="editor-overlay__title">Video Editor</h1>
-    </div>
-    <div class="editor-overlay__actions">
-      <button type="button" id="editorSave" class="btn btn--secondary btn--sm">Save</button>
-      <button type="button" id="editorDuplicate" class="btn btn--ghost btn--sm">Duplicate</button>
-      <button type="button" id="editorPublish" class="btn btn--primary btn--sm">Xuất bản</button>
-      <button type="button" id="editorRevertDraft" class="btn btn--ghost btn--sm">Lưu draft</button>
-      <span id="editorJobStatus" class="editor-job-status"></span>
+      <div class="editor-overlay__title-stack">
+        <button type="button" id="editorProjectName" class="editor-overlay__project-name" title="Đổi tên project">Project mới</button>
+        <input type="text" id="editorProjectNameInput" class="editor-overlay__project-name-input" maxlength="80" hidden aria-label="Tên project" />
+        <span id="editorJobStatus" class="editor-job-status"></span>
+      </div>
     </div>
     <div id="editorFrameMeta" class="editor-overlay__meta"></div>
   </header>
@@ -85,6 +82,11 @@
         <div class="editor-menu">
           <button type="button" class="editor-menu__trigger" aria-haspopup="true" aria-expanded="false">File</button>
           <div class="editor-menu__dropdown" hidden>
+            <button type="button" id="editorSave" class="editor-menu__item">Save</button>
+            <button type="button" id="editorDuplicate" class="editor-menu__item">Duplicate</button>
+            <button type="button" id="editorPublish" class="editor-menu__item">Xuất bản</button>
+            <div class="editor-menu__separator" role="separator"></div>
+            <button type="button" id="editorSettings" class="editor-menu__item">Settings</button>
             <button type="button" id="editorExport" class="editor-menu__item">Export JSON</button>
           </div>
         </div>
@@ -110,14 +112,7 @@
           </div>
         </div>
       </nav>
-      <div class="editor-toolbar__draw-tools">
-        <div class="editor-toolbar__draw-colors">
-          <label title="Màu viền / nét"><span>Viền</span><input type="color" id="editorDrawStroke" value="#ffffff" /></label>
-          <label title="Độ dày nét"><span>Nét</span><input type="number" id="editorDrawStrokeWidth" min="1" max="40" value="6" /></label>
-          <label class="editor-toolbar__fill-toggle" title="Bật màu nền shape"><input type="checkbox" id="editorDrawFillOn" /><span>Nền</span><input type="color" id="editorDrawFill" value="#6366f1" /></label>
-        </div>
-        <button type="button" id="editorSelectTool" class="btn btn--ghost btn--sm" title="Chọn layer">Select</button>
-      </div>
+     
       <input id="editorMediaInput" type="file" accept="image/*,video/*" hidden aria-hidden="true" tabindex="-1" />
       <div class="editor-toolbar__playback">
         <button type="button" id="editorPlayPause" class="btn btn--ghost btn--sm" title="Play" aria-pressed="false">▶ Play</button>
@@ -178,6 +173,41 @@
     </div>
   </div>
 </div>
+
+<dialog id="editorSettingsDialog" class="editor-settings-dialog">
+  <div class="editor-settings-dialog__header">
+    <h3>Cài đặt</h3>
+    <button type="button" id="editorSettingsClose" class="btn btn--ghost btn--sm" aria-label="Đóng">Đóng</button>
+  </div>
+  <div class="editor-settings-dialog__body">
+    <nav class="editor-settings-dialog__nav" aria-label="Settings tabs" role="tablist">
+      <button type="button" class="editor-settings-dialog__tab" data-settings-tab="config" role="tab" aria-selected="true" aria-controls="editorSettingsPanelConfig" id="editorSettingsTabConfig">Config</button>
+    </nav>
+    <div class="editor-settings-dialog__content">
+      <div id="editorSettingsPanelConfig" class="editor-settings-dialog__panel" role="tabpanel" aria-labelledby="editorSettingsTabConfig">
+        <div class="editor-settings-item">
+          <div class="editor-settings-item__title">Viền</div>
+          <div class="editor-settings-item__control">
+            <input type="color" id="editorDrawStroke" value="#ffffff" title="Màu viền / nét" />
+          </div>
+        </div>
+        <div class="editor-settings-item">
+          <div class="editor-settings-item__title">Nét</div>
+          <div class="editor-settings-item__control">
+            <input type="number" id="editorDrawStrokeWidth" min="1" max="40" value="6" title="Độ dày nét" />
+          </div>
+        </div>
+        <div class="editor-settings-item">
+          <div class="editor-settings-item__title">Nền</div>
+          <div class="editor-settings-item__control editor-settings-item__control--fill">
+            <input type="checkbox" id="editorDrawFillOn" title="Bật màu nền shape" />
+            <input type="color" id="editorDrawFill" value="#6366f1" title="Màu nền shape" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</dialog>
 
 <dialog id="editorExportDialog" class="editor-export-dialog">
   <h3>Export JSON</h3>

@@ -137,6 +137,7 @@ func GetEditorJob(identifier, userID string) (structs.EditorJobResponseDto, erro
 	return structs.EditorJobResponseDto{
 		Identifier:  job.Identifier,
 		Status:      string(job.Status),
+		Name:        extras.Name,
 		Frame:       extras.Frame,
 		FramePreset: extras.FramePreset,
 		Duration:    extras.Duration,

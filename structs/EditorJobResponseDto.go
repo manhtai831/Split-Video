@@ -10,6 +10,7 @@ type EditorInputFileDto struct {
 type EditorJobResponseDto struct {
 	Identifier  string               `json:"identifier"`
 	Status      string               `json:"status"`
+	Name        string               `json:"name,omitempty"`
 	Frame       EditorFrameDto       `json:"frame"`
 	FramePreset string               `json:"framePreset"`
 	Duration    float64              `json:"duration"`

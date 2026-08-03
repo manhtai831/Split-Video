@@ -12,6 +12,7 @@ type EditorFrameDto struct {
 }
 
 type EditorJobExtrasDto struct {
+	Name        string                   `json:"name,omitempty"`
 	Frame       EditorFrameDto           `json:"frame"`
 	FramePreset string                   `json:"framePreset"`
 	Duration    float64                  `json:"duration"`

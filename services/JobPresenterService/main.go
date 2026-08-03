@@ -66,8 +66,10 @@ func ToJobItemDto(job entities.Job) (structs.JobItemDto, error) {
 	}
 
 	if job.Type == enums.JobTypeEditor {
-		dto.FileName = dto.EncodeSummary
-		if dto.FileName == "" {
+		extras, err := structs.ParseEditorJobExtrasJSON(job.Extras)
+		if err == nil && strings.TrimSpace(extras.Name) != "" {
+			dto.FileName = strings.TrimSpace(extras.Name)
+		} else {
 			dto.FileName = "Editor project"
 		}
 	}

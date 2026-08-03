@@ -12,6 +12,7 @@
 
   function cloneSnapshot(state) {
     return {
+      name: state.name,
       frame: Object.assign({}, state.frame),
       framePreset: state.framePreset,
       layers: JSON.parse(JSON.stringify(state.layers)),

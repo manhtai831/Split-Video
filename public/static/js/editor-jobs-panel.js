@@ -184,8 +184,8 @@
   }
 
   function projectLabel(job) {
-    if (job.encode_summary) return job.encode_summary;
     if (job.file_name) return job.file_name;
+    if (job.encode_summary) return job.encode_summary;
     return "Editor project";
   }
 

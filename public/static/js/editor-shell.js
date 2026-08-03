@@ -104,6 +104,7 @@
     document.addEventListener("keydown", function (e) {
       if (!isOpen || e.key !== "Escape") return;
       if (e.target && e.target.closest && e.target.closest("dialog[open]")) return;
+      if (e.target && e.target.id === "editorProjectNameInput") return;
       e.preventDefault();
       closeEditor(false);
     });
