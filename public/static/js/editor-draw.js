@@ -12,11 +12,17 @@
   var onToolChange = null;
 
   var activeTool = null;
-  var drawStroke = "#ffffff";
+  var drawStroke = "#ff0000";
   var drawStrokeWidth = 6;
   var shapeFill = "transparent";
   var shapeFillHasColor = false;
   var blurAmount = 12;
+
+  function fillHasColor(value) {
+    if (value == null) return false;
+    var v = String(value).trim().toLowerCase();
+    return v !== "" && v !== "transparent" && v !== "none";
+  }
 
   var shapeDrag = null;
   var brushStroke = null;
@@ -261,7 +267,7 @@
     var w = Math.max(1, pxW || 100);
     var h = Math.max(1, pxH || 100);
     var sw = Math.max(1, layer.strokeWidth || drawStrokeWidth || 6);
-    var stroke = layer.stroke || drawStroke || "#ffffff";
+    var stroke = layer.stroke || drawStroke || "#ff0000";
     var fill = layer.fill || "transparent";
     var shape = layer.shape || "rect";
     var inset = sw / 2;
@@ -400,7 +406,7 @@
           '<path d="' +
           d +
           '" fill="none" stroke="' +
-          (path.stroke || drawStroke || "#ffffff") +
+          (path.stroke || drawStroke || "#ff0000") +
           '" stroke-width="' +
           sw +
           '" stroke-linecap="round" stroke-linejoin="round" />'
@@ -687,14 +693,18 @@
     paintShapeLayer: paintShapeLayer,
     paintDrawLayer: paintDrawLayer,
     setDrawStroke: function (c) {
-      drawStroke = c;
+      if (c != null && String(c).trim()) drawStroke = String(c).trim();
     },
     setDrawStrokeWidth: function (w) {
       drawStrokeWidth = w;
     },
     setShapeFill: function (f, hasColor) {
-      shapeFill = f;
-      shapeFillHasColor = !!hasColor;
+      var value = f == null ? "transparent" : String(f).trim();
+      if (!value) value = "transparent";
+      shapeFill = value;
+      shapeFillHasColor =
+        hasColor == null ? fillHasColor(value) : !!hasColor && fillHasColor(value);
+      if (!shapeFillHasColor) shapeFill = "transparent";
     },
     getDrawStroke: function () {
       return drawStroke;

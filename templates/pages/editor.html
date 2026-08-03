@@ -82,7 +82,10 @@
         <div class="editor-menu">
           <button type="button" class="editor-menu__trigger" aria-haspopup="true" aria-expanded="false">File</button>
           <div class="editor-menu__dropdown" hidden>
-            <button type="button" id="editorSave" class="editor-menu__item">Save</button>
+            <button type="button" id="editorSave" class="editor-menu__item">
+              Save
+              <span class="editor-menu__shortcut" id="editorSaveShortcut">Ctrl+S</span>
+            </button>
             <button type="button" id="editorDuplicate" class="editor-menu__item">Duplicate</button>
             <button type="button" id="editorPublish" class="editor-menu__item">Xuất bản</button>
             <div class="editor-menu__separator" role="separator"></div>
@@ -112,7 +115,20 @@
           </div>
         </div>
       </nav>
-     
+      <button
+        type="button"
+        id="editorSaveToolbar"
+        class="btn btn--icon btn--sm btn--secondary editor-save-btn"
+        title="Lưu (Ctrl+S)"
+        aria-label="Lưu"
+        aria-keyshortcuts="Control+s Meta+s"
+      >
+        <svg class="btn__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+      </button>
       <input id="editorMediaInput" type="file" accept="image/*,video/*" hidden aria-hidden="true" tabindex="-1" />
       <div class="editor-toolbar__playback">
         <button type="button" id="editorPlayPause" class="btn btn--ghost btn--sm" title="Play" aria-pressed="false">▶ Play</button>
@@ -187,8 +203,21 @@
       <div id="editorSettingsPanelConfig" class="editor-settings-dialog__panel" role="tabpanel" aria-labelledby="editorSettingsTabConfig">
         <div class="editor-settings-item">
           <div class="editor-settings-item__title">Viền</div>
-          <div class="editor-settings-item__control">
-            <input type="color" id="editorDrawStroke" value="#ffffff" title="Màu viền / nét" />
+          <div class="editor-settings-item__control editor-settings-item__control--color">
+            <div class="editor-color-swatches" id="editorDrawStrokeSwatches" role="group" aria-label="Màu viền nhanh">
+              <button type="button" class="editor-color-swatch editor-color-swatch--transparent" data-color="transparent" title="Trong suốt" aria-label="Trong suốt"></button>
+              <button type="button" class="editor-color-swatch" data-color="#ff0000" style="--swatch:#ff0000" title="Đỏ" aria-label="Đỏ"></button>
+              <button type="button" class="editor-color-swatch" data-color="#ffffff" style="--swatch:#ffffff" title="Trắng" aria-label="Trắng"></button>
+              <button type="button" class="editor-color-swatch" data-color="#000000" style="--swatch:#000000" title="Đen" aria-label="Đen"></button>
+              <button type="button" class="editor-color-swatch" data-color="#f59e0b" style="--swatch:#f59e0b" title="Vàng" aria-label="Vàng"></button>
+              <button type="button" class="editor-color-swatch" data-color="#22c55e" style="--swatch:#22c55e" title="Xanh lá" aria-label="Xanh lá"></button>
+              <button type="button" class="editor-color-swatch" data-color="#3b82f6" style="--swatch:#3b82f6" title="Xanh dương" aria-label="Xanh dương"></button>
+              <button type="button" class="editor-color-swatch" data-color="#6366f1" style="--swatch:#6366f1" title="Indigo" aria-label="Indigo"></button>
+            </div>
+            <div class="editor-color-inputs">
+              <input type="color" id="editorDrawStroke" value="#ff0000" title="Màu viền / nét" />
+              <input type="text" id="editorDrawStrokeHex" class="editor-color-hex" value="#ff0000" maxlength="20" spellcheck="false" placeholder="#rrggbb hoặc transparent" title="Mã màu viền" aria-label="Mã màu viền" />
+            </div>
           </div>
         </div>
         <div class="editor-settings-item">
@@ -199,9 +228,21 @@
         </div>
         <div class="editor-settings-item">
           <div class="editor-settings-item__title">Nền</div>
-          <div class="editor-settings-item__control editor-settings-item__control--fill">
-            <input type="checkbox" id="editorDrawFillOn" title="Bật màu nền shape" />
-            <input type="color" id="editorDrawFill" value="#6366f1" title="Màu nền shape" />
+          <div class="editor-settings-item__control editor-settings-item__control--color">
+            <div class="editor-color-swatches" id="editorDrawFillSwatches" role="group" aria-label="Màu nền nhanh">
+              <button type="button" class="editor-color-swatch editor-color-swatch--transparent" data-color="transparent" title="Trong suốt" aria-label="Trong suốt"></button>
+              <button type="button" class="editor-color-swatch" data-color="#ff0000" style="--swatch:#ff0000" title="Đỏ" aria-label="Đỏ"></button>
+              <button type="button" class="editor-color-swatch" data-color="#ffffff" style="--swatch:#ffffff" title="Trắng" aria-label="Trắng"></button>
+              <button type="button" class="editor-color-swatch" data-color="#000000" style="--swatch:#000000" title="Đen" aria-label="Đen"></button>
+              <button type="button" class="editor-color-swatch" data-color="#f59e0b" style="--swatch:#f59e0b" title="Vàng" aria-label="Vàng"></button>
+              <button type="button" class="editor-color-swatch" data-color="#22c55e" style="--swatch:#22c55e" title="Xanh lá" aria-label="Xanh lá"></button>
+              <button type="button" class="editor-color-swatch" data-color="#3b82f6" style="--swatch:#3b82f6" title="Xanh dương" aria-label="Xanh dương"></button>
+              <button type="button" class="editor-color-swatch" data-color="#6366f1" style="--swatch:#6366f1" title="Indigo" aria-label="Indigo"></button>
+            </div>
+            <div class="editor-color-inputs">
+              <input type="color" id="editorDrawFill" value="#ffffff" title="Màu nền shape" />
+              <input type="text" id="editorDrawFillHex" class="editor-color-hex" value="transparent" maxlength="20" spellcheck="false" placeholder="#rrggbb hoặc transparent" title="Mã màu nền" aria-label="Mã màu nền" />
+            </div>
           </div>
         </div>
       </div>

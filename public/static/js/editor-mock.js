@@ -5,6 +5,10 @@
   var DEFAULT_FRAME = { width: 1920, height: 1080 };
   var DEFAULT_PROJECT_NAME = "Project mới";
   var PROJECT_NAME_MAX_LEN = 80;
+  var DRAW_SETTINGS_KEY = "editorDraw.settings";
+  var DEFAULT_DRAW_STROKE = "#ff0000";
+  var DEFAULT_DRAW_STROKE_WIDTH = 6;
+  var DEFAULT_DRAW_FILL = "transparent";
 
   var state = {
     name: DEFAULT_PROJECT_NAME,
@@ -26,6 +30,7 @@
   var clientKeyCounter = 0;
   var pendingFiles = {};
   var isReadOnly = false;
+  var isSaving = false;
   var suppressDirty = false;
   var statusPollTimer = null;
   var STATUS_POLL_MS = 3000;
@@ -95,7 +100,67 @@
   function markDirty() {
     if (!suppressDirty) {
       isDirty = true;
+      updateSaveUI();
     }
+  }
+
+  function isMacPlatform() {
+    if (navigator.userAgentData && navigator.userAgentData.platform) {
+      return navigator.userAgentData.platform === "macOS";
+    }
+    return /Mac|iPhone|iPad|iPod/i.test(navigator.platform || "");
+  }
+
+  function saveShortcutHint() {
+    return isMacPlatform() ? "⌘S" : "Ctrl+S";
+  }
+
+  function updateSaveUI() {
+    var toolbar = $("editorSaveToolbar");
+    var menuBtn = $("editorSave");
+    var disabled = isReadOnly || isSaving;
+
+    if (menuBtn) menuBtn.disabled = disabled;
+
+    if (!toolbar) return;
+
+    toolbar.disabled = disabled;
+    toolbar.classList.toggle(
+      "editor-save-btn--dirty",
+      isDirty && !isSaving && !isReadOnly
+    );
+    toolbar.classList.toggle(
+      "editor-save-btn--saved",
+      !isDirty && !isSaving
+    );
+    toolbar.classList.toggle("editor-save-btn--saving", isSaving);
+
+    var ariaLabel = "Lưu";
+    var title = "Lưu (" + saveShortcutHint() + ")";
+    if (isSaving) {
+      ariaLabel = "Đang lưu…";
+      title = "Đang lưu…";
+    } else if (isReadOnly) {
+      ariaLabel = "Lưu";
+      title = "Lưu";
+    } else if (!isDirty) {
+      ariaLabel = "Đã lưu";
+      title = "Đã lưu";
+    }
+    toolbar.title = title;
+    toolbar.setAttribute("aria-label", ariaLabel);
+  }
+
+  function requestSave() {
+    if (isReadOnly || isSaving) return Promise.resolve();
+    closeEditorMenus();
+    return saveDraft()
+      .catch(function (err) {
+        showToast(err.message || "Không thể lưu");
+      })
+      .finally(function () {
+        applyReadOnlyUI();
+      });
   }
 
   function nextClientKey() {
@@ -290,14 +355,13 @@
     if (workspace) {
       workspace.classList.toggle("editor-workspace--readonly", isReadOnly);
     }
-    var saveBtn = $("editorSave");
     var dupBtn = $("editorDuplicate");
     var pubBtn = $("editorPublish");
     var nameBtn = $("editorProjectName");
-    if (saveBtn) saveBtn.disabled = isReadOnly;
     if (dupBtn) dupBtn.disabled = isReadOnly;
     if (pubBtn) pubBtn.disabled = isReadOnly;
     if (nameBtn) nameBtn.disabled = isReadOnly;
+    updateSaveUI();
   }
 
   function stopStatusPolling() {
@@ -355,19 +419,26 @@
     if (!window.EditorAPI) {
       return Promise.reject(new Error("Editor API unavailable"));
     }
+    isSaving = true;
+    updateSaveUI();
     var config = buildConfigForSave();
     var files = collectPendingFiles();
     var promise = jobIdentifier
       ? window.EditorAPI.updateJob(jobIdentifier, config, files)
       : window.EditorAPI.createJob(config, files);
 
-    return promise.then(function (resp) {
-      syncJobFromResponse(resp);
-      if (!opts.silent) {
-        showToast("Đã lưu draft");
-      }
-      return resp;
-    });
+    return promise
+      .then(function (resp) {
+        syncJobFromResponse(resp);
+        if (!opts.silent) {
+          showToast("Đã lưu draft");
+        }
+        return resp;
+      })
+      .finally(function () {
+        isSaving = false;
+        updateSaveUI();
+      });
   }
 
   function publishProject() {
@@ -606,6 +677,9 @@
       if (!opts.skipHistory) {
         recordHistoryDebounced("Sửa " + formatLayerLabel(merged));
       }
+      if (!isRestoringHistory && !isReadOnly) {
+        markDirty();
+      }
       return;
     }
     if (!opts || !opts.skipNotify) {
@@ -746,6 +820,7 @@
     if (bound) bound.zIndex = 0;
     notify();
     recordHistory("Sắp xếp layers");
+    if (!isReadOnly) markDirty();
   }
 
   function setFramePreset(preset) {
@@ -762,6 +837,7 @@
     }
     notify();
     recordHistory("Đổi frame " + preset);
+    if (!isReadOnly) markDirty();
   }
 
   function setFrameDimensions(width, height) {
@@ -773,6 +849,7 @@
     recordHistory(
       "Đổi frame " + state.frame.width + "×" + state.frame.height
     );
+    if (!isReadOnly) markDirty();
   }
 
   function updateMetaDisplay() {
@@ -917,43 +994,159 @@
 
   function syncToolbarDrawFromLayer(layer) {
     if (!layer || layer.kind !== "shape") return;
-    var drawStroke = $("editorDrawStroke");
     var drawStrokeWidth = $("editorDrawStrokeWidth");
-    var drawFill = $("editorDrawFill");
-    var drawFillOn = $("editorDrawFillOn");
-    if (drawStroke && layer.stroke) drawStroke.value = layer.stroke;
+    if (layer.stroke) setStrokeColorInputs(layer.stroke);
     if (drawStrokeWidth && layer.strokeWidth != null) {
       drawStrokeWidth.value = String(layer.strokeWidth);
       if (window.EditorDraw && window.EditorDraw.setDrawStrokeWidth) {
         window.EditorDraw.setDrawStrokeWidth(layer.strokeWidth);
       }
     }
-    if (drawFill && drawFillOn) {
-      var hasFill = !!(layer.fill && layer.fill !== "transparent");
-      drawFillOn.checked = hasFill;
-      if (hasFill) drawFill.value = layer.fill;
-      drawFill.disabled = !hasFill;
-    }
+    setFillColorInputs(
+      layer.fill && layer.fill !== "transparent" ? layer.fill : "transparent"
+    );
   }
 
   function syncSettingsDrawInputs() {
     if (!window.EditorDraw) return;
-    var drawStroke = $("editorDrawStroke");
     var drawStrokeWidth = $("editorDrawStrokeWidth");
-    var drawFill = $("editorDrawFill");
-    var drawFillOn = $("editorDrawFillOn");
-    if (drawStroke) drawStroke.value = window.EditorDraw.getDrawStroke();
+    setStrokeColorInputs(window.EditorDraw.getDrawStroke());
     if (drawStrokeWidth) {
       drawStrokeWidth.value = String(window.EditorDraw.getDrawStrokeWidth());
     }
-    if (drawFill && drawFillOn) {
-      var fill = window.EditorDraw.getShapeFill();
-      var hasFill = !!(fill && fill !== "transparent");
-      drawFillOn.checked = hasFill;
-      if (hasFill) drawFill.value = fill;
-      drawFill.disabled = !hasFill;
-    }
+    setFillColorInputs(window.EditorDraw.getShapeFill());
     syncToolbarDrawFromLayer(getSelectedLayer());
+  }
+
+  function normalizeHexColor(raw, allowTransparent) {
+    if (raw == null) return null;
+    var v = String(raw).trim().toLowerCase();
+    if (allowTransparent && (v === "transparent" || v === "none")) {
+      return "transparent";
+    }
+    if (!v) return null;
+    if (v.charAt(0) !== "#") v = "#" + v;
+    if (/^#[0-9a-f]{3}$/i.test(v)) {
+      return (
+        "#" +
+        v.charAt(1) +
+        v.charAt(1) +
+        v.charAt(2) +
+        v.charAt(2) +
+        v.charAt(3) +
+        v.charAt(3)
+      ).toLowerCase();
+    }
+    if (/^#[0-9a-f]{6}$/i.test(v)) return v.toLowerCase();
+    if (/^#[0-9a-f]{8}$/i.test(v)) return v.slice(0, 7).toLowerCase();
+    return null;
+  }
+
+  function isTransparentColor(value) {
+    var v = String(value || "")
+      .trim()
+      .toLowerCase();
+    return !v || v === "transparent" || v === "none";
+  }
+
+  function markActiveSwatches(groupId, color) {
+    var group = $(groupId);
+    if (!group) return;
+    var target = String(color || "")
+      .trim()
+      .toLowerCase();
+    group.querySelectorAll(".editor-color-swatch").forEach(function (btn) {
+      var c = String(btn.getAttribute("data-color") || "")
+        .trim()
+        .toLowerCase();
+      btn.setAttribute("aria-pressed", c === target ? "true" : "false");
+    });
+  }
+
+  function setColorInputs(pickerId, hexId, swatchesId, color, fallbackSolid) {
+    var picker = $(pickerId);
+    var hex = $(hexId);
+    if (isTransparentColor(color)) {
+      if (hex) hex.value = "transparent";
+      markActiveSwatches(swatchesId, "transparent");
+      return;
+    }
+    var normalized = normalizeHexColor(color, false) || fallbackSolid;
+    if (picker) picker.value = normalized;
+    if (hex) hex.value = normalized;
+    markActiveSwatches(swatchesId, normalized);
+  }
+
+  function setStrokeColorInputs(color) {
+    setColorInputs(
+      "editorDrawStroke",
+      "editorDrawStrokeHex",
+      "editorDrawStrokeSwatches",
+      color,
+      DEFAULT_DRAW_STROKE
+    );
+  }
+
+  function setFillColorInputs(color) {
+    setColorInputs(
+      "editorDrawFill",
+      "editorDrawFillHex",
+      "editorDrawFillSwatches",
+      color,
+      "#ffffff"
+    );
+  }
+
+  function parseColorSetting(raw, fallback) {
+    if (isTransparentColor(raw)) return "transparent";
+    return normalizeHexColor(raw, false) || fallback;
+  }
+
+  function readDrawSettingsFromStorage() {
+    try {
+      var raw = localStorage.getItem(DRAW_SETTINGS_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {
+      /* ignore corrupt storage */
+    }
+    return null;
+  }
+
+  function writeDrawSettingsToStorage() {
+    if (!window.EditorDraw) return;
+    try {
+      localStorage.setItem(
+        DRAW_SETTINGS_KEY,
+        JSON.stringify({
+          stroke: window.EditorDraw.getDrawStroke(),
+          strokeWidth: window.EditorDraw.getDrawStrokeWidth(),
+          fill: window.EditorDraw.getShapeFill(),
+        })
+      );
+    } catch (e) {
+      /* ignore quota / private mode */
+    }
+  }
+
+  function applySavedDrawSettings() {
+    if (!window.EditorDraw) return;
+    var saved = readDrawSettingsFromStorage();
+    var stroke = DEFAULT_DRAW_STROKE;
+    var strokeWidth = DEFAULT_DRAW_STROKE_WIDTH;
+    var fill = DEFAULT_DRAW_FILL;
+    if (saved) {
+      stroke = parseColorSetting(saved.stroke, DEFAULT_DRAW_STROKE);
+      var w = parseInt(saved.strokeWidth, 10);
+      if (isFinite(w) && w >= 1 && w <= 40) strokeWidth = w;
+      fill = parseColorSetting(saved.fill, DEFAULT_DRAW_FILL);
+    }
+    window.EditorDraw.setDrawStroke(stroke);
+    window.EditorDraw.setDrawStrokeWidth(strokeWidth);
+    window.EditorDraw.setShapeFill(fill);
+    setStrokeColorInputs(stroke);
+    var drawStrokeWidth = $("editorDrawStrokeWidth");
+    if (drawStrokeWidth) drawStrokeWidth.value = String(strokeWidth);
+    setFillColorInputs(fill);
   }
 
   function bindSettingsDialog() {
@@ -992,30 +1185,23 @@
   function applyToolbarDrawToSelectedShape() {
     var layer = getSelectedLayer();
     if (!layer || layer.kind !== "shape" || !window.EditorDraw) return;
-    var drawStroke = $("editorDrawStroke");
     var drawStrokeWidth = $("editorDrawStrokeWidth");
-    var drawFill = $("editorDrawFill");
-    var drawFillOn = $("editorDrawFillOn");
     var strokeWidth = drawStrokeWidth
       ? parseInt(drawStrokeWidth.value, 10)
       : window.EditorDraw.getDrawStrokeWidth();
     if (!isFinite(strokeWidth) || strokeWidth < 1) {
       strokeWidth = window.EditorDraw.getDrawStrokeWidth();
     }
-    window.EditorDraw.setDrawStroke(
-      drawStroke ? drawStroke.value : window.EditorDraw.getDrawStroke()
-    );
     window.EditorDraw.setDrawStrokeWidth(strokeWidth);
-    var changes = {
-      stroke: window.EditorDraw.getDrawStroke(),
-      strokeWidth: strokeWidth,
-    };
-    if (drawFillOn && drawFillOn.checked && drawFill) {
-      changes.fill = drawFill.value;
-    } else {
-      changes.fill = "transparent";
-    }
-    updateLayer(layer.id, changes, { live: true });
+    updateLayer(
+      layer.id,
+      {
+        stroke: window.EditorDraw.getDrawStroke(),
+        strokeWidth: strokeWidth,
+        fill: window.EditorDraw.getShapeFill(),
+      },
+      { live: true }
+    );
   }
 
   function applyShapeStyleFromProperties(layerId, changes) {
@@ -1622,19 +1808,22 @@
       });
     }
 
+    var shortcutEl = $("editorSaveShortcut");
+    if (shortcutEl) shortcutEl.textContent = saveShortcutHint();
+
     var saveBtn = $("editorSave");
     if (saveBtn) {
       saveBtn.addEventListener("click", function () {
         if (saveBtn.disabled) return;
-        closeEditorMenus();
-        saveBtn.disabled = true;
-        saveDraft()
-          .catch(function (err) {
-            showToast(err.message || "Không thể lưu");
-          })
-          .finally(function () {
-            applyReadOnlyUI();
-          });
+        requestSave();
+      });
+    }
+
+    var saveToolbar = $("editorSaveToolbar");
+    if (saveToolbar) {
+      saveToolbar.addEventListener("click", function () {
+        if (saveToolbar.disabled) return;
+        requestSave();
       });
     }
 
@@ -1703,6 +1892,12 @@
       }
 
       var mod = e.metaKey || e.ctrlKey;
+      if (mod && (e.key === "s" || e.key === "S")) {
+        if (shouldIgnoreShortcut(e)) return;
+        e.preventDefault();
+        requestSave();
+        return;
+      }
       if (mod && e.key === "z" && !e.shiftKey) {
         if (shouldIgnoreShortcut(e)) return;
         if (window.EditorHistory && window.EditorHistory.canUndo()) {
@@ -1778,12 +1973,13 @@
 
     var drawStroke = $("editorDrawStroke");
     var drawStrokeWidth = $("editorDrawStrokeWidth");
+    var drawStrokeHex = $("editorDrawStrokeHex");
     var drawFill = $("editorDrawFill");
-    var drawFillOn = $("editorDrawFillOn");
+    var drawFillHex = $("editorDrawFillHex");
+    var strokeSwatches = $("editorDrawStrokeSwatches");
+    var fillSwatches = $("editorDrawFillSwatches");
+
     function onToolbarDrawChange() {
-      if (drawStroke && window.EditorDraw) {
-        window.EditorDraw.setDrawStroke(drawStroke.value);
-      }
       if (drawStrokeWidth && window.EditorDraw) {
         var w = parseInt(drawStrokeWidth.value, 10);
         if (isFinite(w) && w >= 1) {
@@ -1791,30 +1987,75 @@
         }
       }
       applyToolbarDrawToSelectedShape();
+      writeDrawSettingsToStorage();
     }
-    bindLiveInput(drawStroke, onToolbarDrawChange);
+
+    function applyStrokeColor(color) {
+      if (!window.EditorDraw) return;
+      var next = parseColorSetting(color, null);
+      if (!next) return;
+      window.EditorDraw.setDrawStroke(next);
+      setStrokeColorInputs(next);
+      applyToolbarDrawToSelectedShape();
+      writeDrawSettingsToStorage();
+    }
+
+    function applyFillColor(color) {
+      if (!window.EditorDraw) return;
+      var next = parseColorSetting(color, null);
+      if (!next) return;
+      window.EditorDraw.setShapeFill(next);
+      setFillColorInputs(next);
+      applyToolbarDrawToSelectedShape();
+      writeDrawSettingsToStorage();
+    }
+
+    if (drawStroke) {
+      drawStroke.addEventListener("input", function () {
+        applyStrokeColor(drawStroke.value);
+      });
+    }
     bindLiveInput(drawStrokeWidth, onToolbarDrawChange);
+    if (drawStrokeHex) {
+      drawStrokeHex.addEventListener("change", function () {
+        applyStrokeColor(drawStrokeHex.value);
+      });
+      drawStrokeHex.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          applyStrokeColor(drawStrokeHex.value);
+        }
+      });
+    }
     if (drawFill) {
       drawFill.addEventListener("input", function () {
-        window.EditorDraw.setShapeFill(
-          drawFill.value,
-          drawFillOn ? drawFillOn.checked : true
-        );
-        applyToolbarDrawToSelectedShape();
+        applyFillColor(drawFill.value);
       });
     }
-    if (drawFillOn) {
-      drawFillOn.addEventListener("change", function () {
-        if (drawFill) {
-          window.EditorDraw.setShapeFill(
-            drawFill.value,
-            drawFillOn.checked
-          );
-        }
-        if (drawFill) drawFill.disabled = !drawFillOn.checked;
-        applyToolbarDrawToSelectedShape();
+    if (drawFillHex) {
+      drawFillHex.addEventListener("change", function () {
+        applyFillColor(drawFillHex.value);
       });
-      if (drawFill) drawFill.disabled = !drawFillOn.checked;
+      drawFillHex.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          applyFillColor(drawFillHex.value);
+        }
+      });
+    }
+    if (strokeSwatches) {
+      strokeSwatches.addEventListener("click", function (e) {
+        var btn = e.target.closest("[data-color]");
+        if (!btn || !strokeSwatches.contains(btn)) return;
+        applyStrokeColor(btn.getAttribute("data-color"));
+      });
+    }
+    if (fillSwatches) {
+      fillSwatches.addEventListener("click", function (e) {
+        var btn = e.target.closest("[data-color]");
+        if (!btn || !fillSwatches.contains(btn)) return;
+        applyFillColor(btn.getAttribute("data-color"));
+      });
     }
   }
 
@@ -1843,6 +2084,7 @@
       getDuration: getDuration,
       onToolChange: updateDrawToolButtons,
     });
+    applySavedDrawSettings();
 
     window.EditorTransform.init({
       frameEl: $("editorFrame"),
@@ -1928,6 +2170,7 @@
 
     bindDragDrop();
     bindToolbar();
+    updateSaveUI();
     window.addEventListener("beforeunload", function () {
       trackedBlobUrls.forEach(function (url) {
         try {
