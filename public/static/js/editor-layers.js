@@ -8,11 +8,12 @@
   var selectLayer = null;
   var updateLayer = null;
   var deleteLayer = null;
-  var moveLayerZ = null;
+  var duplicateLayer = null;
   var reorderLayers = null;
   var isLayerVisibleOnFrame = null;
   var getCurrentTime = null;
   var isTimelinePlaying = null;
+  var menuListenersBound = false;
 
   var layerIdCounter = 0;
   var panelDrag = null;
@@ -39,14 +40,17 @@
     '<path d="m2 2 20 20"/>' +
     "</svg>";
 
-  var ICON_CHEVRON_UP =
+  var ICON_MORE =
     "<svg " + ICON_ATTRS + ">" +
-    '<path d="m18 15-6-6-6 6"/>' +
+    '<circle cx="12" cy="12" r="1"/>' +
+    '<circle cx="12" cy="5" r="1"/>' +
+    '<circle cx="12" cy="19" r="1"/>' +
     "</svg>";
 
-  var ICON_CHEVRON_DOWN =
+  var ICON_COPY =
     "<svg " + ICON_ATTRS + ">" +
-    '<path d="m6 9 6 6 6-6"/>' +
+    '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>' +
+    '<path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>' +
     "</svg>";
 
   var ICON_TRASH =
@@ -645,6 +649,85 @@
     listEl.addEventListener("pointercancel", onPanelDragEnd);
   }
 
+  function closeAllLayerMenus() {
+    if (!listEl) return;
+    listEl.querySelectorAll(".editor-layer-row__more").forEach(function (wrap) {
+      var menu = wrap.querySelector(".editor-layer-row__menu");
+      var btn = wrap.querySelector(".editor-layer-row__action--more");
+      if (menu) menu.hidden = true;
+      if (btn) btn.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function createMenuItem(label, iconHtml, onClick) {
+    var item = document.createElement("button");
+    item.type = "button";
+    item.className = "editor-layer-row__menu-item";
+    item.setAttribute("role", "menuitem");
+    item.innerHTML =
+      iconHtml + '<span class="editor-layer-row__menu-label">' + label + "</span>";
+    item.addEventListener("click", function (e) {
+      e.stopPropagation();
+      closeAllLayerMenus();
+      if (onClick) onClick();
+    });
+    return item;
+  }
+
+  function createMoreMenu(layerId) {
+    var wrap = document.createElement("div");
+    wrap.className = "editor-layer-row__more";
+
+    var moreBtn = document.createElement("button");
+    moreBtn.type = "button";
+    moreBtn.className = "editor-layer-row__action editor-layer-row__action--more";
+    moreBtn.title = "Thêm";
+    moreBtn.setAttribute("aria-label", "Thêm");
+    moreBtn.setAttribute("aria-haspopup", "menu");
+    moreBtn.setAttribute("aria-expanded", "false");
+    moreBtn.innerHTML = ICON_MORE;
+
+    var menu = document.createElement("div");
+    menu.className = "editor-layer-row__menu";
+    menu.setAttribute("role", "menu");
+    menu.hidden = true;
+
+    var dupItem = createMenuItem("Nhân bản", ICON_COPY, function () {
+      if (duplicateLayer) duplicateLayer(layerId);
+    });
+    var delItem = createMenuItem("Xóa", ICON_TRASH, function () {
+      if (deleteLayer) deleteLayer(layerId);
+    });
+
+    moreBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var wasOpen = !menu.hidden;
+      closeAllLayerMenus();
+      if (!wasOpen) {
+        menu.hidden = false;
+        moreBtn.setAttribute("aria-expanded", "true");
+      }
+    });
+
+    menu.appendChild(dupItem);
+    menu.appendChild(delItem);
+    wrap.appendChild(moreBtn);
+    wrap.appendChild(menu);
+    return wrap;
+  }
+
+  function bindMenuListeners() {
+    if (menuListenersBound) return;
+    menuListenersBound = true;
+    document.addEventListener("click", function (e) {
+      if (e.target.closest(".editor-layer-row__more")) return;
+      closeAllLayerMenus();
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") closeAllLayerMenus();
+    });
+  }
+
   function renderPanel() {
     if (!listEl || !emptyEl || !getState) return;
     var state = getState();
@@ -669,6 +752,7 @@
       handle.innerHTML = isBoundLayer(layer) ? ICON_FRAME : ICON_GRIP;
       if (!isBoundLayer(layer)) {
         handle.addEventListener("pointerdown", function (e) {
+          closeAllLayerMenus();
           onDragHandlePointerDown(e, layer.id, li);
         });
       }
@@ -693,50 +777,16 @@
       visBtn.innerHTML = layer.visible ? ICON_EYE : ICON_EYE_OFF;
       visBtn.addEventListener("click", function (e) {
         e.stopPropagation();
+        closeAllLayerMenus();
         var current = getState().layers.find(function (l) {
           return l.id === layer.id;
         });
         updateLayer(layer.id, { visible: !(current && current.visible) });
       });
 
-      var upBtn = document.createElement("button");
-      upBtn.type = "button";
-      upBtn.className = "editor-layer-row__action";
-      upBtn.title = "Lên trên";
-      upBtn.setAttribute("aria-label", "Lên trên");
-      upBtn.innerHTML = ICON_CHEVRON_UP;
-      upBtn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        moveLayerZ(layer.id, 1);
-      });
-
-      var downBtn = document.createElement("button");
-      downBtn.type = "button";
-      downBtn.className = "editor-layer-row__action";
-      downBtn.title = "Xuống dưới";
-      downBtn.setAttribute("aria-label", "Xuống dưới");
-      downBtn.innerHTML = ICON_CHEVRON_DOWN;
-      downBtn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        moveLayerZ(layer.id, -1);
-      });
-
-      var delBtn = document.createElement("button");
-      delBtn.type = "button";
-      delBtn.className = "editor-layer-row__action";
-      delBtn.title = "Xóa";
-      delBtn.setAttribute("aria-label", "Xóa");
-      delBtn.innerHTML = ICON_TRASH;
-      delBtn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        deleteLayer(layer.id);
-      });
-
       actions.appendChild(visBtn);
       if (!isBoundLayer(layer)) {
-        actions.appendChild(upBtn);
-        actions.appendChild(downBtn);
-        actions.appendChild(delBtn);
+        actions.appendChild(createMoreMenu(layer.id));
       }
 
       li.appendChild(handle);
@@ -814,11 +864,12 @@
     selectLayer = opts.selectLayer;
     updateLayer = opts.updateLayer;
     deleteLayer = opts.deleteLayer;
-    moveLayerZ = opts.moveLayerZ;
+    duplicateLayer = opts.duplicateLayer;
     reorderLayers = opts.reorderLayers;
     isLayerVisibleOnFrame = opts.isLayerVisibleOnFrame;
     getCurrentTime = opts.getCurrentTime;
     isTimelinePlaying = opts.isTimelinePlaying;
+    bindMenuListeners();
   }
 
   window.EditorLayers = {

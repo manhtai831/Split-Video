@@ -83,33 +83,71 @@
           <button type="button" class="editor-menu__trigger" aria-haspopup="true" aria-expanded="false">File</button>
           <div class="editor-menu__dropdown" hidden>
             <button type="button" id="editorSave" class="editor-menu__item">
-              Save
+              <svg class="editor-menu__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              <span class="editor-menu__label">Save</span>
               <span class="editor-menu__shortcut" id="editorSaveShortcut">Ctrl+S</span>
             </button>
-            <button type="button" id="editorDuplicate" class="editor-menu__item">Duplicate</button>
-            <button type="button" id="editorPublish" class="editor-menu__item">Xuất bản</button>
+            <button type="button" id="editorDuplicate" class="editor-menu__item">
+              <svg class="editor-menu__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+              <span class="editor-menu__label">Duplicate</span>
+            </button>
+            <button type="button" id="editorPublish" class="editor-menu__item">
+              <svg class="editor-menu__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+              <span class="editor-menu__label">Xuất bản</span>
+            </button>
             <div class="editor-menu__separator" role="separator"></div>
-            <button type="button" id="editorSettings" class="editor-menu__item">Settings</button>
-            <button type="button" id="editorExport" class="editor-menu__item">Export JSON</button>
+            <button type="button" id="editorSettings" class="editor-menu__item">
+              <svg class="editor-menu__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              <span class="editor-menu__label">Settings</span>
+            </button>
+            <button type="button" id="editorExport" class="editor-menu__item">
+              <svg class="editor-menu__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+              <span class="editor-menu__label">Export JSON</span>
+            </button>
           </div>
         </div>
         <div class="editor-menu">
           <button type="button" class="editor-menu__trigger" aria-haspopup="true" aria-expanded="false">Insert</button>
           <div class="editor-menu__dropdown" hidden>
-            <button type="button" id="editorInsertFile" class="editor-menu__item">File</button>
-            <button type="button" id="editorAddText" class="editor-menu__item">Text</button>
-            <button type="button" id="editorInsertBlur" class="editor-menu__item" data-tool="blur">Blur</button>
+            <button type="button" id="editorInsertFile" class="editor-menu__item">
+              <svg class="editor-menu__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+              <span class="editor-menu__label">File</span>
+            </button>
+            <button type="button" id="editorAddText" class="editor-menu__item">
+              <svg class="editor-menu__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/></svg>
+              <span class="editor-menu__label">Text</span>
+            </button>
+            <button type="button" id="editorInsertBlur" class="editor-menu__item" data-tool="blur">
+              <svg class="editor-menu__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
+              <span class="editor-menu__label">Blur</span>
+            </button>
             <div class="editor-menu__submenu-wrap">
               <button type="button" class="editor-menu__item editor-menu__item--submenu" aria-haspopup="true">
-                Shape
+                <svg class="editor-menu__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z"/><rect x="3" y="14" width="7" height="7" rx="1"/><circle cx="17.5" cy="17.5" r="3.5"/></svg>
+                <span class="editor-menu__label">Shape</span>
                 <span class="editor-menu__arrow" aria-hidden="true">›</span>
               </button>
               <div class="editor-menu__submenu" hidden>
-                <button type="button" id="editorBrushTool" class="editor-menu__item" data-tool="brush">Brush</button>
-                <button type="button" class="editor-menu__item" data-shape="rect">Hình chữ nhật</button>
-                <button type="button" class="editor-menu__item" data-shape="circle">Tròn</button>
-                <button type="button" class="editor-menu__item" data-shape="triangle">Tam giác</button>
-                <button type="button" class="editor-menu__item" data-shape="arrow">Mũi tên</button>
+                <button type="button" id="editorBrushTool" class="editor-menu__item" data-tool="brush">
+                  <svg class="editor-menu__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9.06 11.9 8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"/></svg>
+                  <span class="editor-menu__label">Brush</span>
+                </button>
+                <button type="button" class="editor-menu__item" data-shape="rect">
+                  <svg class="editor-menu__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>
+                  <span class="editor-menu__label">Hình chữ nhật</span>
+                </button>
+                <button type="button" class="editor-menu__item" data-shape="circle">
+                  <svg class="editor-menu__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/></svg>
+                  <span class="editor-menu__label">Tròn</span>
+                </button>
+                <button type="button" class="editor-menu__item" data-shape="triangle">
+                  <svg class="editor-menu__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.73 4a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/></svg>
+                  <span class="editor-menu__label">Tam giác</span>
+                </button>
+                <button type="button" class="editor-menu__item" data-shape="arrow">
+                  <svg class="editor-menu__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
+                  <span class="editor-menu__label">Mũi tên</span>
+                </button>
               </div>
             </div>
           </div>

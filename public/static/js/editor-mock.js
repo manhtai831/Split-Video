@@ -9,6 +9,16 @@
   var DEFAULT_DRAW_STROKE = "#ff0000";
   var DEFAULT_DRAW_STROKE_WIDTH = 6;
   var DEFAULT_DRAW_FILL = "transparent";
+  var QUICK_COLORS = [
+    { color: "transparent", title: "Trong suốt", transparent: true },
+    { color: "#ff0000", title: "Đỏ" },
+    { color: "#ffffff", title: "Trắng" },
+    { color: "#000000", title: "Đen" },
+    { color: "#f59e0b", title: "Vàng" },
+    { color: "#22c55e", title: "Xanh lá" },
+    { color: "#3b82f6", title: "Xanh dương" },
+    { color: "#6366f1", title: "Indigo" },
+  ];
 
   var state = {
     name: DEFAULT_PROJECT_NAME,
@@ -1327,6 +1337,84 @@
     );
   }
 
+  function renderColorFieldHtml(opts) {
+    var label = opts.label || "";
+    var pickerId = opts.pickerId;
+    var hexId = opts.hexId;
+    var swatchesId = opts.swatchesId;
+    var fallbackSolid = opts.fallbackSolid || "#ffffff";
+    var rawValue = opts.value;
+    var isTransparent = isTransparentColor(rawValue);
+    var solidValue =
+      normalizeHexColor(rawValue, false) || fallbackSolid;
+    var hexValue = isTransparent ? "transparent" : solidValue;
+    var swatchesHtml = "";
+    for (var i = 0; i < QUICK_COLORS.length; i++) {
+      var item = QUICK_COLORS[i];
+      var pressed =
+        String(item.color).toLowerCase() === String(hexValue).toLowerCase()
+          ? ' aria-pressed="true"'
+          : ' aria-pressed="false"';
+      if (item.transparent) {
+        swatchesHtml +=
+          '<button type="button" class="editor-color-swatch editor-color-swatch--transparent" data-color="transparent" title="' +
+          item.title +
+          '" aria-label="' +
+          item.title +
+          '"' +
+          pressed +
+          "></button>";
+      } else {
+        swatchesHtml +=
+          '<button type="button" class="editor-color-swatch" data-color="' +
+          item.color +
+          '" style="--swatch:' +
+          item.color +
+          '" title="' +
+          item.title +
+          '" aria-label="' +
+          item.title +
+          '"' +
+          pressed +
+          "></button>";
+      }
+    }
+    return (
+      '<div class="form-field">' +
+      '<label for="' +
+      pickerId +
+      '">' +
+      label +
+      "</label>" +
+      '<div class="editor-settings-item__control editor-settings-item__control--color">' +
+      '<div class="editor-color-swatches" id="' +
+      swatchesId +
+      '" role="group" aria-label="' +
+      escapeAttr(label) +
+      ' nhanh">' +
+      swatchesHtml +
+      "</div>" +
+      '<div class="editor-color-inputs">' +
+      '<input type="color" id="' +
+      pickerId +
+      '" value="' +
+      solidValue +
+      '" title="' +
+      escapeAttr(label) +
+      '" />' +
+      '<input type="text" id="' +
+      hexId +
+      '" class="editor-color-hex" value="' +
+      escapeAttr(hexValue) +
+      '" maxlength="20" spellcheck="false" placeholder="#rrggbb hoặc transparent" title="Mã ' +
+      escapeAttr(label.toLowerCase()) +
+      '" aria-label="Mã ' +
+      escapeAttr(label.toLowerCase()) +
+      '" />' +
+      "</div></div></div>"
+    );
+  }
+
   function renderProperties() {
     var panel = $("editorProperties");
     if (!panel) return;
@@ -1400,20 +1488,22 @@
         '<input type="text" id="propShape" value="' +
         escapeAttr(layer.shape || "rect") +
         '" disabled /></div>' +
-        '<div class="form-field"><label for="propStroke">Màu viền</label>' +
-        '<input type="color" id="propStroke" value="' +
-        (layer.stroke || "#ffffff") +
-        '" /></div>' +
-        '<div class="form-field form-field--checkbox">' +
-        '<label><input type="checkbox" id="propFillOn"' +
-        (layer.fill && layer.fill !== "transparent" ? " checked" : "") +
-        ' /> Tô nền</label></div>' +
-        '<div class="form-field"><label for="propFill">Màu nền</label>' +
-        '<input type="color" id="propFill" value="' +
-        (layer.fill && layer.fill !== "transparent" ? layer.fill : "#6366f1") +
-        '"' +
-        (layer.fill && layer.fill !== "transparent" ? "" : " disabled") +
-        ' /></div>' +
+        renderColorFieldHtml({
+          label: "Màu viền",
+          pickerId: "propStroke",
+          hexId: "propStrokeHex",
+          swatchesId: "propStrokeSwatches",
+          value: layer.stroke || DEFAULT_DRAW_STROKE,
+          fallbackSolid: DEFAULT_DRAW_STROKE,
+        }) +
+        renderColorFieldHtml({
+          label: "Màu nền",
+          pickerId: "propFill",
+          hexId: "propFillHex",
+          swatchesId: "propFillSwatches",
+          value: layer.fill || DEFAULT_DRAW_FILL,
+          fallbackSolid: "#6366f1",
+        }) +
         '<div class="form-field"><label for="propStrokeWidth">Độ dày nét</label>' +
         '<input type="number" id="propStrokeWidth" min="1" max="40" value="' +
         (layer.strokeWidth || 6) +
@@ -1509,8 +1599,11 @@
     var opacity = $("propOpacity");
     var rotation = $("propRotation");
     var propStroke = $("propStroke");
+    var propStrokeHex = $("propStrokeHex");
+    var propStrokeSwatches = $("propStrokeSwatches");
     var propFill = $("propFill");
-    var propFillOn = $("propFillOn");
+    var propFillHex = $("propFillHex");
+    var propFillSwatches = $("propFillSwatches");
     var propStrokeWidth = $("propStrokeWidth");
     var propBlurAmount = $("propBlurAmount");
 
@@ -1602,25 +1695,77 @@
     bindOffsetInput(propY, "y", true);
     bindOffsetInput(propWidth, "width", true);
     bindOffsetInput(propHeight, "height", true);
+
+    function applyPropStrokeColor(color) {
+      var next = parseColorSetting(color, null);
+      if (!next) return;
+      setColorInputs(
+        "propStroke",
+        "propStrokeHex",
+        "propStrokeSwatches",
+        next,
+        DEFAULT_DRAW_STROKE
+      );
+      applyShapeStyleFromProperties(layerId, { stroke: next });
+    }
+
+    function applyPropFillColor(color) {
+      var next = parseColorSetting(color, null);
+      if (!next) return;
+      setColorInputs(
+        "propFill",
+        "propFillHex",
+        "propFillSwatches",
+        next,
+        "#6366f1"
+      );
+      applyShapeStyleFromProperties(layerId, { fill: next });
+    }
+
     if (propStroke) {
-      bindLiveInput(propStroke, function () {
-        applyShapeStyleFromProperties(layerId, { stroke: propStroke.value });
+      propStroke.addEventListener("input", function () {
+        applyPropStrokeColor(propStroke.value);
+      });
+    }
+    if (propStrokeHex) {
+      propStrokeHex.addEventListener("change", function () {
+        applyPropStrokeColor(propStrokeHex.value);
+      });
+      propStrokeHex.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          applyPropStrokeColor(propStrokeHex.value);
+        }
+      });
+    }
+    if (propStrokeSwatches) {
+      propStrokeSwatches.addEventListener("click", function (e) {
+        var btn = e.target.closest("[data-color]");
+        if (!btn || !propStrokeSwatches.contains(btn)) return;
+        applyPropStrokeColor(btn.getAttribute("data-color"));
       });
     }
     if (propFill) {
-      bindLiveInput(propFill, function () {
-        applyShapeStyleFromProperties(layerId, { fill: propFill.value });
+      propFill.addEventListener("input", function () {
+        applyPropFillColor(propFill.value);
       });
     }
-    if (propFillOn) {
-      propFillOn.addEventListener("change", function () {
-        if (propFillOn.checked && propFill) {
-          propFill.disabled = false;
-          applyShapeStyleFromProperties(layerId, { fill: propFill.value });
-        } else {
-          if (propFill) propFill.disabled = true;
-          applyShapeStyleFromProperties(layerId, { fill: "transparent" });
+    if (propFillHex) {
+      propFillHex.addEventListener("change", function () {
+        applyPropFillColor(propFillHex.value);
+      });
+      propFillHex.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          applyPropFillColor(propFillHex.value);
         }
+      });
+    }
+    if (propFillSwatches) {
+      propFillSwatches.addEventListener("click", function (e) {
+        var btn = e.target.closest("[data-color]");
+        if (!btn || !propFillSwatches.contains(btn)) return;
+        applyPropFillColor(btn.getAttribute("data-color"));
       });
     }
     if (propStrokeWidth) {
@@ -2105,7 +2250,7 @@
       selectLayer: selectLayer,
       updateLayer: updateLayer,
       deleteLayer: deleteLayer,
-      moveLayerZ: moveLayerZ,
+      duplicateLayer: duplicateLayer,
       reorderLayers: reorderLayers,
       isLayerVisibleOnFrame: isLayerVisibleOnFrame,
       getCurrentTime: getCurrentTime,
