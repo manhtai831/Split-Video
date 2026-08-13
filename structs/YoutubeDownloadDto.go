@@ -98,10 +98,10 @@ func ValidateYoutubeURL(raw string) (string, error) {
 	if scheme != "http" && scheme != "https" {
 		return "", fmt.Errorf("URL phải dùng http hoặc https")
 	}
-	host := strings.ToLower(parsed.Hostname())
-	if !isYoutubeHost(host) {
-		return "", fmt.Errorf("chỉ hỗ trợ URL YouTube, Facebook (youtube.com / youtu.be / facebook.com / www.facebook.com)")
-	}
+	// host := strings.ToLower(parsed.Hostname())
+	// if !isYoutubeHost(host) {
+	// 	return "", fmt.Errorf("chỉ hỗ trợ URL YouTube, Facebook (youtube.com / youtu.be / facebook.com / www.facebook.com)")
+	// }
 	return raw, nil
 }
 

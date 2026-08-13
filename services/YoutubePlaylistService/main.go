@@ -403,16 +403,18 @@ func extractYoutubeID(rawURL string) string {
 		}
 		return id
 	}
-	q := parsed.Query().Get("v")
-	if q != "" {
-		return q
-	}
-	parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
-	for i := 0; i+1 < len(parts); i++ {
-		switch parts[i] {
-		case "shorts", "embed", "live", "v":
-			return parts[i+1]
+	if strings.Contains(host, "youtube.com") {
+		q := parsed.Query().Get("v")
+		if q != "" {
+			return q
+		}
+		parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
+		for i := 0; i+1 < len(parts); i++ {
+			switch parts[i] {
+			case "shorts", "embed", "live", "v":
+				return parts[i+1]
+			}
 		}
 	}
-	return ""
+	return rawURL
 }
