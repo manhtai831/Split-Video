@@ -111,6 +111,11 @@ func mapFormats(raw []rawFormat) []structs.YoutubeFormatDto {
 		if f.FPS != nil {
 			fps = *f.FPS
 		}
+
+		// fallback to 30 minutes
+		if f.AvailableAt == 0 {
+			f.AvailableAt = time.Now().Unix() + 30*60
+		}
 		out = append(out, structs.YoutubeFormatDto{
 			FormatID:    f.FormatID,
 			Ext:         f.Ext,

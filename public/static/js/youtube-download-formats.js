@@ -205,6 +205,9 @@
 
     var filtered = lastFormats.filter(function (f) {
       if (filter === "all") return true;
+      if(filter === 'muxed' && ['sd', 'hd'].includes(f.format_id)){
+        return true;
+      }
       return f.kind === filter;
     });
 

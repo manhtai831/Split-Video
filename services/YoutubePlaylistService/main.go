@@ -386,7 +386,16 @@ func extractYoutubeID(rawURL string) string {
 	if err != nil {
 		return ""
 	}
+	// https://www.facebook.com/reel/1018481387553780
+	// https://www.facebook.com/share/v/1BX7evjBej/
 	host := strings.ToLower(parsed.Hostname())
+	if strings.Contains(host, "facebook.com") {
+		parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
+		if len(parts) > 0 {
+			return parts[len(parts)-1]
+		}
+		return ""
+	}
 	if host == "youtu.be" || host == "www.youtu.be" {
 		id := strings.Trim(parsed.Path, "/")
 		if i := strings.IndexByte(id, '/'); i >= 0 {

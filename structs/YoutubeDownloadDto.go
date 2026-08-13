@@ -88,7 +88,7 @@ type YoutubeReorderRequestDto struct {
 func ValidateYoutubeURL(raw string) (string, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
-		return "", fmt.Errorf("cần nhập URL YouTube")
+		return "", fmt.Errorf("cần nhập URL")
 	}
 	parsed, err := url.Parse(raw)
 	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
@@ -100,14 +100,23 @@ func ValidateYoutubeURL(raw string) (string, error) {
 	}
 	host := strings.ToLower(parsed.Hostname())
 	if !isYoutubeHost(host) {
-		return "", fmt.Errorf("chỉ hỗ trợ URL YouTube (youtube.com / youtu.be)")
+		return "", fmt.Errorf("chỉ hỗ trợ URL YouTube, Facebook (youtube.com / youtu.be / facebook.com / www.facebook.com)")
 	}
 	return raw, nil
 }
 
 func isYoutubeHost(host string) bool {
 	switch host {
-	case "youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be", "www.youtu.be":
+	case "youtube.com",
+		"www.youtube.com",
+		"m.youtube.com",
+		"music.youtube.com",
+		"youtu.be",
+		"www.youtu.be",
+		"facebook.com",
+		"www.facebook.com",
+		"m.facebook.com",
+		"www.m.facebook.com":
 		return true
 	default:
 		return strings.HasSuffix(host, ".youtube.com")
