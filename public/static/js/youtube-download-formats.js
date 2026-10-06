@@ -132,10 +132,48 @@
     el.classList.toggle("yt-status--error", !!isError);
   }
 
+  function syncDockSpacer() {
+    var dock = $("ytDock");
+    var spacer = $("ytDockSpacer");
+    if (!spacer) return;
+    if (!dock || dock.hidden) {
+      spacer.hidden = true;
+      spacer.style.height = "";
+      return;
+    }
+    spacer.hidden = false;
+    spacer.style.height = dock.offsetHeight + "px";
+  }
+
+  function setExpanded(expanded) {
+    var panel = $("ytFormatsPanel");
+    var body = $("ytFormatsBodyPanel");
+    var toggle = $("ytFormatsToggle");
+    var isOpen = !!expanded;
+    if (panel) panel.classList.toggle("is-expanded", isOpen);
+    if (body) body.hidden = !isOpen;
+    if (toggle) {
+      toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      toggle.setAttribute("title", isOpen ? "Thu gọn Formats" : "Mở rộng Formats");
+      toggle.setAttribute("aria-label", isOpen ? "Thu gọn Formats" : "Mở rộng Formats");
+    }
+    requestAnimationFrame(syncDockSpacer);
+  }
+
+  function isExpanded() {
+    var toggle = $("ytFormatsToggle");
+    return !!(toggle && toggle.getAttribute("aria-expanded") === "true");
+  }
+
+  function toggleExpanded() {
+    setExpanded(!isExpanded());
+  }
+
   function reset() {
     lastFormats = [];
     setStatus("", false);
     setPreview(null);
+    setExpanded(false);
     var hint = $("ytFormatsHint");
     var filters = $("ytFormatFilters");
     var wrap = $("ytFormatsWrap");
@@ -150,12 +188,14 @@
     var hint = $("ytFormatsHint");
     if (hint) hint.hidden = true;
     setStatus(loading ? "Đang tải formats…" : "", false);
+    if (loading) setExpanded(true);
   }
 
   function setError(msg) {
     setStatus(msg || "Lỗi", true);
     var wrap = $("ytFormatsWrap");
     if (wrap) wrap.hidden = true;
+    setExpanded(true);
   }
 
   function iconButtonHtml(action, label, icon, disabled) {
@@ -195,6 +235,7 @@
     if (!body) return;
 
     setStatus("", false);
+    setExpanded(true);
     if (hint) hint.hidden = true;
     if (filters) {
       filters.hidden = false;
@@ -326,7 +367,32 @@
       });
     }
 
+    var toggle = $("ytFormatsToggle");
+    if (toggle) {
+      toggle.addEventListener("click", function () {
+        toggleExpanded();
+      });
+    }
+
+    var head = document.querySelector(".yt-formats-head");
+    if (head && toggle) {
+      head.addEventListener("click", function (e) {
+        if (e.target.closest("#ytFormatsToggle")) return;
+        toggleExpanded();
+      });
+    }
+
+    var dock = $("ytDock");
+    if (dock && typeof ResizeObserver !== "undefined") {
+      var ro = new ResizeObserver(function () {
+        syncDockSpacer();
+      });
+      ro.observe(dock);
+    }
+    window.addEventListener("resize", syncDockSpacer);
+
     reset();
+    syncDockSpacer();
   }
 
   window.YoutubeDownloadFormats = {
@@ -337,5 +403,7 @@
     setError: setError,
     setSelected: setSelected,
     setPreview: setPreview,
+    setExpanded: setExpanded,
+    syncDockSpacer: syncDockSpacer,
   };
 })();

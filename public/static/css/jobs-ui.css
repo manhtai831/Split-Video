@@ -1578,8 +1578,6 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 480px;
-  overflow: auto;
 }
 
 .yt-playlist__item {
@@ -1851,11 +1849,86 @@
   color: var(--primary);
 }
 
+.yt-dock-spacer {
+  width: 100%;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.yt-dock-spacer[hidden] {
+  display: none;
+}
+
+.yt-dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0 16px 16px;
+  background: #fff;
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -8px 24px -12px rgba(15, 23, 42, 0.18);
+}
+
+.yt-dock[hidden] {
+  display: none;
+}
+
+.yt-dock .yt-panel--formats {
+  border: none;
+  border-radius: 0;
+  border-bottom: 1px solid var(--border);
+  min-height: 0;
+  padding: 10px 0 12px;
+  background: transparent;
+}
+
+.yt-dock .yt-player-bar {
+  border: none;
+  border-radius: 0;
+  padding: 12px 0 0;
+  background: transparent;
+}
+
+.yt-formats-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.yt-formats-head .jobs-section__title {
+  margin: 0;
+}
+
+.yt-formats-toggle .btn__icon {
+  transition: transform 0.15s ease;
+}
+
+.yt-panel--formats.is-expanded .yt-formats-toggle .btn__icon {
+  transform: rotate(180deg);
+}
+
+.yt-formats-body {
+  margin-top: 10px;
+}
+
+.yt-formats-body[hidden] {
+  display: none;
+}
+
 .yt-formats-wrap {
   overflow-x: auto;
   overflow-y: auto;
-  max-height: 360px;
-  margin-bottom: 12px;
+  max-height: 280px;
+  margin-bottom: 0;
   max-width: 100%;
   -webkit-overflow-scrolling: touch;
 }
@@ -2000,15 +2073,39 @@
 
 .yt-player-bar__media .yt-media {
   width: 100%;
-  max-height: 360px;
+  max-height: 180px;
   border-radius: 8px;
 }
 
 .yt-player-bar__controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 16px;
   align-items: center;
+  justify-content: center;
+}
+
+.yt-player-bar__controls .btn--icon {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  padding: 10px;
+}
+
+.yt-player-bar__controls .btn--icon .btn__icon {
+  width: 22px;
+  height: 22px;
+}
+
+.yt-player-bar__controls #ytPlayPauseBtn {
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+}
+
+.yt-player-bar__controls #ytPlayPauseBtn .btn__icon {
+  width: 26px;
+  height: 26px;
 }
 
 #ytLoopBtn.is-active {

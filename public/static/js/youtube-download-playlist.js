@@ -354,14 +354,15 @@
 
   function updatePanelsVisibility() {
     var playlistPanel = $("ytPlaylistPanel");
-    var formatsPanel = $("ytFormatsPanel");
-    var playerBar = $("ytPlayerBar");
+    var dock = $("ytDock");
     var hasItems = state.items.length > 0;
     var hasSelection = !!state.selectedId && hasItems;
 
     if (playlistPanel) playlistPanel.hidden = !hasItems;
-    if (formatsPanel) formatsPanel.hidden = !hasSelection;
-    if (playerBar) playerBar.hidden = !hasSelection;
+    if (dock) dock.hidden = !hasSelection;
+    if (window.YoutubeDownloadFormats && window.YoutubeDownloadFormats.syncDockSpacer) {
+      requestAnimationFrame(window.YoutubeDownloadFormats.syncDockSpacer);
+    }
   }
 
   function renderPlaylist() {

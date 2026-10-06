@@ -31,90 +31,110 @@
       <h2 id="ytPlaylistHeading" class="jobs-section__title">Playlist</h2>
       <ul id="ytPlaylist" class="yt-playlist" role="list"></ul>
     </section>
-
-    <section id="ytFormatsPanel" class="yt-panel yt-panel--formats" aria-labelledby="ytFormatsHeading" hidden>
-      <h2 id="ytFormatsHeading" class="jobs-section__title">Formats</h2>
-      <p id="ytFormatsHint" class="field-hint" hidden>Chọn một mục trong playlist để xem danh sách format.</p>
-      <button type="button" id="ytFormatPreview" class="yt-format-preview" hidden title="Mở trên YouTube">
-        <img id="ytFormatPreviewThumb" class="yt-format-preview__thumb" alt="" hidden />
-        <div class="yt-format-preview__body">
-          <div id="ytFormatPreviewTitle" class="yt-format-preview__title">—</div>
-          <div id="ytFormatPreviewSub" class="yt-format-preview__sub">—</div>
-        </div>
-      </button>
-      <div id="ytFormatFilters" class="yt-format-filters" hidden>
-        <button type="button" class="btn btn--sm btn--secondary yt-filter-btn is-active" data-filter="all">Tất cả</button>
-        <button type="button" class="btn btn--sm btn--secondary yt-filter-btn" data-filter="muxed">Muxed</button>
-        <button type="button" class="btn btn--sm btn--secondary yt-filter-btn" data-filter="audio">Audio</button>
-        <button type="button" class="btn btn--sm btn--secondary yt-filter-btn" data-filter="video">Video</button>
-      </div>
-      <p id="ytFormatsStatus" class="yt-status" hidden></p>
-      <div id="ytFormatsWrap" class="yt-formats-wrap" hidden>
-        <table class="yt-formats-table">
-          <thead>
-            <tr>
-              <th scope="col">Res / Bitrate</th>
-              <th scope="col">Size</th>
-              <th scope="col">Note</th>
-              <th class="cell-actions" scope="col" aria-label="Thao tác">
-                <span class="cell-actions__header-icon" aria-hidden="true">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
-                  </svg>
-                </span>
-                <span class="sr-only">Thao tác</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody id="ytFormatsBody"></tbody>
-        </table>
-      </div>
-    </section>
   </div>
 
-  <section id="ytPlayerBar" class="yt-player-bar" aria-label="Player" hidden>
-    <div class="yt-player-bar__meta">
-      <img id="ytPlayerThumb" class="yt-player-bar__thumb" alt="" hidden />
-      <div>
-        <div id="ytPlayerTitle" class="yt-player-bar__title">Chưa phát bài nào</div>
-        <div id="ytPlayerSub" class="yt-player-bar__sub">—</div>
+  <div id="ytDockSpacer" class="yt-dock-spacer" hidden aria-hidden="true"></div>
+  <div id="ytDock" class="yt-dock" hidden>
+    <section id="ytFormatsPanel" class="yt-panel yt-panel--formats" aria-labelledby="ytFormatsHeading">
+      <header class="yt-formats-head">
+        <h2 id="ytFormatsHeading" class="jobs-section__title">Formats</h2>
+        <button
+          type="button"
+          id="ytFormatsToggle"
+          class="btn btn--icon btn--ghost btn--sm yt-formats-toggle"
+          aria-expanded="false"
+          aria-controls="ytFormatsBodyPanel"
+          title="Mở rộng Formats"
+          aria-label="Mở rộng Formats"
+        >
+          <svg class="btn__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+      </header>
+      <div id="ytFormatsBodyPanel" class="yt-formats-body" hidden>
+        <p id="ytFormatsHint" class="field-hint" hidden>Chọn một mục trong playlist để xem danh sách format.</p>
+        <button type="button" id="ytFormatPreview" class="yt-format-preview" hidden title="Mở trên YouTube">
+          <img id="ytFormatPreviewThumb" class="yt-format-preview__thumb" alt="" hidden />
+          <div class="yt-format-preview__body">
+            <div id="ytFormatPreviewTitle" class="yt-format-preview__title">—</div>
+            <div id="ytFormatPreviewSub" class="yt-format-preview__sub">—</div>
+          </div>
+        </button>
+        <div id="ytFormatFilters" class="yt-format-filters" hidden>
+          <button type="button" class="btn btn--sm btn--secondary yt-filter-btn is-active" data-filter="all">Tất cả</button>
+          <button type="button" class="btn btn--sm btn--secondary yt-filter-btn" data-filter="muxed">Muxed</button>
+          <button type="button" class="btn btn--sm btn--secondary yt-filter-btn" data-filter="audio">Audio</button>
+          <button type="button" class="btn btn--sm btn--secondary yt-filter-btn" data-filter="video">Video</button>
+        </div>
+        <p id="ytFormatsStatus" class="yt-status" hidden></p>
+        <div id="ytFormatsWrap" class="yt-formats-wrap" hidden>
+          <table class="yt-formats-table">
+            <thead>
+              <tr>
+                <th scope="col">Res / Bitrate</th>
+                <th scope="col">Size</th>
+                <th scope="col">Note</th>
+                <th class="cell-actions" scope="col" aria-label="Thao tác">
+                  <span class="cell-actions__header-icon" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
+                    </svg>
+                  </span>
+                  <span class="sr-only">Thao tác</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="ytFormatsBody"></tbody>
+          </table>
+        </div>
       </div>
-    </div>
-    <div class="yt-player-bar__media">
-      <video id="ytMediaVideo" class="yt-media" controls playsinline hidden preload="none"></video>
-      <audio id="ytMediaAudio" class="yt-media" controls hidden preload="none"></audio>
-    </div>
-    <div class="yt-player-bar__controls">
-      <button type="button" id="ytPrevBtn" class="btn btn--icon btn--secondary btn--sm" title="Previous" aria-label="Previous">
-        <svg class="btn__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/>
-        </svg>
-      </button>
-      <button type="button" id="ytPlayPauseBtn" class="btn btn--icon btn--primary btn--sm" title="Play" aria-label="Play">
-        <svg class="btn__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <polygon points="6 3 20 12 6 21 6 3"/>
-        </svg>
-      </button>
-      <button type="button" id="ytNextBtn" class="btn btn--icon btn--secondary btn--sm" title="Next" aria-label="Next">
-        <svg class="btn__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/>
-        </svg>
-      </button>
-      <button type="button" id="ytLoopBtn" class="btn btn--icon btn--ghost btn--sm" title="Loop: Off" aria-label="Loop: Off" data-loop="off">
-        <svg class="btn__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="m17 2 4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-        </svg>
-      </button>
-    </div>
-    <div id="ytContinuePrompt" class="yt-continue-prompt" hidden role="alertdialog" aria-labelledby="ytContinuePromptTitle">
-      <p id="ytContinuePromptTitle" class="yt-continue-prompt__text">Bạn đã nghe khoảng 2 giờ. Tiếp tục phát?</p>
-      <div class="yt-continue-prompt__actions">
-        <button type="button" id="ytContinueYes" class="btn btn--primary btn--sm">Tiếp tục</button>
-        <button type="button" id="ytContinueNo" class="btn btn--secondary btn--sm">Dừng</button>
+    </section>
+
+    <section id="ytPlayerBar" class="yt-player-bar" aria-label="Player">
+      <div class="yt-player-bar__meta">
+        <img id="ytPlayerThumb" class="yt-player-bar__thumb" alt="" hidden />
+        <div>
+          <div id="ytPlayerTitle" class="yt-player-bar__title">Chưa phát bài nào</div>
+          <div id="ytPlayerSub" class="yt-player-bar__sub">—</div>
+        </div>
       </div>
-    </div>
-    <p id="ytPlayerStatus" class="yt-status" hidden></p>
-  </section>
+      <div class="yt-player-bar__media">
+        <video id="ytMediaVideo" class="yt-media" controls playsinline hidden preload="none"></video>
+        <audio id="ytMediaAudio" class="yt-media" controls hidden preload="none"></audio>
+      </div>
+      <div class="yt-player-bar__controls">
+        <button type="button" id="ytPrevBtn" class="btn btn--icon btn--secondary btn--sm" title="Previous" aria-label="Previous">
+          <svg class="btn__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/>
+          </svg>
+        </button>
+        <button type="button" id="ytPlayPauseBtn" class="btn btn--icon btn--primary btn--sm" title="Play" aria-label="Play">
+          <svg class="btn__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="6 3 20 12 6 21 6 3"/>
+          </svg>
+        </button>
+        <button type="button" id="ytNextBtn" class="btn btn--icon btn--secondary btn--sm" title="Next" aria-label="Next">
+          <svg class="btn__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/>
+          </svg>
+        </button>
+        <button type="button" id="ytLoopBtn" class="btn btn--icon btn--ghost btn--sm" title="Loop: Off" aria-label="Loop: Off" data-loop="off">
+          <svg class="btn__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m17 2 4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+          </svg>
+        </button>
+      </div>
+      <div id="ytContinuePrompt" class="yt-continue-prompt" hidden role="alertdialog" aria-labelledby="ytContinuePromptTitle">
+        <p id="ytContinuePromptTitle" class="yt-continue-prompt__text">Bạn đã nghe khoảng 2 giờ. Tiếp tục phát?</p>
+        <div class="yt-continue-prompt__actions">
+          <button type="button" id="ytContinueYes" class="btn btn--primary btn--sm">Tiếp tục</button>
+          <button type="button" id="ytContinueNo" class="btn btn--secondary btn--sm">Dừng</button>
+        </div>
+      </div>
+      <p id="ytPlayerStatus" class="yt-status" hidden></p>
+    </section>
+  </div>
 
   {{template "seo-tool-content" .}}
 </div>
