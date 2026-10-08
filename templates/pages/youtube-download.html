@@ -94,9 +94,13 @@
     <section id="ytPlayerBar" class="yt-player-bar" aria-label="Player">
       <div class="yt-player-bar__meta">
         <img id="ytPlayerThumb" class="yt-player-bar__thumb" alt="" hidden />
-        <div>
+        <div id="ytPlayerMetaText" class="yt-player-bar__meta-text" tabindex="0">
           <div id="ytPlayerTitle" class="yt-player-bar__title">Chưa phát bài nào</div>
           <div id="ytPlayerSub" class="yt-player-bar__sub">—</div>
+          <div id="ytPlayerMetaBubble" class="yt-player-bar__meta-bubble" hidden role="tooltip">
+            <div id="ytPlayerMetaBubbleTitle" class="yt-player-bar__meta-bubble-title"></div>
+            <div id="ytPlayerMetaBubbleSub" class="yt-player-bar__meta-bubble-sub"></div>
+          </div>
         </div>
       </div>
       <div class="yt-player-bar__media">

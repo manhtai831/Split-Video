@@ -57,6 +57,8 @@
   var isSeeking = false;
   var seekPreviewTime = 0;
   var progressBound = false;
+  var metaBubblePinned = false;
+  var metaBubbleBound = false;
 
   function $(id) {
     return document.getElementById(id);
@@ -368,6 +370,63 @@
     notifyPlayingChange();
   }
 
+  function syncMetaBubbleContent() {
+    var title = $("ytPlayerTitle");
+    var sub = $("ytPlayerSub");
+    var bubbleTitle = $("ytPlayerMetaBubbleTitle");
+    var bubbleSub = $("ytPlayerMetaBubbleSub");
+    if (bubbleTitle) bubbleTitle.textContent = title ? title.textContent : "";
+    if (bubbleSub) bubbleSub.textContent = sub ? sub.textContent : "";
+  }
+
+  function showMetaBubble() {
+    var bubble = $("ytPlayerMetaBubble");
+    if (!bubble) return;
+    syncMetaBubbleContent();
+    bubble.hidden = false;
+  }
+
+  function hideMetaBubble(force) {
+    if (metaBubblePinned && !force) return;
+    var bubble = $("ytPlayerMetaBubble");
+    if (bubble) bubble.hidden = true;
+    if (force) metaBubblePinned = false;
+  }
+
+  function bindMetaBubbleEvents() {
+    if (metaBubbleBound) return;
+    var host = $("ytPlayerMetaText");
+    if (!host) return;
+    metaBubbleBound = true;
+
+    host.addEventListener("mouseenter", function () {
+      showMetaBubble();
+    });
+    host.addEventListener("mouseleave", function () {
+      hideMetaBubble(false);
+    });
+    host.addEventListener("focus", function () {
+      showMetaBubble();
+    });
+    host.addEventListener("blur", function () {
+      if (!metaBubblePinned) hideMetaBubble(false);
+    });
+    host.addEventListener("click", function (e) {
+      e.stopPropagation();
+      metaBubblePinned = !metaBubblePinned;
+      if (metaBubblePinned) {
+        showMetaBubble();
+      } else {
+        hideMetaBubble(true);
+      }
+    });
+    document.addEventListener("click", function (e) {
+      if (!metaBubblePinned) return;
+      if (host.contains(e.target)) return;
+      hideMetaBubble(true);
+    });
+  }
+
   function renderPlayingMeta(item) {
     var title = $("ytPlayerTitle");
     var sub = $("ytPlayerSub");
@@ -387,6 +446,8 @@
         thumb.hidden = true;
       }
     }
+    syncMetaBubbleContent();
+    if (!item) hideMetaBubble(true);
   }
 
   function setPlayingItem(item) {
@@ -749,6 +810,7 @@
     updateLoopButton();
     bindMediaEvents();
     bindProgressEvents();
+    bindMetaBubbleEvents();
     bindContinuePrompt();
 
     var prev = $("ytPrevBtn");
