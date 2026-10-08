@@ -54,6 +54,9 @@
   var listeningActive = false;
   var awaitingContinue = false;
   var isMediaPlaying = false;
+  var isSeeking = false;
+  var seekPreviewTime = 0;
+  var progressBound = false;
 
   function $(id) {
     return document.getElementById(id);
@@ -118,12 +121,211 @@
     updateLoopButton();
   }
 
+  function mediaHasSrc(el) {
+    if (!el) return false;
+    if (el.getAttribute("src")) return true;
+    return !!(el.currentSrc && el.currentSrc.length);
+  }
+
   function activeMedia() {
     var video = $("ytMediaVideo");
     var audio = $("ytMediaAudio");
+    if (video && !video.hidden && mediaHasSrc(video)) return video;
+    if (audio && mediaHasSrc(audio)) return audio;
     if (video && !video.hidden) return video;
-    if (audio && !audio.hidden) return audio;
     return video || audio;
+  }
+
+  function resetProgressUI() {
+    isSeeking = false;
+    seekPreviewTime = 0;
+    var fill = $("ytProgressFill");
+    var bubble = $("ytProgressBubble");
+    var time = $("ytProgressTime");
+    var track = $("ytProgressTrack");
+    if (fill) fill.style.width = "0%";
+    if (bubble) {
+      bubble.hidden = true;
+      bubble.textContent = "0:00";
+      bubble.style.left = "0%";
+    }
+    if (time) time.textContent = "0:00 / 0:00";
+    if (track) {
+      track.setAttribute("aria-valuemin", "0");
+      track.setAttribute("aria-valuemax", "0");
+      track.setAttribute("aria-valuenow", "0");
+    }
+  }
+
+  function showProgress(show) {
+    var progress = $("ytProgress");
+    if (!progress) return;
+    progress.hidden = !show;
+    if (!show) resetProgressUI();
+  }
+
+  function getAudioDuration(audio) {
+    if (!audio) return 0;
+    var d = audio.duration;
+    if (!isFinite(d) || d < 0) return 0;
+    return d;
+  }
+
+  function setProgressVisual(ratio, timeSec, durationSec, updateLabel) {
+    var fill = $("ytProgressFill");
+    var track = $("ytProgressTrack");
+    var time = $("ytProgressTime");
+    var pct = Math.max(0, Math.min(100, (ratio || 0) * 100));
+    if (fill) fill.style.width = pct + "%";
+    if (track) {
+      track.setAttribute("aria-valuemax", String(Math.floor(durationSec || 0)));
+      track.setAttribute("aria-valuenow", String(Math.floor(timeSec || 0)));
+    }
+    if (updateLabel && time) {
+      time.textContent = formatDuration(timeSec) + " / " + formatDuration(durationSec);
+    }
+  }
+
+  function syncProgressFromMedia() {
+    if (isSeeking) return;
+    var audio = $("ytMediaAudio");
+    if (!audio || !mediaHasSrc(audio)) return;
+    var duration = getAudioDuration(audio);
+    var current = audio.currentTime || 0;
+    var ratio = duration > 0 ? current / duration : 0;
+    setProgressVisual(ratio, current, duration, true);
+  }
+
+  function timeFromPointerEvent(e) {
+    var track = $("ytProgressTrack");
+    var audio = $("ytMediaAudio");
+    if (!track || !audio) return 0;
+    var duration = getAudioDuration(audio);
+    if (duration <= 0) return 0;
+    var rect = track.getBoundingClientRect();
+    var x = e.clientX - rect.left;
+    var ratio = rect.width > 0 ? x / rect.width : 0;
+    ratio = Math.max(0, Math.min(1, ratio));
+    return ratio * duration;
+  }
+
+  function showBubbleAt(timeSec, durationSec) {
+    var bubble = $("ytProgressBubble");
+    var track = $("ytProgressTrack");
+    if (!bubble || !track) return;
+    var duration = durationSec || 0;
+    var ratio = duration > 0 ? timeSec / duration : 0;
+    ratio = Math.max(0, Math.min(1, ratio));
+    bubble.hidden = false;
+    bubble.textContent = formatDuration(timeSec);
+    bubble.style.left = ratio * 100 + "%";
+  }
+
+  function hideBubble() {
+    if (isSeeking) return;
+    var bubble = $("ytProgressBubble");
+    if (bubble) bubble.hidden = true;
+  }
+
+  function previewSeek(timeSec) {
+    var audio = $("ytMediaAudio");
+    var duration = getAudioDuration(audio);
+    seekPreviewTime = Math.max(0, Math.min(timeSec, duration));
+    var ratio = duration > 0 ? seekPreviewTime / duration : 0;
+    setProgressVisual(ratio, seekPreviewTime, duration, true);
+    showBubbleAt(seekPreviewTime, duration);
+  }
+
+  function commitSeek() {
+    var audio = $("ytMediaAudio");
+    if (audio && mediaHasSrc(audio) && isFinite(seekPreviewTime)) {
+      try {
+        audio.currentTime = seekPreviewTime;
+      } catch (err) {
+        /* ignore seek errors on unloaded media */
+      }
+    }
+    isSeeking = false;
+    hideBubble();
+    syncProgressFromMedia();
+  }
+
+  function onProgressPointerDown(e) {
+    var audio = $("ytMediaAudio");
+    if (!audio || !mediaHasSrc(audio)) return;
+    if (e.button != null && e.button !== 0) return;
+    e.preventDefault();
+    isSeeking = true;
+    var track = $("ytProgressTrack");
+    if (track && track.setPointerCapture && e.pointerId != null) {
+      try {
+        track.setPointerCapture(e.pointerId);
+      } catch (err) {
+        /* ignore */
+      }
+    }
+    previewSeek(timeFromPointerEvent(e));
+  }
+
+  function onProgressPointerMove(e) {
+    var audio = $("ytMediaAudio");
+    if (!audio || !mediaHasSrc(audio)) return;
+    var duration = getAudioDuration(audio);
+    var t = timeFromPointerEvent(e);
+    if (isSeeking) {
+      previewSeek(t);
+      return;
+    }
+    showBubbleAt(t, duration);
+  }
+
+  function onProgressPointerUp(e) {
+    if (!isSeeking) return;
+    previewSeek(timeFromPointerEvent(e));
+    commitSeek();
+  }
+
+  function onProgressPointerLeave() {
+    hideBubble();
+  }
+
+  function onProgressKeyDown(e) {
+    var audio = $("ytMediaAudio");
+    if (!audio || !mediaHasSrc(audio)) return;
+    var duration = getAudioDuration(audio);
+    if (duration <= 0) return;
+    var step = e.shiftKey ? 10 : 5;
+    var next = audio.currentTime || 0;
+    if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+      e.preventDefault();
+      next = Math.max(0, next - step);
+    } else if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+      e.preventDefault();
+      next = Math.min(duration, next + step);
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      next = 0;
+    } else if (e.key === "End") {
+      e.preventDefault();
+      next = duration;
+    } else {
+      return;
+    }
+    audio.currentTime = next;
+    syncProgressFromMedia();
+  }
+
+  function bindProgressEvents() {
+    if (progressBound) return;
+    var track = $("ytProgressTrack");
+    if (!track) return;
+    progressBound = true;
+    track.addEventListener("pointerdown", onProgressPointerDown);
+    track.addEventListener("pointermove", onProgressPointerMove);
+    track.addEventListener("pointerup", onProgressPointerUp);
+    track.addEventListener("pointercancel", onProgressPointerUp);
+    track.addEventListener("pointerleave", onProgressPointerLeave);
+    track.addEventListener("keydown", onProgressKeyDown);
   }
 
   function hideMedia() {
@@ -141,6 +343,7 @@
       audio.load();
       audio.hidden = true;
     }
+    showProgress(false);
   }
 
   function setPlayPauseLabel(playing) {
@@ -369,7 +572,13 @@
       var el = useAudio ? $("ytMediaAudio") : $("ytMediaVideo");
       if (!el) throw new Error("Thiếu media element");
       setPlayingItem(itemToPlay);
-      el.hidden = false;
+      if (useAudio) {
+        el.hidden = true;
+        showProgress(true);
+      } else {
+        el.hidden = false;
+        showProgress(false);
+      }
       el.src = src;
       el.load();
       el.play().then(
@@ -377,6 +586,7 @@
           setPlayPauseLabel(true);
           setStatus("", false);
           startContinueTimer(false);
+          if (useAudio) syncProgressFromMedia();
         },
         function (err) {
           setPlayPauseLabel(false);
@@ -499,6 +709,12 @@
       });
       el.addEventListener("ended", onEnded);
     });
+    var audio = $("ytMediaAudio");
+    if (audio) {
+      audio.addEventListener("timeupdate", syncProgressFromMedia);
+      audio.addEventListener("loadedmetadata", syncProgressFromMedia);
+      audio.addEventListener("durationchange", syncProgressFromMedia);
+    }
   }
 
   function bindContinuePrompt() {
@@ -532,6 +748,7 @@
     }
     updateLoopButton();
     bindMediaEvents();
+    bindProgressEvents();
     bindContinuePrompt();
 
     var prev = $("ytPrevBtn");
