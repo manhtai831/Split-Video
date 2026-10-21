@@ -348,6 +348,97 @@
     showProgress(false);
   }
 
+  function hasMediaSession() {
+    return typeof navigator !== "undefined" && "mediaSession" in navigator;
+  }
+
+  function updateMediaSessionMetadata(item) {
+    if (!hasMediaSession()) return;
+    if (!item) {
+      navigator.mediaSession.metadata = null;
+      return;
+    }
+    var artwork = [];
+    if (item.thumbnail) {
+      artwork.push({ src: item.thumbnail, sizes: "512x512", type: "image/jpeg" });
+    }
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: item.title || item.youtube_id || "",
+        artist: item.channel || "",
+        artwork: artwork,
+      });
+    } catch (err) {
+      /* MediaMetadata unsupported or invalid artwork */
+    }
+  }
+
+  function updateMediaSessionPlaybackState(playing) {
+    if (!hasMediaSession()) return;
+    if (!playingItem) {
+      navigator.mediaSession.playbackState = "none";
+      return;
+    }
+    navigator.mediaSession.playbackState = playing ? "playing" : "paused";
+  }
+
+  function mediaSessionShouldAutoPlay() {
+    var el = activeMedia();
+    return !!(el && el.src && !el.paused);
+  }
+
+  function mediaSessionPlay() {
+    if (awaitingContinue) return;
+    var el = activeMedia();
+    if (!el || !el.src) {
+      playSelectedFormat();
+      return;
+    }
+    if (!el.paused) return;
+    el.play().then(
+      function () {
+        setPlayPauseLabel(true);
+        startContinueTimer(false);
+      },
+      function (err) {
+        setStatus(err.message || "Không phát được", true);
+      }
+    );
+  }
+
+  function mediaSessionPause() {
+    if (awaitingContinue) return;
+    var el = activeMedia();
+    if (!el || !el.src) return;
+    el.pause();
+    setPlayPauseLabel(false);
+  }
+
+  function mediaSessionPrev() {
+    goRelative(-1, mediaSessionShouldAutoPlay());
+  }
+
+  function mediaSessionNext() {
+    goRelative(1, mediaSessionShouldAutoPlay());
+  }
+
+  function bindMediaSessionHandlers() {
+    if (!hasMediaSession() || !navigator.mediaSession.setActionHandler) return;
+    var actions = {
+      play: mediaSessionPlay,
+      pause: mediaSessionPause,
+      previoustrack: mediaSessionPrev,
+      nexttrack: mediaSessionNext,
+    };
+    Object.keys(actions).forEach(function (action) {
+      try {
+        navigator.mediaSession.setActionHandler(action, actions[action]);
+      } catch (err) {
+        /* action not supported on this browser */
+      }
+    });
+  }
+
   function setPlayPauseLabel(playing) {
     var btn = $("ytPlayPauseBtn");
     if (btn) {
@@ -357,6 +448,7 @@
       btn.setAttribute("aria-label", label);
     }
     isMediaPlaying = !!playing;
+    updateMediaSessionPlaybackState(isMediaPlaying);
     syncPlayingIndicator();
   }
 
@@ -447,6 +539,7 @@
       }
     }
     syncMetaBubbleContent();
+    updateMediaSessionMetadata(item);
     if (!item) hideMetaBubble(true);
   }
 
@@ -460,6 +553,7 @@
     playingItem = null;
     isMediaPlaying = false;
     renderPlayingMeta(null);
+    updateMediaSessionPlaybackState(false);
     notifyPlayingChange();
   }
 
@@ -812,6 +906,7 @@
     bindProgressEvents();
     bindMetaBubbleEvents();
     bindContinuePrompt();
+    bindMediaSessionHandlers();
 
     var prev = $("ytPrevBtn");
     var next = $("ytNextBtn");
@@ -819,16 +914,12 @@
     var loopBtn = $("ytLoopBtn");
     if (prev) {
       prev.addEventListener("click", function () {
-        var el = activeMedia();
-        var shouldPlay = el && el.src && !el.paused;
-        goRelative(-1, shouldPlay);
+        goRelative(-1, mediaSessionShouldAutoPlay());
       });
     }
     if (next) {
       next.addEventListener("click", function () {
-        var el = activeMedia();
-        var shouldPlay = el && el.src && !el.paused;
-        goRelative(1, shouldPlay);
+        goRelative(1, mediaSessionShouldAutoPlay());
       });
     }
     if (playPause) playPause.addEventListener("click", togglePlayPause);
