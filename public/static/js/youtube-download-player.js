@@ -702,6 +702,17 @@
     return api.selectItemById(next.id, { autoPlay: !!autoPlay });
   }
 
+  /** Next: if formats panel is on a different item than what's playing, switch to that item. */
+  function goNext(autoPlay) {
+    var selected = api.getSelectedItem ? api.getSelectedItem() : null;
+    if (selected && (!playingItem || selected.id !== playingItem.id)) {
+      setPlayingItem(selected);
+      if (!api.selectItemById) return Promise.resolve();
+      return api.selectItemById(selected.id, { autoPlay: !!autoPlay });
+    }
+    return goRelative(1, autoPlay);
+  }
+
   function playSelectedFormat() {
     if (awaitingContinue) return;
     if (!api.getSelectedFormat || !api.streamUrl) return;
@@ -919,7 +930,7 @@
     }
     if (next) {
       next.addEventListener("click", function () {
-        goRelative(1, mediaSessionShouldAutoPlay());
+        goNext(mediaSessionShouldAutoPlay());
       });
     }
     if (playPause) playPause.addEventListener("click", togglePlayPause);
