@@ -165,6 +165,11 @@
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     if (window.initYoutubeDownloadPlaylist) window.initYoutubeDownloadPlaylist();
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/video/youtube-download/sw.js", { scope: "/video/youtube-download" })
+        .catch(function () {});
+    }
   });
 </script>
 {{end}}

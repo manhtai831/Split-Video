@@ -17,6 +17,7 @@ import (
 
 func Bootstrap() {
 	http.HandleFunc("/video/youtube-download", handlePage)
+	http.HandleFunc("/video/youtube-download/sw.js", handleServiceWorker)
 	http.HandleFunc("/youtube-download", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/video/youtube-download", http.StatusMovedPermanently)
 	})
