@@ -29,7 +29,20 @@
   <div class="yt-layout">
     <section id="ytPlaylistPanel" class="yt-panel yt-panel--playlist" aria-labelledby="ytPlaylistHeading" hidden>
       <h2 id="ytPlaylistHeading" class="jobs-section__title">Playlist</h2>
+      <div id="ytCategoryTabs" class="yt-category-tabs" role="tablist" aria-label="Category">
+        <button
+          type="button"
+          id="ytCategoryAddBtn"
+          class="yt-category-tabs__add btn btn--sm btn--secondary"
+          title="Tạo category"
+          aria-label="Tạo category"
+        >
+          +
+        </button>
+        <div id="ytCategoryTabsList" class="yt-category-tabs__list"></div>
+      </div>
       <ul id="ytPlaylist" class="yt-playlist" role="list"></ul>
+      <p id="ytPlaylistEmpty" class="yt-empty" hidden>Chưa có video trong mục này.</p>
     </section>
   </div>
 

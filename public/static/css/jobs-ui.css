@@ -1571,6 +1571,83 @@
   color: var(--text-muted);
 }
 
+.yt-category-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 -16px 12px;
+  padding: 10px 16px;
+  min-width: 0;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 6px 14px -10px rgba(15, 23, 42, 0.2);
+}
+
+.yt-category-tabs__add {
+  flex: 0 0 auto;
+  min-width: 36px;
+  font-weight: 600;
+}
+
+.yt-category-tabs__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.yt-category-tabs__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 220px;
+}
+
+.yt-category-tabs__btn {
+  max-width: 160px;
+}
+
+.yt-category-tabs__tab.is-active .yt-category-tabs__btn {
+  border-color: #c7d2fe;
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.yt-category-tabs__tab.is-dragging {
+  opacity: 0.45;
+}
+
+.yt-category-tabs__tab.is-drag-over-before {
+  box-shadow: inset 3px 0 0 #6366f1;
+}
+
+.yt-category-tabs__tab.is-drag-over-after {
+  box-shadow: inset -3px 0 0 #6366f1;
+}
+
+.yt-category-tabs__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.yt-category-tabs__menu {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 2px;
+}
+
+.yt-category-tabs__icon-btn {
+  padding: 2px 4px;
+  min-width: 0;
+  line-height: 1;
+  font-size: 12px;
+}
+
 .yt-playlist {
   list-style: none;
   margin: 0;
@@ -1770,6 +1847,27 @@
 .yt-playlist__meta {
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.yt-playlist__fav {
+  flex-shrink: 0;
+  align-self: center;
+  color: var(--text-muted);
+  padding: 6px;
+}
+
+.yt-playlist__fav svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.yt-playlist__fav.is-active {
+  color: #eab308;
+}
+
+.yt-playlist__fav.is-active svg {
+  fill: currentColor;
 }
 
 .yt-playlist__delete {

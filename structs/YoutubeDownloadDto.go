@@ -50,12 +50,35 @@ type YoutubePlaylistItemDto struct {
 	Channel    string    `json:"channel"`
 	WebpageURL string    `json:"webpage_url"`
 	Position   int       `json:"position"`
+	IsFavorite bool      `json:"is_favorite"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
+type YoutubePlaylistCategoryDto struct {
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	Position  int    `json:"position"`
+	IsSystem  bool   `json:"is_system"`
+	SystemKey string `json:"system_key"`
+}
+
+type YoutubePlaylistCategoryListResponseDto struct {
+	Categories []YoutubePlaylistCategoryDto `json:"categories"`
+}
+
+type YoutubePlaylistCategoryCreateRequestDto struct {
+	Name string `json:"name"`
+}
+
+type YoutubePlaylistCategoryPatchRequestDto struct {
+	Name     *string `json:"name,omitempty"`
+	Position *int    `json:"position,omitempty"`
+}
+
 type YoutubePlaylistAddRequestDto struct {
-	URL string `json:"url"`
+	URL        string `json:"url"`
+	CategoryID *int   `json:"category_id,omitempty"`
 }
 
 type YoutubePlaylistAddResponseDto struct {

@@ -19,6 +19,8 @@ func Bootstrap() {
 		&entities.JobFileData{},
 		&entities.YoutubePlaylistItem{},
 		&entities.YoutubePlaylistError{},
+		&entities.YoutubePlaylistCategory{},
+		&entities.YoutubePlaylistItemCategory{},
 		&entities.User{},
 		&entities.Session{},
 	)

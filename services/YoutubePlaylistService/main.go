@@ -88,7 +88,7 @@ func GetByIDForUser(id int, userID string) (entities.YoutubePlaylistItem, error)
 	return item, err
 }
 
-func AddFromURL(ctx context.Context, userID, pageURL string) (entities.YoutubePlaylistItem, []structs.YoutubeFormatDto, error) {
+func AddFromURL(ctx context.Context, userID, pageURL string, categoryID *int) (entities.YoutubePlaylistItem, []structs.YoutubeFormatDto, error) {
 	validated, err := structs.ValidateYoutubeURL(pageURL)
 	if err != nil {
 		LogError(userID, "AddFromURL-ValidateYoutubeURL", pageURL, err.Error())
@@ -100,6 +100,9 @@ func AddFromURL(ctx context.Context, userID, pageURL string) (entities.YoutubePl
 		var existing entities.YoutubePlaylistItem
 		err = Global.DB.Where("user_id = ? AND youtube_id = ?", userID, youtubeID).First(&existing).Error
 		if err == nil {
+			if err := maybeLinkUserCategory(userID, existing.ID, categoryID); err != nil {
+				return entities.YoutubePlaylistItem{}, nil, err
+			}
 			if formats, ok := cachedFormats(existing); ok {
 				return existing, formats, nil
 			}
@@ -137,6 +140,9 @@ func AddFromURL(ctx context.Context, userID, pageURL string) (entities.YoutubePl
 		if err := Global.DB.Save(&existing).Error; err != nil {
 			return entities.YoutubePlaylistItem{}, nil, err
 		}
+		if err := maybeLinkUserCategory(userID, existing.ID, categoryID); err != nil {
+			return entities.YoutubePlaylistItem{}, nil, err
+		}
 		return existing, probe.Formats, nil
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -163,18 +169,37 @@ func AddFromURL(ctx context.Context, userID, pageURL string) (entities.YoutubePl
 	if err := Global.DB.Create(&item).Error; err != nil {
 		return entities.YoutubePlaylistItem{}, nil, err
 	}
+	if err := maybeLinkUserCategory(userID, item.ID, categoryID); err != nil {
+		return entities.YoutubePlaylistItem{}, nil, err
+	}
 	return item, probe.Formats, nil
 }
 
+func maybeLinkUserCategory(userID string, itemID int, categoryID *int) error {
+	if categoryID == nil || *categoryID < 1 {
+		return nil
+	}
+	return LinkItemToUserCategory(userID, itemID, *categoryID)
+}
+
 func DeleteForUser(id int, userID string) error {
-	result := Global.DB.Where("id = ? AND user_id = ?", id, userID).Delete(&entities.YoutubePlaylistItem{})
-	if result.Error != nil {
-		return result.Error
+	item, err := GetByIDForUser(id, userID)
+	if err != nil {
+		return err
 	}
-	if result.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
-	}
-	return nil
+	return Global.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("item_id = ?", item.ID).Delete(&entities.YoutubePlaylistItemCategory{}).Error; err != nil {
+			return err
+		}
+		result := tx.Where("id = ? AND user_id = ?", item.ID, userID).Delete(&entities.YoutubePlaylistItem{})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return gorm.ErrRecordNotFound
+		}
+		return nil
+	})
 }
 
 func UpdatePosition(id int, userID string, position int) (entities.YoutubePlaylistItem, error) {

@@ -5,6 +5,7 @@ import (
 	"app/entities"
 	"app/middleware"
 	"app/services/MailService"
+	"app/services/YoutubePlaylistService"
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
@@ -94,6 +95,9 @@ func MigrateAnonymousData(fromAnonID, toUserID string) error {
 	if err := db.Model(&entities.YoutubePlaylistError{}).Where("user_id = ?", fromAnonID).Update("user_id", toUserID).Error; err != nil {
 		return err
 	}
+	if err := YoutubePlaylistService.MigrateAnonymousCategories(fromAnonID, toUserID); err != nil {
+		return err
+	}
 	migrateChunkManifests(fromAnonID, toUserID)
 	return nil
 }
@@ -169,6 +173,10 @@ func Register(email, password, anonUserID string) (*AuthResult, error) {
 			return nil, ErrEmailTaken
 		}
 		return nil, err
+	}
+
+	if _, err := YoutubePlaylistService.EnsureFavoriteCategory(user.ID); err != nil {
+		log.Printf("AuthService.Register EnsureFavoriteCategory: %v", err)
 	}
 
 	_ = MigrateAnonymousData(anonUserID, user.ID)

@@ -1,6 +1,7 @@
 package youtubedownload
 
 import (
+	"app/entities"
 	"app/middleware"
 	"app/services/YoutubePlaylistService"
 	"app/structs"
@@ -15,6 +16,20 @@ import (
 	"gorm.io/gorm"
 )
 
+var errInvalidCategoryID = errors.New("invalid category_id")
+
+func listPlaylistItems(userID, categoryIDRaw string) ([]entities.YoutubePlaylistItem, error) {
+	categoryIDRaw = strings.TrimSpace(categoryIDRaw)
+	if categoryIDRaw == "" {
+		return YoutubePlaylistService.ListByUser(userID)
+	}
+	categoryID, err := strconv.Atoi(categoryIDRaw)
+	if err != nil || categoryID < 1 {
+		return nil, errInvalidCategoryID
+	}
+	return YoutubePlaylistService.ListByCategory(userID, categoryID)
+}
+
 func Bootstrap() {
 	http.HandleFunc("/video/youtube-download", handlePage)
 	http.HandleFunc("/video/youtube-download/sw.js", handleServiceWorker)
@@ -23,6 +38,8 @@ func Bootstrap() {
 	})
 	http.HandleFunc("/api/youtube-download/playlist", handlePlaylistCollection)
 	http.HandleFunc("/api/youtube-download/playlist/", handlePlaylistItem)
+	http.HandleFunc("/api/youtube-download/categories", handleCategoriesCollection)
+	http.HandleFunc("/api/youtube-download/categories/", handleCategoryItem)
 }
 
 func handlePage(w http.ResponseWriter, r *http.Request) {
@@ -47,19 +64,123 @@ func handlePage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func handleCategoriesCollection(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(w, r)
+
+	switch r.Method {
+	case http.MethodGet:
+		cats, err := YoutubePlaylistService.ListCategories(userID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		dtos := make([]structs.YoutubePlaylistCategoryDto, 0, len(cats))
+		for _, cat := range cats {
+			dtos = append(dtos, YoutubePlaylistService.ToCategoryDto(cat))
+		}
+		writeJSON(w, structs.YoutubePlaylistCategoryListResponseDto{Categories: dtos})
+
+	case http.MethodPost:
+		var req structs.YoutubePlaylistCategoryCreateRequestDto
+		if err := decodeJSONBody(r, &req); err != nil {
+			http.Error(w, "Body JSON không hợp lệ", http.StatusBadRequest)
+			return
+		}
+		cat, err := YoutubePlaylistService.CreateCategory(userID, req.Name)
+		if err != nil {
+			if errors.Is(err, YoutubePlaylistService.ErrCategoryNameRequired) {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, YoutubePlaylistService.ToCategoryDto(cat))
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func handleCategoryItem(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(w, r)
+	path := strings.TrimPrefix(r.URL.Path, "/api/youtube-download/categories/")
+	path = strings.Trim(path, "/")
+	if path == "" {
+		http.NotFound(w, r)
+		return
+	}
+
+	id, err := strconv.Atoi(path)
+	if err != nil || id < 1 {
+		http.Error(w, "ID không hợp lệ", http.StatusBadRequest)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodPatch:
+		var req structs.YoutubePlaylistCategoryPatchRequestDto
+		if err := decodeJSONBody(r, &req); err != nil {
+			http.Error(w, "Body JSON không hợp lệ", http.StatusBadRequest)
+			return
+		}
+		var catDto structs.YoutubePlaylistCategoryDto
+		if req.Name != nil {
+			cat, err := YoutubePlaylistService.RenameCategory(id, userID, *req.Name)
+			if err != nil {
+				writeCategoryError(w, err)
+				return
+			}
+			catDto = YoutubePlaylistService.ToCategoryDto(cat)
+		}
+		if req.Position != nil {
+			cat, err := YoutubePlaylistService.UpdateCategoryPosition(id, userID, *req.Position)
+			if err != nil {
+				writeCategoryError(w, err)
+				return
+			}
+			catDto = YoutubePlaylistService.ToCategoryDto(cat)
+		}
+		if req.Name == nil && req.Position == nil {
+			http.Error(w, "Cần name hoặc position", http.StatusBadRequest)
+			return
+		}
+		writeJSON(w, catDto)
+
+	case http.MethodDelete:
+		if err := YoutubePlaylistService.DeleteCategory(id, userID); err != nil {
+			writeCategoryError(w, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
 func handlePlaylistCollection(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(w, r)
 
 	switch r.Method {
 	case http.MethodGet:
-		items, err := YoutubePlaylistService.ListByUser(userID)
+		items, err := listPlaylistItems(userID, r.URL.Query().Get("category_id"))
 		if err != nil {
+			if errors.Is(err, errInvalidCategoryID) {
+				http.Error(w, "category_id không hợp lệ", http.StatusBadRequest)
+				return
+			}
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				http.Error(w, "Không tìm thấy category", http.StatusNotFound)
+				return
+			}
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		dtos := make([]structs.YoutubePlaylistItemDto, 0, len(items))
-		for _, item := range items {
-			dtos = append(dtos, YoutubePlaylistService.ToItemDto(item))
+		dtos, err := YoutubePlaylistService.ToItemDtos(userID, items)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		writeJSON(w, structs.YoutubePlaylistListResponseDto{Items: dtos})
 
@@ -69,9 +190,13 @@ func handlePlaylistCollection(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Body JSON không hợp lệ", http.StatusBadRequest)
 			return
 		}
-		item, formats, err := YoutubePlaylistService.AddFromURL(r.Context(), userID, req.URL)
+		item, formats, err := YoutubePlaylistService.AddFromURL(r.Context(), userID, req.URL, req.CategoryID)
 		if err != nil {
 			YoutubePlaylistService.LogError(userID, "add_from_url", req.URL, err.Error())
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				http.Error(w, "Không tìm thấy category", http.StatusNotFound)
+				return
+			}
 			status := http.StatusBadRequest
 			if strings.Contains(err.Error(), "không lấy được") || strings.Contains(err.Error(), "yt-dlp") {
 				status = http.StatusBadGateway
@@ -79,8 +204,13 @@ func handlePlaylistCollection(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), status)
 			return
 		}
+		dto, err := YoutubePlaylistService.ToItemDtoWithFavorite(userID, item)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		writeJSON(w, structs.YoutubePlaylistAddResponseDto{
-			Item:    YoutubePlaylistService.ToItemDto(item),
+			Item:    dto,
 			Formats: formats,
 		})
 
@@ -124,10 +254,35 @@ func handlePlaylistItem(w http.ResponseWriter, r *http.Request) {
 				writeNotFoundOrError(w, err)
 				return
 			}
-			writeJSON(w, YoutubePlaylistService.ToItemDto(item))
+			dto, err := YoutubePlaylistService.ToItemDtoWithFavorite(userID, item)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			writeJSON(w, dto)
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
+		return
+	}
+
+	if len(parts) == 2 && parts[1] == "favorite" {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		item, isFav, err := YoutubePlaylistService.ToggleFavorite(userID, id)
+		if err != nil {
+			writeNotFoundOrError(w, err)
+			return
+		}
+		dto, err := YoutubePlaylistService.ToItemDtoWithFavorite(userID, item)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		dto.IsFavorite = isFav
+		writeJSON(w, dto)
 		return
 	}
 
@@ -141,8 +296,13 @@ func handlePlaylistItem(w http.ResponseWriter, r *http.Request) {
 			writeNotFoundOrError(w, err)
 			return
 		}
+		dto, err := YoutubePlaylistService.ToItemDtoWithFavorite(userID, item)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		writeJSON(w, structs.YoutubeFormatsResponseDto{
-			Item:    YoutubePlaylistService.ToItemDto(item),
+			Item:    dto,
 			Formats: formats,
 		})
 		return
@@ -182,6 +342,19 @@ func handlePlaylistItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.NotFound(w, r)
+}
+
+func writeCategoryError(w http.ResponseWriter, err error) {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		http.Error(w, "Không tìm thấy category", http.StatusNotFound)
+		return
+	}
+	if errors.Is(err, YoutubePlaylistService.ErrCategorySystemProtected) ||
+		errors.Is(err, YoutubePlaylistService.ErrCategoryNameRequired) {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	http.Error(w, err.Error(), http.StatusInternalServerError)
 }
 
 func writeNotFoundOrError(w http.ResponseWriter, err error) {

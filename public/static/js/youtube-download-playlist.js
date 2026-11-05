@@ -2,10 +2,14 @@
   "use strict";
 
   var API_BASE = "/api/youtube-download/playlist";
+  var CATEGORIES_API = "/api/youtube-download/categories";
   var PREFS_KEY = "youtubeDownloadPlayer.prefs";
+  var TAB_ALL = "all";
 
   var state = {
     items: [],
+    categories: [],
+    activeTab: TAB_ALL,
     selectedId: null,
     playingId: null,
     isMediaPlaying: false,
@@ -20,10 +24,21 @@
   var listDragBound = false;
   var reorderPending = false;
 
+  var catDragFromId = null;
+  var catDragOverId = null;
+  var catDragInsertBefore = true;
+  var catTabsDragBound = false;
+  var catReorderPending = false;
+
   var ICON_DRAG =
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
     '<circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/>' +
     '<circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/>' +
+    "</svg>";
+
+  var ICON_STAR =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>' +
     "</svg>";
 
   function $(id) {
@@ -355,14 +370,133 @@
   function updatePanelsVisibility() {
     var playlistPanel = $("ytPlaylistPanel");
     var dock = $("ytDock");
+    var emptyEl = $("ytPlaylistEmpty");
     var hasItems = state.items.length > 0;
     var hasSelection = !!state.selectedId && hasItems;
 
-    if (playlistPanel) playlistPanel.hidden = !hasItems;
+    if (playlistPanel) playlistPanel.hidden = false;
+    if (emptyEl) emptyEl.hidden = hasItems;
     if (dock) dock.hidden = !hasSelection;
     if (window.YoutubeDownloadFormats && window.YoutubeDownloadFormats.syncDockSpacer) {
       requestAnimationFrame(window.YoutubeDownloadFormats.syncDockSpacer);
     }
+  }
+
+  function findFavoriteCategory() {
+    return (
+      state.categories.find(function (c) {
+        return c.system_key === "favorite" || (c.is_system && String(c.name || "").toLowerCase() === "favorite");
+      }) || null
+    );
+  }
+
+  function getUserCategories() {
+    return state.categories
+      .filter(function (c) {
+        return !c.is_system;
+      })
+      .slice()
+      .sort(function (a, b) {
+        return (a.position || 0) - (b.position || 0) || a.id - b.id;
+      });
+  }
+
+  function orderedCategoriesForTabs() {
+    var fav = findFavoriteCategory();
+    var users = getUserCategories();
+    var out = [];
+    if (fav) out.push(fav);
+    return out.concat(users);
+  }
+
+  function activeCategoryId() {
+    if (state.activeTab === TAB_ALL) return null;
+    var id = parseInt(state.activeTab, 10);
+    return id > 0 ? id : null;
+  }
+
+  function activeCategory() {
+    var id = activeCategoryId();
+    if (!id) return null;
+    return (
+      state.categories.find(function (c) {
+        return c.id === id;
+      }) || null
+    );
+  }
+
+  function addCategoryIdForRequest() {
+    var cat = activeCategory();
+    if (!cat || cat.is_system) return null;
+    return cat.id;
+  }
+
+  function playlistQueryUrl() {
+    var cat = activeCategory();
+    if (!cat) return API_BASE;
+    return API_BASE + "?category_id=" + encodeURIComponent(String(cat.id));
+  }
+
+  function setActiveTab(tab) {
+    state.activeTab = tab || TAB_ALL;
+    savePrefs({ activeCategoryTab: state.activeTab });
+    renderCategoryTabs();
+    return loadPlaylist();
+  }
+
+  function renderCategoryTabs() {
+    var wrap = $("ytCategoryTabsList");
+    if (!wrap) return;
+
+    var tabs = [{ key: TAB_ALL, label: "All", system: true, draggable: false }];
+    orderedCategoriesForTabs().forEach(function (cat) {
+      tabs.push({
+        key: String(cat.id),
+        label: cat.system_key === "favorite" ? "Favorite" : cat.name,
+        system: !!cat.is_system,
+        draggable: !cat.is_system,
+        id: cat.id,
+      });
+    });
+
+    wrap.innerHTML = tabs
+      .map(function (tab) {
+        var classes = "yt-category-tabs__tab";
+        if (String(state.activeTab) === String(tab.key)) classes += " is-active";
+        var menu = "";
+        if (!tab.system && tab.id) {
+          menu =
+            '<span class="yt-category-tabs__menu">' +
+            '<button type="button" class="btn btn--ghost btn--sm yt-category-tabs__icon-btn" data-cat-action="rename" data-id="' +
+            tab.id +
+            '" title="Đổi tên" aria-label="Đổi tên">✎</button>' +
+            '<button type="button" class="btn btn--ghost btn--sm yt-category-tabs__icon-btn" data-cat-action="delete" data-id="' +
+            tab.id +
+            '" title="Xóa" aria-label="Xóa">×</button>' +
+            "</span>";
+        }
+        return (
+          '<div class="' +
+          classes +
+          '" role="presentation"' +
+          (tab.draggable ? ' data-cat-id="' + tab.id + '" draggable="true"' : "") +
+          ">" +
+          '<button type="button" class="btn btn--sm btn--secondary yt-category-tabs__btn" role="tab" data-tab="' +
+          escapeHtml(String(tab.key)) +
+          '" aria-selected="' +
+          (String(state.activeTab) === String(tab.key) ? "true" : "false") +
+          '">' +
+          '<span class="yt-category-tabs__label">' +
+          escapeHtml(tab.label) +
+          "</span>" +
+          "</button>" +
+          menu +
+          "</div>"
+        );
+      })
+      .join("");
+
+    bindCategoryTabsDrag(wrap);
   }
 
   function renderPlaylist() {
@@ -391,6 +525,8 @@
           item.id === state.playingId
             ? '<span class="yt-playlist__eq" aria-hidden="true"><span></span><span></span><span></span></span>'
             : "";
+        var favClass = "btn btn--ghost btn--sm yt-playlist__fav";
+        if (item.is_favorite) favClass += " is-active";
         return (
           '<li class="' +
           classes +
@@ -420,6 +556,15 @@
           "</span>" +
           "</span>" +
           "</button>" +
+          '<button type="button" class="' +
+          favClass +
+          '" data-action="favorite" data-id="' +
+          item.id +
+          '" title="Favorite" aria-label="Favorite" aria-pressed="' +
+          (item.is_favorite ? "true" : "false") +
+          '">' +
+          ICON_STAR +
+          "</button>" +
           '<button type="button" class="btn btn--ghost btn--sm yt-playlist__delete" data-action="delete" data-id="' +
           item.id +
           '" title="Xóa">Xóa</button>' +
@@ -428,10 +573,16 @@
       })
       .join("");
 
-    Array.prototype.forEach.call(list.querySelectorAll(".yt-playlist__item"), function (li, index) {
-      bindItemDrag(li, index);
-    });
-    bindListDragReorder(list);
+    if (state.activeTab === TAB_ALL) {
+      Array.prototype.forEach.call(list.querySelectorAll(".yt-playlist__item"), function (li, index) {
+        bindItemDrag(li, index);
+      });
+      bindListDragReorder(list);
+    } else {
+      Array.prototype.forEach.call(list.querySelectorAll(".yt-playlist__drag"), function (handle) {
+        handle.setAttribute("hidden", "hidden");
+      });
+    }
   }
 
   function onPlayingChange(item, mediaPlaying) {
@@ -482,14 +633,186 @@
     return idx >= 0 ? state.items[idx] : item;
   }
 
+  function loadCategories() {
+    return fetchJSON(CATEGORIES_API).then(function (data) {
+      state.categories = (data && data.categories) || [];
+      var prefs = readPrefs();
+      var saved = prefs.activeCategoryTab;
+      if (saved && saved !== TAB_ALL) {
+        var exists = state.categories.some(function (c) {
+          return String(c.id) === String(saved);
+        });
+        state.activeTab = exists ? String(saved) : TAB_ALL;
+      } else if (saved === TAB_ALL) {
+        state.activeTab = TAB_ALL;
+      }
+      renderCategoryTabs();
+      updatePanelsVisibility();
+      return state.categories;
+    });
+  }
+
   function loadPlaylist() {
-    return fetchJSON(API_BASE).then(function (data) {
+    return fetchJSON(playlistQueryUrl()).then(function (data) {
       state.items = (data && data.items) || [];
       renderPlaylist();
       if (window.YoutubeDownloadPlayer) {
         window.YoutubeDownloadPlayer.setPlaylist(state.items);
       }
       return state.items;
+    });
+  }
+
+  function toggleFavorite(id) {
+    return fetchJSON(API_BASE + "/" + id + "/favorite", { method: "POST" }).then(function (item) {
+      if (!item) return null;
+      var fav = findFavoriteCategory();
+      var onFavTab = fav && String(state.activeTab) === String(fav.id);
+      if (onFavTab && !item.is_favorite) {
+        return loadPlaylist();
+      }
+      upsertItem(item);
+      renderPlaylist();
+      return item;
+    });
+  }
+
+  function createCategory(name) {
+    return fetchJSON(CATEGORIES_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name }),
+    }).then(function (cat) {
+      return loadCategories().then(function () {
+        if (cat && cat.id) {
+          return setActiveTab(String(cat.id));
+        }
+      });
+    });
+  }
+
+  function renameCategory(id, name) {
+    return fetchJSON(CATEGORIES_API + "/" + id, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name }),
+    }).then(function () {
+      return loadCategories();
+    });
+  }
+
+  function deleteCategory(id) {
+    return fetchJSON(CATEGORIES_API + "/" + id, { method: "DELETE" }).then(function () {
+      if (String(state.activeTab) === String(id)) {
+        state.activeTab = TAB_ALL;
+        savePrefs({ activeCategoryTab: TAB_ALL });
+      }
+      return loadCategories().then(function () {
+        return loadPlaylist();
+      });
+    });
+  }
+
+  function moveCategory(fromId, toIndexAmongOrdered) {
+    if (catReorderPending) return Promise.resolve();
+    var ordered = orderedCategoriesForTabs();
+    var fromIdx = -1;
+    for (var i = 0; i < ordered.length; i++) {
+      if (ordered[i].id === fromId) {
+        fromIdx = i;
+        break;
+      }
+    }
+    if (fromIdx < 0) return Promise.resolve();
+    var toIdx = toIndexAmongOrdered;
+    if (toIdx < 0) toIdx = 0;
+    if (toIdx >= ordered.length) toIdx = ordered.length - 1;
+    if (fromIdx === toIdx) return Promise.resolve();
+
+    var moved = ordered[fromIdx];
+    if (moved.is_system) return Promise.resolve();
+
+    catReorderPending = true;
+    return fetchJSON(CATEGORIES_API + "/" + fromId, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ position: toIdx }),
+    })
+      .then(function () {
+        return loadCategories();
+      })
+      .catch(function (err) {
+        setText($("youtubeAddError"), err.message || "Sắp xếp category thất bại", true);
+        return loadCategories();
+      })
+      .finally(function () {
+        catReorderPending = false;
+      });
+  }
+
+  function bindCategoryTabsDrag(wrap) {
+    if (!wrap || catTabsDragBound) return;
+    catTabsDragBound = true;
+
+    wrap.addEventListener("dragstart", function (e) {
+      var tab = e.target.closest(".yt-category-tabs__tab[data-cat-id]");
+      if (!tab || !wrap.contains(tab)) return;
+      catDragFromId = parseInt(tab.getAttribute("data-cat-id"), 10);
+      tab.classList.add("is-dragging");
+      e.dataTransfer.effectAllowed = "move";
+      try {
+        e.dataTransfer.setData("text/plain", String(catDragFromId));
+      } catch (err) {
+        /* ignore */
+      }
+    });
+
+    wrap.addEventListener("dragend", function () {
+      Array.prototype.forEach.call(wrap.querySelectorAll(".yt-category-tabs__tab"), function (el) {
+        el.classList.remove("is-dragging", "is-drag-over-before", "is-drag-over-after");
+      });
+      catDragFromId = null;
+      catDragOverId = null;
+    });
+
+    wrap.addEventListener("dragover", function (e) {
+      if (catDragFromId == null) return;
+      var tab = e.target.closest(".yt-category-tabs__tab[data-cat-id]");
+      if (!tab || !wrap.contains(tab)) return;
+      e.preventDefault();
+      var overId = parseInt(tab.getAttribute("data-cat-id"), 10);
+      if (!overId || overId === catDragFromId) return;
+      var rect = tab.getBoundingClientRect();
+      catDragInsertBefore = e.clientX < rect.left + rect.width / 2;
+      catDragOverId = overId;
+      Array.prototype.forEach.call(wrap.querySelectorAll(".yt-category-tabs__tab"), function (el) {
+        el.classList.remove("is-drag-over-before", "is-drag-over-after");
+      });
+      tab.classList.add(catDragInsertBefore ? "is-drag-over-before" : "is-drag-over-after");
+    });
+
+    wrap.addEventListener("drop", function (e) {
+      e.preventDefault();
+      if (catDragFromId == null || catDragOverId == null) return;
+      var ordered = orderedCategoriesForTabs();
+      var toIdx = -1;
+      for (var i = 0; i < ordered.length; i++) {
+        if (ordered[i].id === catDragOverId) {
+          toIdx = i;
+          break;
+        }
+      }
+      if (toIdx < 0) return;
+      if (!catDragInsertBefore) toIdx += 1;
+      var fromIdx = -1;
+      for (var j = 0; j < ordered.length; j++) {
+        if (ordered[j].id === catDragFromId) {
+          fromIdx = j;
+          break;
+        }
+      }
+      if (fromIdx >= 0 && toIdx > fromIdx) toIdx -= 1;
+      moveCategory(catDragFromId, toIdx);
     });
   }
 
@@ -554,20 +877,36 @@
       btn.textContent = "Đang thêm…";
     }
 
+    var body = { url: url };
+    var categoryId = addCategoryIdForRequest();
+    if (categoryId) body.category_id = categoryId;
+
+    var fav = findFavoriteCategory();
+    var onFavTab = fav && String(state.activeTab) === String(fav.id);
+
     return fetchJSON(API_BASE, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: url }),
+      body: JSON.stringify(body),
     })
       .then(function (data) {
         var item = data && data.item;
+        setText(statusEl, "Đã thêm vào playlist.", false);
+        if (onFavTab) {
+          return setActiveTab(TAB_ALL).then(function () {
+            if (item) return selectItem(item.id, data.formats || []);
+          });
+        }
         if (item) {
+          if (categoryId) {
+            return loadPlaylist().then(function () {
+              return selectItem(item.id, data.formats || []);
+            });
+          }
           upsertItem(item);
           renderPlaylist();
-          setText(statusEl, "Đã thêm vào playlist.", false);
           return selectItem(item.id, data.formats || []);
         }
-        setText(statusEl, "Đã thêm vào playlist.", false);
         return loadPlaylist();
       })
       .catch(function (err) {
@@ -714,6 +1053,61 @@
       });
     }
 
+    var addCatBtn = $("ytCategoryAddBtn");
+    if (addCatBtn) {
+      addCatBtn.addEventListener("click", function () {
+        var name = window.prompt("Tên category mới:");
+        if (name == null) return;
+        name = String(name).trim();
+        if (!name) return;
+        createCategory(name).catch(function (err) {
+          setText($("youtubeAddError"), err.message || "Tạo category thất bại", true);
+        });
+      });
+    }
+
+    var tabsList = $("ytCategoryTabsList");
+    if (tabsList) {
+      tabsList.addEventListener("click", function (e) {
+        var actionBtn = e.target.closest("[data-cat-action]");
+        if (actionBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          var catId = parseInt(actionBtn.getAttribute("data-id"), 10);
+          if (!catId) return;
+          var action = actionBtn.getAttribute("data-cat-action");
+          if (action === "rename") {
+            var current = state.categories.find(function (c) {
+              return c.id === catId;
+            });
+            var nextName = window.prompt("Đổi tên category:", current ? current.name : "");
+            if (nextName == null) return;
+            nextName = String(nextName).trim();
+            if (!nextName) return;
+            renameCategory(catId, nextName).catch(function (err) {
+              setText($("youtubeAddError"), err.message || "Đổi tên thất bại", true);
+            });
+            return;
+          }
+          if (action === "delete") {
+            if (!window.confirm("Xóa category này? Video vẫn còn trong All.")) return;
+            deleteCategory(catId).catch(function (err) {
+              setText($("youtubeAddError"), err.message || "Xóa category thất bại", true);
+            });
+            return;
+          }
+        }
+
+        var tabBtn = e.target.closest("[data-tab]");
+        if (!tabBtn || !tabsList.contains(tabBtn)) return;
+        var tab = tabBtn.getAttribute("data-tab");
+        if (!tab || String(tab) === String(state.activeTab)) return;
+        setActiveTab(tab).catch(function (err) {
+          setText($("youtubeAddError"), err.message || "Không tải được playlist", true);
+        });
+      });
+    }
+
     var list = $("ytPlaylist");
     if (list) {
       list.addEventListener("click", function (e) {
@@ -721,11 +1115,16 @@
         if (!btn) return;
         var id = parseInt(btn.getAttribute("data-id"), 10);
         if (!id) return;
-        if (btn.getAttribute("data-action") === "select") {
+        var action = btn.getAttribute("data-action");
+        if (action === "select") {
           selectItem(id);
-        } else if (btn.getAttribute("data-action") === "delete") {
+        } else if (action === "delete") {
           deleteItem(id).catch(function (err) {
             setText($("youtubeAddError"), err.message || "Xóa thất bại", true);
+          });
+        } else if (action === "favorite") {
+          toggleFavorite(id).catch(function (err) {
+            setText($("youtubeAddError"), err.message || "Favorite thất bại", true);
           });
         }
       });
@@ -736,6 +1135,9 @@
     var prefs = readPrefs();
     if (prefs.formatFilter === "all" || prefs.formatFilter === "muxed" || prefs.formatFilter === "audio" || prefs.formatFilter === "video") {
       state.formatFilter = prefs.formatFilter;
+    }
+    if (prefs.activeCategoryTab) {
+      state.activeTab = String(prefs.activeCategoryTab);
     }
   }
 
@@ -782,7 +1184,10 @@
       });
     }
     bindEvents();
-    loadPlaylist()
+    loadCategories()
+      .then(function () {
+        return loadPlaylist();
+      })
       .then(function () {
         return restoreSessionItems();
       })
