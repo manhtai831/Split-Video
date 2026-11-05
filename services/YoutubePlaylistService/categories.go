@@ -5,7 +5,6 @@ import (
 	"app/entities"
 	"app/structs"
 	"errors"
-	"fmt"
 	"strings"
 
 	"gorm.io/gorm"
@@ -262,13 +261,29 @@ func LinkItemToUserCategory(userID string, itemID, categoryID int) error {
 		return err
 	}
 	if cat.IsSystem {
-		return fmt.Errorf("không thể gắn vào category hệ thống khi thêm playlist")
+		return ErrCategorySystemProtected
 	}
 	item, err := GetByIDForUser(itemID, userID)
 	if err != nil {
 		return err
 	}
 	return linkItemToCategory(item.ID, cat.ID)
+}
+
+// UnlinkItemFromUserCategory removes item from a non-system category owned by user.
+func UnlinkItemFromUserCategory(userID string, itemID, categoryID int) error {
+	cat, err := GetCategoryForUser(categoryID, userID)
+	if err != nil {
+		return err
+	}
+	if cat.IsSystem {
+		return ErrCategorySystemProtected
+	}
+	item, err := GetByIDForUser(itemID, userID)
+	if err != nil {
+		return err
+	}
+	return unlinkItemFromCategory(item.ID, cat.ID)
 }
 
 func ToggleFavorite(userID string, itemID int) (entities.YoutubePlaylistItem, bool, error) {
@@ -319,6 +334,33 @@ func favoriteItemIDSet(userID string, itemIDs []int) (map[int]bool, error) {
 	return out, nil
 }
 
+// userCategoryIDsByItem returns non-system category IDs per item.
+func userCategoryIDsByItem(userID string, itemIDs []int) (map[int][]int, error) {
+	out := make(map[int][]int)
+	if len(itemIDs) == 0 {
+		return out, nil
+	}
+	type row struct {
+		ItemID     int
+		CategoryID int
+	}
+	var rows []row
+	err := Global.DB.
+		Table("youtube_playlist_item_categories AS ic").
+		Select("ic.item_id, ic.category_id").
+		Joins("INNER JOIN youtube_playlist_categories AS c ON c.id = ic.category_id").
+		Where("ic.item_id IN ? AND c.user_id = ? AND c.is_system = ?", itemIDs, userID, false).
+		Order("ic.category_id asc").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range rows {
+		out[r.ItemID] = append(out[r.ItemID], r.CategoryID)
+	}
+	return out, nil
+}
+
 func ToCategoryDto(cat entities.YoutubePlaylistCategory) structs.YoutubePlaylistCategoryDto {
 	key := ""
 	if cat.SystemKey != nil {
@@ -342,10 +384,19 @@ func ToItemDtos(userID string, items []entities.YoutubePlaylistItem) ([]structs.
 	if err != nil {
 		return nil, err
 	}
+	catIDs, err := userCategoryIDsByItem(userID, ids)
+	if err != nil {
+		return nil, err
+	}
 	dtos := make([]structs.YoutubePlaylistItemDto, 0, len(items))
 	for _, it := range items {
 		dto := ToItemDto(it)
 		dto.IsFavorite = favSet[it.ID]
+		if ids := catIDs[it.ID]; len(ids) > 0 {
+			dto.CategoryIDs = ids
+		} else {
+			dto.CategoryIDs = []int{}
+		}
 		dtos = append(dtos, dto)
 	}
 	return dtos, nil

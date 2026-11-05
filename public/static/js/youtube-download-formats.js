@@ -81,15 +81,23 @@
   }
 
   function setPreview(item) {
+    var row = $("ytFormatPreviewRow");
     var preview = $("ytFormatPreview");
+    var assignBtn = $("ytCategoryAssignBtn");
+    var assignMenu = $("ytCategoryAssignMenu");
     var thumb = $("ytFormatPreviewThumb");
     var title = $("ytFormatPreviewTitle");
     var sub = $("ytFormatPreviewSub");
     if (!preview) return;
     if (!item) {
-      preview.hidden = true;
+      if (row) row.hidden = true;
       preview.removeAttribute("data-url");
       preview.disabled = true;
+      if (assignBtn) {
+        assignBtn.hidden = true;
+        assignBtn.setAttribute("aria-expanded", "false");
+      }
+      if (assignMenu) assignMenu.hidden = true;
       if (thumb) {
         thumb.removeAttribute("src");
         thumb.hidden = true;
@@ -98,8 +106,9 @@
       if (sub) sub.textContent = "—";
       return;
     }
+    if (row) row.hidden = false;
+    if (assignBtn) assignBtn.hidden = false;
     var url = youtubeWatchUrl(item);
-    preview.hidden = false;
     preview.disabled = !url;
     if (url) preview.setAttribute("data-url", url);
     else preview.removeAttribute("data-url");

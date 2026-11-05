@@ -286,6 +286,41 @@ func handlePlaylistItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(parts) == 3 && parts[1] == "categories" {
+		categoryID, err := strconv.Atoi(parts[2])
+		if err != nil || categoryID < 1 {
+			http.Error(w, "category_id không hợp lệ", http.StatusBadRequest)
+			return
+		}
+		switch r.Method {
+		case http.MethodPost:
+			if err := YoutubePlaylistService.LinkItemToUserCategory(userID, id, categoryID); err != nil {
+				writeItemCategoryError(w, err)
+				return
+			}
+		case http.MethodDelete:
+			if err := YoutubePlaylistService.UnlinkItemFromUserCategory(userID, id, categoryID); err != nil {
+				writeItemCategoryError(w, err)
+				return
+			}
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		item, err := YoutubePlaylistService.GetByIDForUser(id, userID)
+		if err != nil {
+			writeNotFoundOrError(w, err)
+			return
+		}
+		dto, err := YoutubePlaylistService.ToItemDtoWithFavorite(userID, item)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, dto)
+		return
+	}
+
 	if len(parts) == 2 && parts[1] == "formats" {
 		if r.Method != http.MethodGet {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -351,6 +386,18 @@ func writeCategoryError(w http.ResponseWriter, err error) {
 	}
 	if errors.Is(err, YoutubePlaylistService.ErrCategorySystemProtected) ||
 		errors.Is(err, YoutubePlaylistService.ErrCategoryNameRequired) {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	http.Error(w, err.Error(), http.StatusInternalServerError)
+}
+
+func writeItemCategoryError(w http.ResponseWriter, err error) {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		http.Error(w, "Không tìm thấy mục hoặc category", http.StatusNotFound)
+		return
+	}
+	if errors.Is(err, YoutubePlaylistService.ErrCategorySystemProtected) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

@@ -67,13 +67,39 @@
       </header>
       <div id="ytFormatsBodyPanel" class="yt-formats-body" hidden>
         <p id="ytFormatsHint" class="field-hint" hidden>Chọn một mục trong playlist để xem danh sách format.</p>
-        <button type="button" id="ytFormatPreview" class="yt-format-preview" hidden title="Mở trên YouTube">
-          <img id="ytFormatPreviewThumb" class="yt-format-preview__thumb" alt="" hidden />
-          <div class="yt-format-preview__body">
-            <div id="ytFormatPreviewTitle" class="yt-format-preview__title">—</div>
-            <div id="ytFormatPreviewSub" class="yt-format-preview__sub">—</div>
+        <div id="ytFormatPreviewRow" class="yt-format-preview-row" hidden>
+          <button type="button" id="ytFormatPreview" class="yt-format-preview" title="Mở trên YouTube" disabled>
+            <img id="ytFormatPreviewThumb" class="yt-format-preview__thumb" alt="" hidden />
+            <div class="yt-format-preview__body">
+              <div id="ytFormatPreviewTitle" class="yt-format-preview__title">—</div>
+              <div id="ytFormatPreviewSub" class="yt-format-preview__sub">—</div>
+            </div>
+          </button>
+          <div class="yt-category-assign-wrap">
+            <button
+              type="button"
+              id="ytCategoryAssignBtn"
+              class="btn btn--icon btn--ghost btn--sm yt-category-assign-btn"
+              title="Thêm vào category"
+              aria-label="Thêm vào category"
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-controls="ytCategoryAssignMenu"
+              hidden
+            >
+              <svg class="btn__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+            </button>
+            <div id="ytCategoryAssignMenu" class="yt-category-assign" hidden role="menu" aria-label="Thêm vào category">
+              <div class="yt-category-assign__title">Thêm vào category</div>
+              <div id="ytCategoryAssignList" class="yt-category-assign__list"></div>
+              <button type="button" id="ytCategoryAssignCreate" class="yt-category-assign__create" role="menuitem">
+                + Tạo category mới…
+              </button>
+            </div>
           </div>
-        </button>
+        </div>
         <div id="ytFormatFilters" class="yt-format-filters" hidden>
           <button type="button" class="btn btn--sm btn--secondary yt-filter-btn is-active" data-filter="all">Tất cả</button>
           <button type="button" class="btn btn--sm btn--secondary yt-filter-btn" data-filter="muxed">Muxed</button>

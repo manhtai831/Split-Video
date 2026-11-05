@@ -42,17 +42,18 @@ type YoutubeProbeDto struct {
 }
 
 type YoutubePlaylistItemDto struct {
-	ID         int       `json:"id"`
-	YoutubeID  string    `json:"youtube_id"`
-	Title      string    `json:"title"`
-	Thumbnail  string    `json:"thumbnail"`
-	Duration   int       `json:"duration"`
-	Channel    string    `json:"channel"`
-	WebpageURL string    `json:"webpage_url"`
-	Position   int       `json:"position"`
-	IsFavorite bool      `json:"is_favorite"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID          int       `json:"id"`
+	YoutubeID   string    `json:"youtube_id"`
+	Title       string    `json:"title"`
+	Thumbnail   string    `json:"thumbnail"`
+	Duration    int       `json:"duration"`
+	Channel     string    `json:"channel"`
+	WebpageURL  string    `json:"webpage_url"`
+	Position    int       `json:"position"`
+	IsFavorite  bool      `json:"is_favorite"`
+	CategoryIDs []int     `json:"category_ids"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type YoutubePlaylistCategoryDto struct {

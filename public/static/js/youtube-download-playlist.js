@@ -29,6 +29,7 @@
   var catDragInsertBefore = true;
   var catTabsDragBound = false;
   var catReorderPending = false;
+  var assignMenuBound = false;
 
   var ICON_DRAG =
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
@@ -687,17 +688,210 @@
     });
   }
 
-  function createCategory(name) {
+  function createCategory(name, options) {
+    options = options || {};
     return fetchJSON(CATEGORIES_API, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: name }),
     }).then(function (cat) {
       return loadCategories().then(function () {
+        if (options.skipActivate) return cat;
         if (cat && cat.id) {
-          return setActiveTab(String(cat.id));
+          return setActiveTab(String(cat.id)).then(function () {
+            return cat;
+          });
         }
+        return cat;
       });
+    });
+  }
+
+  function userCategoriesForAssign() {
+    return (state.categories || []).filter(function (c) {
+      return c && !c.is_system;
+    });
+  }
+
+  function itemCategoryIds(item) {
+    if (!item || !Array.isArray(item.category_ids)) return [];
+    return item.category_ids;
+  }
+
+  function isCategoryAssignMenuOpen() {
+    var menu = $("ytCategoryAssignMenu");
+    return !!(menu && !menu.hidden);
+  }
+
+  function closeCategoryAssignMenu() {
+    var menu = $("ytCategoryAssignMenu");
+    var btn = $("ytCategoryAssignBtn");
+    if (menu) menu.hidden = true;
+    if (btn) btn.setAttribute("aria-expanded", "false");
+  }
+
+  function renderCategoryAssignMenu() {
+    var list = $("ytCategoryAssignList");
+    if (!list) return;
+    var item = getSelectedItem();
+    var cats = userCategoriesForAssign();
+    var ids = itemCategoryIds(item);
+    if (!cats.length) {
+      list.innerHTML = '<p class="yt-category-assign__empty">Chưa có category. Tạo mới bên dưới.</p>';
+      return;
+    }
+    list.innerHTML = cats
+      .map(function (cat) {
+        var checked = ids.indexOf(cat.id) >= 0;
+        return (
+          '<label class="yt-category-assign__item" role="menuitemcheckbox" aria-checked="' +
+          (checked ? "true" : "false") +
+          '">' +
+          '<input type="checkbox" data-category-id="' +
+          cat.id +
+          '"' +
+          (checked ? " checked" : "") +
+          " />" +
+          '<span class="yt-category-assign__item-label">' +
+          escapeHtml(cat.name) +
+          "</span>" +
+          "</label>"
+        );
+      })
+      .join("");
+  }
+
+  function openCategoryAssignMenu() {
+    var menu = $("ytCategoryAssignMenu");
+    var btn = $("ytCategoryAssignBtn");
+    if (!menu || !btn || btn.hidden) return;
+    if (!state.selectedId) return;
+    renderCategoryAssignMenu();
+    menu.hidden = false;
+    btn.setAttribute("aria-expanded", "true");
+  }
+
+  function toggleCategoryAssignMenu() {
+    if (isCategoryAssignMenuOpen()) {
+      closeCategoryAssignMenu();
+      return;
+    }
+    openCategoryAssignMenu();
+  }
+
+  function afterCategoryMembershipChange(item, categoryId, linked) {
+    if (!item) return Promise.resolve(null);
+    upsertItem(item);
+    if (!linked && String(state.activeTab) === String(categoryId)) {
+      var selectedId = state.selectedId;
+      return loadPlaylist().then(function () {
+        var stillThere = findItemById(selectedId);
+        if (!stillThere) {
+          closeCategoryAssignMenu();
+          state.selectedId = null;
+          state.formats = [];
+          state.selectedFormatId = null;
+          savePrefs({ selectedItemId: null });
+          updateFormatPreview(null);
+          if (window.YoutubeDownloadFormats) {
+            window.YoutubeDownloadFormats.reset();
+          }
+          updatePanelsVisibility();
+          return item;
+        }
+        if (isCategoryAssignMenuOpen()) renderCategoryAssignMenu();
+        return item;
+      });
+    }
+    renderPlaylist();
+    if (isCategoryAssignMenuOpen()) renderCategoryAssignMenu();
+    return Promise.resolve(item);
+  }
+
+  function linkItemCategory(itemId, categoryId) {
+    return fetchJSON(API_BASE + "/" + itemId + "/categories/" + categoryId, {
+      method: "POST",
+    }).then(function (item) {
+      return afterCategoryMembershipChange(item, categoryId, true);
+    });
+  }
+
+  function unlinkItemCategory(itemId, categoryId) {
+    return fetchJSON(API_BASE + "/" + itemId + "/categories/" + categoryId, {
+      method: "DELETE",
+    }).then(function (item) {
+      return afterCategoryMembershipChange(item, categoryId, false);
+    });
+  }
+
+  function createCategoryAndLinkSelected(name) {
+    var itemId = state.selectedId;
+    if (!itemId) return Promise.resolve(null);
+    return createCategory(name, { skipActivate: true }).then(function (cat) {
+      if (!cat || !cat.id) return null;
+      return linkItemCategory(itemId, cat.id);
+    });
+  }
+
+  function bindCategoryAssignMenu() {
+    if (assignMenuBound) return;
+    assignMenuBound = true;
+
+    var btn = $("ytCategoryAssignBtn");
+    if (btn) {
+      btn.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleCategoryAssignMenu();
+      });
+    }
+
+    var menu = $("ytCategoryAssignMenu");
+    if (menu) {
+      menu.addEventListener("click", function (e) {
+        e.stopPropagation();
+      });
+      menu.addEventListener("change", function (e) {
+        var input = e.target;
+        if (!input || input.type !== "checkbox") return;
+        var categoryId = parseInt(input.getAttribute("data-category-id"), 10);
+        var itemId = state.selectedId;
+        if (!categoryId || !itemId) return;
+        var wantLinked = !!input.checked;
+        var req = wantLinked ? linkItemCategory(itemId, categoryId) : unlinkItemCategory(itemId, categoryId);
+        req.catch(function (err) {
+          input.checked = !wantLinked;
+          setText($("youtubeAddError"), err.message || "Cập nhật category thất bại", true);
+        });
+      });
+    }
+
+    var createBtn = $("ytCategoryAssignCreate");
+    if (createBtn) {
+      createBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var name = window.prompt("Tên category mới:");
+        if (name == null) return;
+        name = String(name).trim();
+        if (!name) return;
+        createCategoryAndLinkSelected(name).catch(function (err) {
+          setText($("youtubeAddError"), err.message || "Tạo category thất bại", true);
+        });
+      });
+    }
+
+    document.addEventListener("click", function (e) {
+      if (!isCategoryAssignMenuOpen()) return;
+      var wrap = e.target.closest(".yt-category-assign-wrap");
+      if (wrap) return;
+      closeCategoryAssignMenu();
+    });
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && isCategoryAssignMenuOpen()) {
+        closeCategoryAssignMenu();
+      }
     });
   }
 
@@ -828,6 +1022,7 @@
 
   function selectItem(id, formatsFromAdd, options) {
     options = options || {};
+    closeCategoryAssignMenu();
     state.selectedId = id;
     state.selectedFormatId = null;
     savePrefs({ selectedItemId: id || null });
@@ -1195,6 +1390,7 @@
       });
     }
     bindEvents();
+    bindCategoryAssignMenu();
     loadCategories()
       .then(function () {
         return loadPlaylist();

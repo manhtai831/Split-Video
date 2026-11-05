@@ -1909,12 +1909,127 @@
   margin-bottom: 12px;
 }
 
+.yt-format-preview-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin: 0 0 12px;
+  min-width: 0;
+}
+
+.yt-format-preview-row[hidden] {
+  display: none;
+}
+
+.yt-category-assign-wrap {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 6px;
+}
+
+.yt-category-assign-btn[hidden] {
+  display: none;
+}
+
+.yt-category-assign {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 4px);
+  z-index: 50;
+  min-width: 200px;
+  max-width: min(280px, calc(100vw - 32px));
+  max-height: min(280px, 50vh);
+  overflow: auto;
+  padding: 8px 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.yt-category-assign[hidden] {
+  display: none;
+}
+
+.yt-category-assign__title {
+  padding: 4px 12px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.yt-category-assign__list {
+  display: flex;
+  flex-direction: column;
+}
+
+.yt-category-assign__empty {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.yt-category-assign__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.yt-category-assign__item:hover {
+  background: #f3f4f6;
+}
+
+.yt-category-assign__item input {
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.yt-category-assign__item-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.yt-category-assign__create {
+  display: block;
+  width: 100%;
+  margin: 4px 0 0;
+  padding: 8px 12px;
+  border: 0;
+  border-top: 1px solid var(--border);
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.yt-category-assign__create:hover {
+  background: #eef2ff;
+}
+
 .yt-format-preview {
   display: flex;
   align-items: center;
   gap: 12px;
-  width: 100%;
-  margin: 0 0 12px;
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  margin: 0;
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
