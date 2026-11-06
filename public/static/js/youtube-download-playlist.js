@@ -10,6 +10,7 @@
     items: [],
     categories: [],
     activeTab: TAB_ALL,
+    categoryTabsEditMode: false,
     selectedId: null,
     playingId: null,
     isMediaPlaying: false,
@@ -451,17 +452,36 @@
     return loadPlaylist();
   }
 
+  function syncCategoryTabsEditUi() {
+    var tabsRoot = $("ytCategoryTabs");
+    if (tabsRoot) {
+      tabsRoot.classList.toggle("is-edit-mode", !!state.categoryTabsEditMode);
+    }
+    var editSwitch = $("ytCategoryEditSwitch");
+    if (editSwitch) {
+      editSwitch.setAttribute("aria-checked", state.categoryTabsEditMode ? "true" : "false");
+    }
+  }
+
+  function setCategoryTabsEditMode(on) {
+    state.categoryTabsEditMode = !!on;
+    renderCategoryTabs();
+  }
+
   function renderCategoryTabs() {
     var wrap = $("ytCategoryTabsList");
     if (!wrap) return;
 
+    syncCategoryTabsEditUi();
+
+    var editMode = !!state.categoryTabsEditMode;
     var tabs = [{ key: TAB_ALL, label: "All", system: true, draggable: false }];
     orderedCategoriesForTabs().forEach(function (cat) {
       tabs.push({
         key: String(cat.id),
         label: cat.system_key === "favorite" ? "Favorite" : cat.name,
         system: !!cat.is_system,
-        draggable: !cat.is_system,
+        draggable: editMode && !cat.is_system,
         id: cat.id,
       });
     });
@@ -471,7 +491,7 @@
         var classes = "yt-category-tabs__tab";
         if (String(state.activeTab) === String(tab.key)) classes += " is-active";
         var menu = "";
-        if (!tab.system && tab.id) {
+        if (editMode && !tab.system && tab.id) {
           menu =
             '<span class="yt-category-tabs__menu">' +
             '<button type="button" class="btn btn--ghost btn--sm yt-category-tabs__icon-btn" data-cat-action="rename" data-id="' +
@@ -488,7 +508,7 @@
           '" role="presentation"' +
           (tab.draggable ? ' data-cat-id="' + tab.id + '" draggable="true"' : "") +
           ">" +
-          '<button type="button" class="btn btn--sm btn--secondary yt-category-tabs__btn" role="tab" data-tab="' +
+          '<button type="button" class="yt-category-tabs__btn" role="tab" data-tab="' +
           escapeHtml(String(tab.key)) +
           '" aria-selected="' +
           (String(state.activeTab) === String(tab.key) ? "true" : "false") +
@@ -959,6 +979,10 @@
     catTabsDragBound = true;
 
     wrap.addEventListener("dragstart", function (e) {
+      if (!state.categoryTabsEditMode) {
+        e.preventDefault();
+        return;
+      }
       var tab = e.target.closest(".yt-category-tabs__tab[data-cat-id]");
       if (!tab || !wrap.contains(tab)) return;
       catDragFromId = parseInt(tab.getAttribute("data-cat-id"), 10);
@@ -1268,6 +1292,19 @@
         createCategory(name).catch(function (err) {
           setText($("youtubeAddError"), err.message || "Tạo category thất bại", true);
         });
+      });
+    }
+
+    var editSwitch = $("ytCategoryEditSwitch");
+    if (editSwitch) {
+      editSwitch.addEventListener("click", function () {
+        setCategoryTabsEditMode(!state.categoryTabsEditMode);
+      });
+    }
+    var editLabel = $("ytCategoryEditLabel");
+    if (editLabel && editSwitch) {
+      editLabel.addEventListener("click", function () {
+        setCategoryTabsEditMode(!state.categoryTabsEditMode);
       });
     }
 
