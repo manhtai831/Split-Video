@@ -36,6 +36,9 @@ func CreateDraft(userID string, extrasJSON string, files []UploadedFile) (entiti
 	if err != nil {
 		return entities.Job{}, err
 	}
+	if err := validateAudioLayerUploadRefs(extras.Layers, files, nil); err != nil {
+		return entities.Job{}, err
+	}
 
 	job := entities.Job{
 		Identifier: uuid.New().String(),
@@ -55,6 +58,9 @@ func CreateDraft(userID string, extrasJSON string, files []UploadedFile) (entiti
 	}
 
 	extras.ResolveLayerFiles(job.Identifier, clientKeyToFileID)
+	if err := extras.ValidateResolvedAudioLayerFiles(); err != nil {
+		return entities.Job{}, err
+	}
 	extras.SanitizeLayersForStorage()
 	storedJSON, err := extras.ToJSON()
 	if err != nil {
@@ -83,6 +89,17 @@ func UpdateDraft(identifier, userID, extrasJSON string, files []UploadedFile) (e
 	if err != nil {
 		return entities.Job{}, err
 	}
+	existingFiles, err := JobFileDataService.GetJobFileDataByJobId(job.ID, enums.JobFileDataTypeInput)
+	if err != nil {
+		return entities.Job{}, err
+	}
+	existingFileIDs := make(map[int]bool, len(existingFiles))
+	for _, file := range existingFiles {
+		existingFileIDs[file.ID] = true
+	}
+	if err := validateAudioLayerUploadRefs(extras.Layers, files, existingFileIDs); err != nil {
+		return entities.Job{}, err
+	}
 
 	clientKeyToFileID, err := saveInputFiles(job.ID, files)
 	if err != nil {
@@ -90,6 +107,9 @@ func UpdateDraft(identifier, userID, extrasJSON string, files []UploadedFile) (e
 	}
 
 	extras.ResolveLayerFiles(job.Identifier, clientKeyToFileID)
+	if err := extras.ValidateResolvedAudioLayerFiles(); err != nil {
+		return entities.Job{}, err
+	}
 	extras.SanitizeLayersForStorage()
 	storedJSON, err := extras.ToJSON()
 	if err != nil {
@@ -320,6 +340,51 @@ func saveInputFiles(jobID int, files []UploadedFile) (map[string]int, error) {
 	}
 
 	return clientKeyToFileID, nil
+}
+
+func validateAudioLayerUploadRefs(
+	layers []map[string]interface{},
+	files []UploadedFile,
+	existingFileIDs map[int]bool,
+) error {
+	uploadedKeys := make(map[string]bool, len(files))
+	for _, file := range files {
+		uploadedKeys[file.ClientKey] = true
+	}
+
+	for i, layer := range layers {
+		kind, _ := layer["kind"].(string)
+		if kind != "audio" {
+			continue
+		}
+
+		clientKey, _ := layer["clientKey"].(string)
+		if clientKey != "" {
+			if !uploadedKeys[clientKey] {
+				return fmt.Errorf("invalid editor config: audio layer %d upload is missing", i)
+			}
+			continue
+		}
+
+		fileID := editorLayerFileID(layer["fileId"])
+		if existingFileIDs == nil || !existingFileIDs[fileID] {
+			return fmt.Errorf("invalid editor config: audio layer %d file is not part of this project", i)
+		}
+	}
+	return nil
+}
+
+func editorLayerFileID(raw interface{}) int {
+	switch value := raw.(type) {
+	case int:
+		return value
+	case int64:
+		return int(value)
+	case float64:
+		return int(value)
+	default:
+		return 0
+	}
 }
 
 func remapLayerFileIDs(extras *structs.EditorJobExtrasDto, oldToNew map[int]int, identifier string) {

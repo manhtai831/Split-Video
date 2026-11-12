@@ -109,3 +109,49 @@ func TestParseEditorLayer_arrowEnds(t *testing.T) {
 		t.Fatal("legacy arrow should not have HasArrowEnds")
 	}
 }
+
+func TestParseEditorLayer_audio(t *testing.T) {
+	layer, err := ParseEditorLayer(map[string]interface{}{
+		"id": "audio-1",
+		"kind": "audio",
+		"start": 2.0,
+		"end": 8.0,
+		"volume": 150.0,
+		"fileId": 4.0,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if layer.Volume != 150 || layer.Start != 2 || layer.End != 8 {
+		t.Fatalf("unexpected audio layer: %+v", layer)
+	}
+
+	defaultVolume, err := ParseEditorLayer(map[string]interface{}{
+		"id": "audio-2",
+		"kind": "audio",
+		"start": 0.0,
+		"end": 3.0,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error for default volume: %v", err)
+	}
+	if defaultVolume.Volume != 100 {
+		t.Fatalf("expected default volume 100, got %v", defaultVolume.Volume)
+	}
+}
+
+func TestParseEditorLayer_audioRejectsInvalidTimingAndVolume(t *testing.T) {
+	tests := []map[string]interface{}{
+		{"id": "bad-time", "kind": "audio", "start": -1.0, "end": 2.0},
+		{"id": "bad-range", "kind": "audio", "start": 2.0, "end": 2.0},
+		{"id": "bad-start-type", "kind": "audio", "start": "0", "end": 2.0},
+		{"id": "bad-volume-low", "kind": "audio", "start": 0.0, "end": 2.0, "volume": -1.0},
+		{"id": "bad-volume-type", "kind": "audio", "start": 0.0, "end": 2.0, "volume": "100"},
+		{"id": "bad-volume-high", "kind": "audio", "start": 0.0, "end": 2.0, "volume": 201.0},
+	}
+	for _, raw := range tests {
+		if _, err := ParseEditorLayer(raw); err == nil {
+			t.Errorf("expected invalid audio layer to fail: %#v", raw)
+		}
+	}
+}

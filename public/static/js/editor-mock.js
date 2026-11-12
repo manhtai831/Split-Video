@@ -88,6 +88,7 @@
     }
     if (layer.kind === "image") return "Ảnh";
     if (layer.kind === "video") return "Video";
+    if (layer.kind === "audio") return layer.name || "Audio";
     if (layer.kind === "shape") return "Shape";
     if (layer.kind === "draw") return "Vẽ";
     if (layer.kind === "blur") return "Blur";
@@ -100,6 +101,7 @@
       text: "text",
       image: "ảnh",
       video: "video",
+      audio: "audio",
       shape: "shape",
       draw: "vẽ",
       blur: "blur",
@@ -172,7 +174,6 @@
         applyReadOnlyUI();
       });
   }
-
   function nextClientKey() {
     clientKeyCounter += 1;
     return "ck-" + clientKeyCounter;
@@ -265,8 +266,14 @@
 
   function collectPendingFiles() {
     var files = [];
+    var pendingKeys = {};
+    state.layers.forEach(function (layer) {
+      if (layer && layer.clientKey && !layer.fileId) {
+        pendingKeys[layer.clientKey] = true;
+      }
+    });
     Object.keys(pendingFiles).forEach(function (key) {
-      if (pendingFiles[key]) {
+      if (pendingKeys[key] && pendingFiles[key]) {
         files.push({ clientKey: key, file: pendingFiles[key] });
       }
     });
@@ -578,7 +585,7 @@
     notify();
     window.EditorLayers.updateVisibilityForTime(state.currentTime);
     var layer = getSelectedLayer();
-    if (layer && !window.EditorLayers.isBoundLayer(layer)) {
+    if (layer && layer.kind !== "audio" && !window.EditorLayers.isBoundLayer(layer)) {
       window.EditorTransform.syncTransformBox(layer);
       syncToolbarDrawFromLayer(layer);
     } else {
@@ -628,7 +635,7 @@
       window.EditorLayers.updateSelection(id);
       renderProperties();
       var layer = getSelectedLayer();
-      if (layer && !window.EditorLayers.isBoundLayer(layer)) {
+      if (layer && layer.kind !== "audio" && !window.EditorLayers.isBoundLayer(layer)) {
         window.EditorTransform.syncTransformBox(layer);
         syncToolbarDrawFromLayer(layer);
       } else {
@@ -638,7 +645,7 @@
     }
     notify();
     var layer = getSelectedLayer();
-    if (layer && !window.EditorLayers.isBoundLayer(layer)) {
+    if (layer && layer.kind !== "audio" && !window.EditorLayers.isBoundLayer(layer)) {
       window.EditorTransform.syncTransformBox(layer);
       syncToolbarDrawFromLayer(layer);
     } else {
@@ -706,7 +713,7 @@
           changes.alwaysVisible !== undefined
         ) {
           window.EditorLayers.updateVisibilityForTime(state.currentTime);
-        } else {
+        } else if (merged.kind !== "audio") {
           window.EditorTransform.syncTransformBox(merged);
         }
       }
@@ -770,6 +777,21 @@
       assignPendingFile(layer, file);
       addLayer(layer);
     };
+  }
+
+  function addAudioLayerFromFile(file) {
+    var url = URL.createObjectURL(file);
+    trackBlobUrl(url);
+    var start = state.currentTime;
+    var duration = Math.max(0.1, getDuration() - start);
+    var layer = window.EditorLayers.defaultAudioLayer(
+      url,
+      start,
+      duration,
+      file.name
+    );
+    assignPendingFile(layer, file);
+    addLayer(layer);
   }
 
   function addLayer(layer) {
@@ -906,7 +928,10 @@
 
   function revokeLayerResources(layer) {
     if (!layer) return;
-    if ((layer.kind === "image" || layer.kind === "video") && layer.src) {
+    if (
+      (layer.kind === "image" || layer.kind === "video" || layer.kind === "audio") &&
+      layer.src
+    ) {
       try {
         URL.revokeObjectURL(layer.src);
       } catch (err) {
@@ -946,7 +971,7 @@
     window.EditorLayers.repatchShapeLayers();
     window.EditorLayers.repatchBlurLayers();
     var layer = getSelectedLayer();
-    if (layer && !window.EditorLayers.isBoundLayer(layer)) {
+    if (layer && layer.kind !== "audio" && !window.EditorLayers.isBoundLayer(layer)) {
       window.EditorTransform.syncTransformBox(layer);
     } else {
       window.EditorTransform.syncTransformBox(null);
@@ -1522,6 +1547,18 @@
       html += renderTimingFields(layer) + renderOffsetFields(layer);
     }
 
+    if (layer.kind === "audio") {
+      html +=
+        renderTimingFields(layer) +
+        '<div class="form-field"><label for="propAudioVolume">Âm lượng (%)</label>' +
+        '<input type="range" id="propAudioVolume" min="0" max="200" step="1" value="' +
+        (layer.volume != null ? layer.volume : 100) +
+        '" />' +
+        '<output id="propAudioVolumeValue">' +
+        (layer.volume != null ? layer.volume : 100) +
+        '%</output></div>';
+    }
+
     if (layer.kind === "video") {
       html +=
         '<div class="form-field form-field--checkbox">' +
@@ -1585,15 +1622,17 @@
         renderOffsetFields(layer);
     }
 
-    html +=
-      '<div class="form-field"><label for="propOpacity">Opacity</label>' +
-      '<input type="number" id="propOpacity" min="0" max="1" step="0.05" value="' +
-      (layer.opacity != null ? layer.opacity : 1) +
-      '" /></div>' +
-      '<div class="form-field"><label for="propRotation">Rotation (°)</label>' +
-      '<input type="number" id="propRotation" step="1" value="' +
-      Math.round(layer.rotation || 0) +
-      '" /></div>';
+    if (layer.kind !== "audio") {
+      html +=
+        '<div class="form-field"><label for="propOpacity">Opacity</label>' +
+        '<input type="number" id="propOpacity" min="0" max="1" step="0.05" value="' +
+        (layer.opacity != null ? layer.opacity : 1) +
+        '" /></div>' +
+        '<div class="form-field"><label for="propRotation">Rotation (°)</label>' +
+        '<input type="number" id="propRotation" step="1" value="' +
+        Math.round(layer.rotation || 0) +
+        '" /></div>';
+    }
 
     panel.innerHTML = html;
     bindPropertyInputs(layer.id);
@@ -1660,6 +1699,8 @@
     var propFillSwatches = $("propFillSwatches");
     var propStrokeWidth = $("propStrokeWidth");
     var propBlurAmount = $("propBlurAmount");
+    var audioVolume = $("propAudioVolume");
+    var audioVolumeValue = $("propAudioVolumeValue");
 
     if (text) {
       text.addEventListener("input", function () {
@@ -1839,6 +1880,14 @@
         updateLayer(layerId, { blurAmount: v }, { live: true });
       });
     }
+    if (audioVolume) {
+      audioVolume.addEventListener("input", function () {
+        var value = parseFloat(audioVolume.value);
+        if (!isFinite(value)) return;
+        if (audioVolumeValue) audioVolumeValue.textContent = value + "%";
+        updateLayer(layerId, { volume: value }, { live: true });
+      });
+    }
     if (opacity) {
       opacity.addEventListener("input", function () {
         var v = parseFloat(opacity.value);
@@ -1890,8 +1939,12 @@
           handlers.onImage(file);
           return;
         }
+        if (handlers.onAudio && file.type.indexOf("audio/") === 0) {
+          handlers.onAudio(file);
+          return;
+        }
       }
-      showToast("Chỉ hỗ trợ file video hoặc ảnh");
+      showToast("Chỉ hỗ trợ file video, ảnh hoặc audio");
     });
   }
 
@@ -1908,6 +1961,7 @@
         assignPendingFile(layer, file);
         addLayer(layer);
       },
+      onAudio: addAudioLayerFromFile,
     });
   }
 
@@ -1928,20 +1982,23 @@
 
     $("editorMediaInput").addEventListener("change", function () {
       var input = $("editorMediaInput");
-      if (!input.files || !input.files[0]) return;
-      var file = input.files[0];
-      if (file.type.indexOf("video/") === 0) {
-        addVideoLayerFromFile(file);
-      } else if (file.type.indexOf("image/") === 0) {
-        var url = URL.createObjectURL(file);
-        trackBlobUrl(url);
-        var t = state.currentTime;
-        var imgLayer = window.EditorLayers.defaultImageLayer(url, t, getDuration());
-        assignPendingFile(imgLayer, file);
-        addLayer(imgLayer);
-      } else {
-        showToast("Chỉ hỗ trợ file video hoặc ảnh");
-      }
+      if (!input.files || !input.files.length) return;
+      Array.prototype.forEach.call(input.files, function (file) {
+        if (file.type.indexOf("video/") === 0) {
+          addVideoLayerFromFile(file);
+        } else if (file.type.indexOf("image/") === 0) {
+          var url = URL.createObjectURL(file);
+          trackBlobUrl(url);
+          var t = state.currentTime;
+          var imgLayer = window.EditorLayers.defaultImageLayer(url, t, getDuration());
+          assignPendingFile(imgLayer, file);
+          addLayer(imgLayer);
+        } else if (file.type.indexOf("audio/") === 0) {
+          addAudioLayerFromFile(file);
+        } else {
+          showToast("Chỉ hỗ trợ file video, ảnh hoặc audio");
+        }
+      });
       input.value = "";
     });
 
@@ -2144,7 +2201,11 @@
         if (shouldIgnoreShortcut(e)) return;
         if (isDrawToolActive()) return;
         var moveLayer = getSelectedLayer();
-        if (!moveLayer || window.EditorLayers.isBoundLayer(moveLayer)) return;
+        if (
+          !moveLayer ||
+          moveLayer.kind === "audio" ||
+          window.EditorLayers.isBoundLayer(moveLayer)
+        ) return;
         var rect = window.EditorFrame.getFrameRect();
         if (!rect.width || !rect.height) return;
         e.preventDefault();

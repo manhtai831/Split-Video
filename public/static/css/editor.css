@@ -1263,6 +1263,11 @@ body.editor-active .main {
   border-color: #f97316;
 }
 
+.editor-caption-segment--audio {
+  background: rgba(20, 184, 166, 0.3);
+  border-color: #14b8a6;
+}
+
 .editor-caption-segment--shape {
   background: rgba(168, 85, 247, 0.3);
   border-color: #a855f7;
@@ -1288,6 +1293,10 @@ body.editor-active .main {
 
 .editor-caption-segment--selected.editor-caption-segment--video {
   background: rgba(249, 115, 22, 0.5);
+}
+
+.editor-caption-segment--selected.editor-caption-segment--audio {
+  background: rgba(20, 184, 166, 0.5);
 }
 
 .editor-caption-segment--selected.editor-caption-segment--shape {

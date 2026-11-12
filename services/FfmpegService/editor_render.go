@@ -83,8 +83,8 @@ func RenderEditorProject(ctx context.Context, opts EditorRenderOptions) (structs
 		return structs.SegmentResultDto{}, err
 	}
 
-	audioMix, hasAudio := buildAudioMixFilter(audioTracks)
-	if hasAudio && audioMix.filterExpr != "" {
+	audioMix, hasAudio := buildAudioMixFilter(audioTracks, duration)
+	if hasAudio {
 		filterParts = append(filterParts, audioMix.filterExpr)
 	}
 
@@ -159,6 +159,37 @@ func buildEditorFilterGraph(
 	step := 0
 
 	for _, layer := range layers {
+		if layer.Kind == "audio" {
+			path, ok := filePaths[layer.FileID]
+			if !ok || path == "" {
+				return nil, nil, "", nil, fmt.Errorf("missing input file for audio layer %s (fileId=%d)", layer.ID, layer.FileID)
+			}
+
+			trackStart := layerStart(layer)
+			trackEnd := layer.End
+			if layer.AlwaysVisible {
+				trackEnd = duration
+			}
+			if trackStart < 0 {
+				trackStart = 0
+			}
+			if trackEnd > duration {
+				trackEnd = duration
+			}
+			if trackStart >= duration || trackEnd <= trackStart {
+				continue
+			}
+
+			inputIndex := nextInputIndex
+			inputs = append(inputs, editorInput{args: []string{"-i", path}})
+			nextInputIndex++
+			aLabel := fmt.Sprintf("[lay_a_%d]", step)
+			filterParts = append(filterParts, buildEditorAudioLayerFilter(inputIndex, trackStart, trackEnd, layer.Volume, aLabel))
+			audioTracks = append(audioTracks, editorAudioTrack{label: aLabel})
+			step++
+			continue
+		}
+
 		enable := layer.EnableExpr(duration)
 		rect := layer.PixelRect(frameW, frameH)
 		opacity := layer.Opacity
@@ -329,19 +360,42 @@ func buildOverlayFilter(baseLabel, srcLabel string, rect structs.PixelRect, enab
 		baseLabel, srcLabel, rect.X, rect.Y, enable, outLabel)
 }
 
-func buildAudioMixFilter(tracks []editorAudioTrack) (audioMixResult, bool) {
+func buildEditorAudioLayerFilter(inputIndex int, start, end, volume float64, outLabel string) string {
+	delayMs := int(math.Round(start * 1000))
+	return fmt.Sprintf(
+		"[%d:a]atrim=duration=%s,asetpts=PTS-STARTPTS,volume=%s,adelay=%d|%d%s",
+		inputIndex,
+		formatSeconds(end-start),
+		formatSeconds(volume/100),
+		delayMs,
+		delayMs,
+		outLabel,
+	)
+}
+
+func buildAudioMixFilter(tracks []editorAudioTrack, duration float64) (audioMixResult, bool) {
 	if len(tracks) == 0 {
 		return audioMixResult{}, false
 	}
-	if len(tracks) == 1 {
-		return audioMixResult{mapLabel: tracks[0].label}, true
+	filterExpr := ""
+	mixLabel := tracks[0].label
+	if len(tracks) > 1 {
+		inputs := strings.Builder{}
+		for _, track := range tracks {
+			inputs.WriteString(track.label)
+		}
+		mixLabel = "[mixed]"
+		filterExpr = fmt.Sprintf(
+			"%samix=inputs=%d:duration=longest:dropout_transition=0%s;",
+			inputs.String(),
+			len(tracks),
+			mixLabel,
+		)
 	}
-	inputs := strings.Builder{}
-	for _, track := range tracks {
-		inputs.WriteString(track.label)
-	}
+
+	filterExpr += fmt.Sprintf("%satrim=duration=%s,asetpts=PTS-STARTPTS[outa]", mixLabel, formatSeconds(duration))
 	return audioMixResult{
-		filterExpr: fmt.Sprintf("%samix=inputs=%d:duration=longest:dropout_transition=0[outa]", inputs.String(), len(tracks)),
+		filterExpr: filterExpr,
 		mapLabel:   "[outa]",
 	}, true
 }

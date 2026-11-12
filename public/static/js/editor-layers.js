@@ -202,6 +202,29 @@
     );
   }
 
+  function defaultAudioLayer(src, currentTime, duration, name) {
+    var timing = defaultTiming(currentTime, duration);
+    timing.end = timing.start + duration;
+    return Object.assign(
+      {
+        id: nextId(),
+        kind: "audio",
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+        rotation: 0,
+        opacity: 1,
+        zIndex: 1,
+        visible: true,
+        src: src,
+        name: name || "Audio",
+        volume: 100,
+      },
+      timing
+    );
+  }
+
   function layerLabel(layer) {
     if (layer.kind === "bound") return "Frame bound";
     if (layer.kind === "text") {
@@ -210,6 +233,7 @@
     }
     if (layer.kind === "image") return "Image";
     if (layer.kind === "video") return "Video";
+    if (layer.kind === "audio") return layer.name || "Audio";
     if (layer.kind === "shape") return "Shape (" + (layer.shape || "rect") + ")";
     if (layer.kind === "draw") return "Drawing";
     if (layer.kind === "blur") return "Blur";
@@ -515,6 +539,7 @@
       return (a.zIndex || 0) - (b.zIndex || 0);
     });
     sorted.forEach(function (layer) {
+      if (layer.kind === "audio") return;
       overlayEl.appendChild(renderLayerEl(layer));
     });
 
@@ -542,7 +567,12 @@
     var selected = state.layers.find(function (l) {
       return l.id === state.selectedId;
     });
-    if (selected && layerFrameVisible(selected) && !isBoundLayer(selected)) {
+    if (
+      selected &&
+      selected.kind !== "audio" &&
+      layerFrameVisible(selected) &&
+      !isBoundLayer(selected)
+    ) {
       window.EditorTransform.syncTransformBox(selected);
     } else {
       window.EditorTransform.syncTransformBox(null);
@@ -884,6 +914,7 @@
     defaultTextLayer: defaultTextLayer,
     defaultImageLayer: defaultImageLayer,
     defaultVideoLayer: defaultVideoLayer,
+    defaultAudioLayer: defaultAudioLayer,
     isBoundLayer: isBoundLayer,
     BOUND_LAYER_ID: BOUND_LAYER_ID,
     repatchShapeLayers: repatchShapeLayers,

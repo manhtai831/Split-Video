@@ -52,3 +52,26 @@ func TestEditorJobExtrasSanitizeAndResolve(t *testing.T) {
 		t.Fatal("src should be removed")
 	}
 }
+
+func TestEditorJobExtrasAudioLayerUploadReference(t *testing.T) {
+	raw := `{"frame":{"width":1280,"height":720},"framePreset":"16:9","duration":12,"layers":[{"id":"audio-1","kind":"audio","start":1,"end":8,"volume":125,"clientKey":"ck-audio"}]}`
+	dto, err := ParseEditorJobExtrasJSON(raw)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	dto.ResolveLayerFiles("job-1", map[string]int{"ck-audio": 42})
+	if err := dto.ValidateResolvedAudioLayerFiles(); err != nil {
+		t.Fatalf("unexpected validation error: %v", err)
+	}
+	if dto.Layers[0]["fileId"] != 42 {
+		t.Fatalf("expected fileId 42, got %v", dto.Layers[0]["fileId"])
+	}
+}
+
+func TestParseEditorJobExtrasJSONRejectsAudioWithoutFileReference(t *testing.T) {
+	raw := `{"frame":{"width":1280,"height":720},"framePreset":"16:9","duration":12,"layers":[{"id":"audio-1","kind":"audio","start":1,"end":8}]}`
+	if _, err := ParseEditorJobExtrasJSON(raw); err == nil {
+		t.Fatal("expected audio layer without file reference to fail")
+	}
+}

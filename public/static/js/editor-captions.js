@@ -32,6 +32,7 @@
     }
     if (layer.kind === "image") return "Image";
     if (layer.kind === "video") return "Video";
+    if (layer.kind === "audio") return layer.name || "Audio";
     if (layer.kind === "shape") return "Shape";
     if (layer.kind === "draw") return "Draw";
     if (layer.kind === "blur") return "Blur";

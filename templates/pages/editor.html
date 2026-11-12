@@ -167,7 +167,7 @@
           <polyline points="7 3 7 8 15 8"/>
         </svg>
       </button>
-      <input id="editorMediaInput" type="file" accept="image/*,video/*" hidden aria-hidden="true" tabindex="-1" />
+      <input id="editorMediaInput" type="file" accept="image/*,video/*,audio/*" multiple hidden aria-hidden="true" tabindex="-1" />
       <div class="editor-toolbar__playback">
         <button type="button" id="editorPlayPause" class="btn btn--ghost btn--sm" title="Play" aria-pressed="false">▶ Play</button>
         <span id="editorTimeDisplay" class="editor-time-display">0:00 / 0:00</span>
@@ -179,7 +179,7 @@
         <div class="editor-panel__layers-section">
           <h3 class="editor-panel__title">Layers</h3>
           <ul id="editorLayersList" class="editor-layers-list" role="list"></ul>
-          <p id="editorLayersEmpty" class="editor-panel__empty">Thêm ảnh, video, text hoặc kéo thả vào khung.</p>
+          <p id="editorLayersEmpty" class="editor-panel__empty">Thêm ảnh, video, audio, text hoặc kéo thả vào khung.</p>
         </div>
         <div class="editor-panel__history-section">
           <h3 class="editor-panel__title editor-panel__title--history">History</h3>
@@ -188,7 +188,7 @@
       </aside>
 
       <div class="editor-preview-wrap">
-        <div id="editorFrame" class="editor-frame editor-drop-zone" title="Kéo thả ảnh hoặc video vào khung canvas">
+        <div id="editorFrame" class="editor-frame editor-drop-zone" title="Kéo thả ảnh/video vào canvas hoặc audio để thêm layer">
           <div id="editorOverlay" class="editor-frame__overlay"></div>
           <svg id="editorDrawPreview" class="editor-draw-preview" hidden></svg>
           <div id="editorBlurPreview" class="editor-draw-preview editor-draw-preview--blur" hidden></div>

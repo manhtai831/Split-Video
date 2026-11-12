@@ -47,6 +47,7 @@ type EditorLayerDto struct {
 	BlurAmount    float64
 	Muted         bool
 	Loop          bool
+	Volume        float64
 }
 
 type PixelRect struct {
@@ -87,6 +88,7 @@ func ParseEditorLayer(raw map[string]interface{}) (EditorLayerDto, error) {
 		BlurAmount:    floatFieldDefault(raw, "blurAmount", 12),
 		Muted:         boolFieldDefault(raw, "muted", true),
 		Loop:          boolField(raw, "loop"),
+		Volume:        100,
 	}
 
 	if _, ok := raw["x1"]; ok {
@@ -105,6 +107,29 @@ func ParseEditorLayer(raw map[string]interface{}) (EditorLayerDto, error) {
 
 	if layer.Kind == "" {
 		return EditorLayerDto{}, fmt.Errorf("layer kind is required")
+	}
+	if layer.Kind == "audio" {
+		var ok bool
+		layer.Start, ok = numericField(raw, "start")
+		if !ok {
+			return EditorLayerDto{}, fmt.Errorf("invalid editor config: audio layer start must be numeric")
+		}
+		layer.End, ok = numericField(raw, "end")
+		if !ok {
+			return EditorLayerDto{}, fmt.Errorf("invalid editor config: audio layer end must be numeric")
+		}
+		if rawVolume, exists := raw["volume"]; exists {
+			layer.Volume, ok = numericFieldValue(rawVolume)
+			if !ok {
+				return EditorLayerDto{}, fmt.Errorf("invalid editor config: audio layer volume must be numeric")
+			}
+		}
+		if layer.Start < 0 || layer.End <= layer.Start {
+			return EditorLayerDto{}, fmt.Errorf("invalid editor config: audio layer start/end must be valid")
+		}
+		if layer.Volume < 0 || layer.Volume > 200 {
+			return EditorLayerDto{}, fmt.Errorf("invalid editor config: audio layer volume must be between 0 and 200")
+		}
 	}
 
 	return layer, nil
@@ -248,6 +273,29 @@ func floatFieldDefault(m map[string]interface{}, key string, fallback float64) f
 		return fallback
 	}
 	return floatFromInterface(v)
+}
+
+func numericField(m map[string]interface{}, key string) (float64, bool) {
+	value, ok := m[key]
+	if !ok {
+		return 0, false
+	}
+	return numericFieldValue(value)
+}
+
+func numericFieldValue(value interface{}) (float64, bool) {
+	switch n := value.(type) {
+	case float64:
+		return n, true
+	case float32:
+		return float64(n), true
+	case int:
+		return float64(n), true
+	case int64:
+		return float64(n), true
+	default:
+		return 0, false
+	}
 }
 
 func intField(m map[string]interface{}, key string) int {

@@ -52,6 +52,17 @@ func ParseEditorJobExtrasJSON(raw string) (EditorJobExtrasDto, error) {
 	if dto.Layers == nil {
 		dto.Layers = []map[string]interface{}{}
 	}
+	for i, rawLayer := range dto.Layers {
+		if stringField(rawLayer, "kind") != "audio" {
+			continue
+		}
+		if _, err := ParseEditorLayer(rawLayer); err != nil {
+			return EditorJobExtrasDto{}, fmt.Errorf("layer %d: %w", i, err)
+		}
+		if intField(rawLayer, "fileId") < 1 && stringField(rawLayer, "clientKey") == "" {
+			return EditorJobExtrasDto{}, fmt.Errorf("invalid editor config: audio layer file is required")
+		}
+	}
 
 	return dto, nil
 }
@@ -72,6 +83,15 @@ func (d *EditorJobExtrasDto) SanitizeLayersForStorage() {
 		delete(layer, "clientKey")
 		d.Layers[i] = layer
 	}
+}
+
+func (d EditorJobExtrasDto) ValidateResolvedAudioLayerFiles() error {
+	for i, layer := range d.Layers {
+		if stringField(layer, "kind") == "audio" && intField(layer, "fileId") < 1 {
+			return fmt.Errorf("invalid editor config: audio layer %d file upload is missing", i)
+		}
+	}
+	return nil
 }
 
 func (d *EditorJobExtrasDto) ResolveLayerFiles(identifier string, clientKeyToFileID map[string]int) {
