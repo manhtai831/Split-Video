@@ -53,6 +53,14 @@ func TestBuildEditorAudioLayerFilter(t *testing.T) {
 	}
 }
 
+func TestBuildSubtitleFilterEscapesPathAndChainsVideo(t *testing.T) {
+	got := buildSubtitleFilter("[video]", "uploads/cap:tions, one[2].srt", "[subtitled]")
+	want := "[video]subtitles=filename=uploads/cap\\:tions\\, one\\[2\\].srt:charenc=UTF-8[subtitled]"
+	if got != want {
+		t.Fatalf("unexpected subtitle filter:\n got:  %s\n want: %s", got, want)
+	}
+}
+
 func TestBuildEditorFilterGraph_audioLayer(t *testing.T) {
 	inputs, filters, _, tracks, err := buildEditorFilterGraph(
 		context.Background(),
@@ -87,21 +95,21 @@ func TestBuildEditorFilterGraph_audioLayer(t *testing.T) {
 
 func TestBuildAudioMixFilter(t *testing.T) {
 	tests := []struct {
-		name        string
-		tracks      []editorAudioTrack
-		wantFilter  string
+		name         string
+		tracks       []editorAudioTrack
+		wantFilter   string
 		wantMapLabel string
 	}{
 		{
-			name:        "single track",
-			tracks:      []editorAudioTrack{{label: "[a1]"}},
-			wantFilter:  "[a1]atrim=duration=12.000,asetpts=PTS-STARTPTS[outa]",
+			name:         "single track",
+			tracks:       []editorAudioTrack{{label: "[a1]"}},
+			wantFilter:   "[a1]atrim=duration=12.000,asetpts=PTS-STARTPTS[outa]",
 			wantMapLabel: "[outa]",
 		},
 		{
-			name:        "overlapping tracks",
-			tracks:      []editorAudioTrack{{label: "[a1]"}, {label: "[a2]"}},
-			wantFilter:  "[a1][a2]amix=inputs=2:duration=longest:dropout_transition=0[mixed];[mixed]atrim=duration=12.000,asetpts=PTS-STARTPTS[outa]",
+			name:         "overlapping tracks",
+			tracks:       []editorAudioTrack{{label: "[a1]"}, {label: "[a2]"}},
+			wantFilter:   "[a1][a2]amix=inputs=2:duration=longest:dropout_transition=0[mixed];[mixed]atrim=duration=12.000,asetpts=PTS-STARTPTS[outa]",
 			wantMapLabel: "[outa]",
 		},
 	}

@@ -26,9 +26,9 @@ type UploadedFile struct {
 }
 
 var (
-	ErrJobNotFound      = errors.New("job not found")
-	ErrInvalidStatus    = errors.New("invalid job status for this operation")
-	ErrNotEditorJob     = errors.New("not an editor job")
+	ErrJobNotFound   = errors.New("job not found")
+	ErrInvalidStatus = errors.New("invalid job status for this operation")
+	ErrNotEditorJob  = errors.New("not an editor job")
 )
 
 func CreateDraft(userID string, extrasJSON string, files []UploadedFile) (entities.Job, error) {
@@ -37,6 +37,9 @@ func CreateDraft(userID string, extrasJSON string, files []UploadedFile) (entiti
 		return entities.Job{}, err
 	}
 	if err := validateAudioLayerUploadRefs(extras.Layers, files, nil); err != nil {
+		return entities.Job{}, err
+	}
+	if err := validateSubtitleTrackRefs(extras.Subtitles, files, nil); err != nil {
 		return entities.Job{}, err
 	}
 
@@ -58,10 +61,15 @@ func CreateDraft(userID string, extrasJSON string, files []UploadedFile) (entiti
 	}
 
 	extras.ResolveLayerFiles(job.Identifier, clientKeyToFileID)
+	extras.ResolveSubtitleFiles(job.Identifier, clientKeyToFileID)
 	if err := extras.ValidateResolvedAudioLayerFiles(); err != nil {
 		return entities.Job{}, err
 	}
+	if err := extras.ValidateResolvedSubtitleFiles(); err != nil {
+		return entities.Job{}, err
+	}
 	extras.SanitizeLayersForStorage()
+	extras.SanitizeSubtitlesForStorage()
 	storedJSON, err := extras.ToJSON()
 	if err != nil {
 		return entities.Job{}, err
@@ -94,10 +102,15 @@ func UpdateDraft(identifier, userID, extrasJSON string, files []UploadedFile) (e
 		return entities.Job{}, err
 	}
 	existingFileIDs := make(map[int]bool, len(existingFiles))
+	existingFilesByID := make(map[int]entities.JobFileData, len(existingFiles))
 	for _, file := range existingFiles {
 		existingFileIDs[file.ID] = true
+		existingFilesByID[file.ID] = file
 	}
 	if err := validateAudioLayerUploadRefs(extras.Layers, files, existingFileIDs); err != nil {
+		return entities.Job{}, err
+	}
+	if err := validateSubtitleTrackRefs(extras.Subtitles, files, existingFilesByID); err != nil {
 		return entities.Job{}, err
 	}
 
@@ -107,10 +120,15 @@ func UpdateDraft(identifier, userID, extrasJSON string, files []UploadedFile) (e
 	}
 
 	extras.ResolveLayerFiles(job.Identifier, clientKeyToFileID)
+	extras.ResolveSubtitleFiles(job.Identifier, clientKeyToFileID)
 	if err := extras.ValidateResolvedAudioLayerFiles(); err != nil {
 		return entities.Job{}, err
 	}
+	if err := extras.ValidateResolvedSubtitleFiles(); err != nil {
+		return entities.Job{}, err
+	}
 	extras.SanitizeLayersForStorage()
+	extras.SanitizeSubtitlesForStorage()
 	storedJSON, err := extras.ToJSON()
 	if err != nil {
 		return entities.Job{}, err
@@ -162,6 +180,7 @@ func GetEditorJob(identifier, userID string) (structs.EditorJobResponseDto, erro
 		FramePreset: extras.FramePreset,
 		Duration:    extras.Duration,
 		Layers:      extras.Layers,
+		Subtitles:   extras.Subtitles,
 		Files:       files,
 	}, nil
 }
@@ -218,7 +237,9 @@ func DuplicateJob(identifier, userID string) (entities.Job, error) {
 		}
 	}
 	remapLayerFileIDs(&extras, oldToNew, newJob.Identifier)
+	remapSubtitleFileIDs(&extras, oldToNew, newJob.Identifier)
 	extras.SanitizeLayersForStorage()
+	extras.SanitizeSubtitlesForStorage()
 	storedJSON, err := extras.ToJSON()
 	if err != nil {
 		return entities.Job{}, err
@@ -374,6 +395,45 @@ func validateAudioLayerUploadRefs(
 	return nil
 }
 
+func validateSubtitleTrackRefs(
+	subtitles []structs.EditorSubtitleDto,
+	files []UploadedFile,
+	existingFiles map[int]entities.JobFileData,
+) error {
+	uploadedFiles := make(map[string]UploadedFile, len(files))
+	for _, file := range files {
+		uploadedFiles[file.ClientKey] = file
+	}
+
+	for i, subtitle := range subtitles {
+		if subtitle.ClientKey != "" {
+			file, ok := uploadedFiles[subtitle.ClientKey]
+			if !ok {
+				return fmt.Errorf("invalid editor config: subtitle track %d upload is missing", i)
+			}
+			if !structs.IsSupportedSubtitleName(file.Name) {
+				return fmt.Errorf("invalid editor config: subtitle track %d must be an SRT or VTT file", i)
+			}
+			if err := FfmpegService.ValidateSubtitleFile(file.Path); err != nil {
+				return fmt.Errorf("invalid editor config: subtitle track %d: %w", i, err)
+			}
+			continue
+		}
+
+		file, ok := existingFiles[subtitle.FileID]
+		if !ok {
+			return fmt.Errorf("invalid editor config: subtitle track %d file is not part of this project", i)
+		}
+		if !structs.IsSupportedSubtitleName(file.Name) {
+			return fmt.Errorf("invalid editor config: subtitle track %d must be an SRT or VTT file", i)
+		}
+		if err := FfmpegService.ValidateSubtitleFile(file.Path); err != nil {
+			return fmt.Errorf("invalid editor config: subtitle track %d: %w", i, err)
+		}
+	}
+	return nil
+}
+
 func editorLayerFileID(raw interface{}) int {
 	switch value := raw.(type) {
 	case int:
@@ -402,6 +462,16 @@ func remapLayerFileIDs(extras *structs.EditorJobExtrasDto, oldToNew map[int]int,
 				layer["mediaUrl"] = fmt.Sprintf("/api/jobs/%s/files/%d/download", identifier, newID)
 			}
 		}
+
 		extras.Layers[i] = layer
+	}
+}
+
+func remapSubtitleFileIDs(extras *structs.EditorJobExtrasDto, oldToNew map[int]int, identifier string) {
+	for i := range extras.Subtitles {
+		if newID, ok := oldToNew[extras.Subtitles[i].FileID]; ok {
+			extras.Subtitles[i].FileID = newID
+			extras.Subtitles[i].MediaURL = fmt.Sprintf("/api/jobs/%s/files/%d/download", identifier, newID)
+		}
 	}
 }

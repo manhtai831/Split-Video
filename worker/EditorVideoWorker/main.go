@@ -45,6 +45,18 @@ func Process(job entities.Job, ctx context.Context) error {
 		filePaths[f.ID] = f.Path
 	}
 
+	subtitlePaths := make([]string, 0, len(extras.Subtitles))
+	for i, subtitle := range extras.Subtitles {
+		path, ok := filePaths[subtitle.FileID]
+		if !ok || path == "" {
+			return fmt.Errorf("[EditorVideoWorker] missing input file for subtitle track %d (fileId=%d)", i, subtitle.FileID)
+		}
+		if err := FfmpegService.ValidateSubtitleFile(path); err != nil {
+			return fmt.Errorf("[EditorVideoWorker] invalid subtitle track %d: %w", i, err)
+		}
+		subtitlePaths = append(subtitlePaths, path)
+	}
+
 	layers, err := structs.ParseEditorLayers(extras.Layers)
 	if err != nil {
 		return fmt.Errorf("[EditorVideoWorker] parse layers: %w", err)
@@ -107,13 +119,14 @@ func Process(job entities.Job, ctx context.Context) error {
 	outputPath := filepath.Join(outputDir, fileName)
 
 	result, err := FfmpegService.RenderEditorProject(ctx, FfmpegService.EditorRenderOptions{
-		Extras:      extras,
-		Layers:      sortedLayers,
-		FilePaths:   filePaths,
-		RasterPaths: rasterPaths,
-		OutputPath:  outputPath,
-		TempDir:     tempDir,
-		Encode:      extras.Encode,
+		Extras:        extras,
+		Layers:        sortedLayers,
+		FilePaths:     filePaths,
+		RasterPaths:   rasterPaths,
+		SubtitlePaths: subtitlePaths,
+		OutputPath:    outputPath,
+		TempDir:       tempDir,
+		Encode:        extras.Encode,
 		OnProgress: func(p float64) {
 			onProgress(0.2 + p*0.8)
 		},

@@ -168,6 +168,7 @@
         </svg>
       </button>
       <input id="editorMediaInput" type="file" accept="image/*,video/*,audio/*" multiple hidden aria-hidden="true" tabindex="-1" />
+      <input id="editorSubtitleInput" type="file" accept=".srt,.vtt,application/x-subrip,text/vtt" multiple hidden aria-hidden="true" tabindex="-1" />
       <div class="editor-toolbar__playback">
         <button type="button" id="editorPlayPause" class="btn btn--ghost btn--sm" title="Play" aria-pressed="false">▶ Play</button>
         <span id="editorTimeDisplay" class="editor-time-display">0:00 / 0:00</span>
@@ -180,6 +181,14 @@
           <h3 class="editor-panel__title">Layers</h3>
           <ul id="editorLayersList" class="editor-layers-list" role="list"></ul>
           <p id="editorLayersEmpty" class="editor-panel__empty">Thêm ảnh, video, audio, text hoặc kéo thả vào khung.</p>
+        </div>
+        <div class="editor-panel__subtitles-section">
+          <div class="editor-subtitles-heading">
+            <h3 class="editor-panel__title">Phụ đề</h3>
+            <button type="button" id="editorAddSubtitle" class="btn btn--secondary btn--sm">+ Nhập SRT/VTT</button>
+          </div>
+          <ul id="editorSubtitlesList" class="editor-subtitles-list" role="list"></ul>
+          <p id="editorSubtitlesEmpty" class="editor-panel__empty">Chưa có track phụ đề.</p>
         </div>
         <div class="editor-panel__history-section">
           <h3 class="editor-panel__title editor-panel__title--history">History</h3>

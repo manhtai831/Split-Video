@@ -8,12 +8,13 @@ type EditorInputFileDto struct {
 }
 
 type EditorJobResponseDto struct {
-	Identifier  string               `json:"identifier"`
-	Status      string               `json:"status"`
-	Name        string               `json:"name,omitempty"`
-	Frame       EditorFrameDto       `json:"frame"`
-	FramePreset string               `json:"framePreset"`
-	Duration    float64              `json:"duration"`
+	Identifier  string                   `json:"identifier"`
+	Status      string                   `json:"status"`
+	Name        string                   `json:"name,omitempty"`
+	Frame       EditorFrameDto           `json:"frame"`
+	FramePreset string                   `json:"framePreset"`
+	Duration    float64                  `json:"duration"`
 	Layers      []map[string]interface{} `json:"layers"`
-	Files       []EditorInputFileDto `json:"files"`
+	Subtitles   []EditorSubtitleDto      `json:"subtitles,omitempty"`
+	Files       []EditorInputFileDto     `json:"files"`
 }

@@ -533,6 +533,69 @@ body.editor-active .main {
   padding: 12px;
 }
 
+.editor-panel__subtitles-section {
+  padding: 12px;
+  border-top: 1px solid #334155;
+}
+
+.editor-subtitles-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.editor-subtitles-heading .editor-panel__title {
+  margin: 0;
+}
+
+.editor-subtitles-list {
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+}
+
+.editor-subtitle-track {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #cbd5e1;
+  font-size: 12px;
+}
+
+.editor-subtitle-track__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-subtitle-track__remove {
+  flex: 0 0 auto;
+  border: 0;
+  padding: 0 4px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.editor-subtitle-track__remove:hover {
+  color: #f87171;
+}
+
+.editor-subtitle-track__remove:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .editor-panel__history-section {
   flex-shrink: 0;
   border-top: 1px solid #334155;

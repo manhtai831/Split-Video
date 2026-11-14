@@ -15,14 +15,15 @@ import (
 const editorBlurGblurSigmaFactor = 1.5
 
 type EditorRenderOptions struct {
-	Extras      structs.EditorJobExtrasDto
-	Layers      []structs.EditorLayerDto
-	FilePaths   map[int]string
-	RasterPaths map[string]string
-	OutputPath  string
-	TempDir     string
-	Encode      structs.FfmpegEncodeOptionsDto
-	OnProgress  func(float64)
+	Extras        structs.EditorJobExtrasDto
+	Layers        []structs.EditorLayerDto
+	FilePaths     map[int]string
+	RasterPaths   map[string]string
+	SubtitlePaths []string
+	OutputPath    string
+	TempDir       string
+	Encode        structs.FfmpegEncodeOptionsDto
+	OnProgress    func(float64)
 }
 
 type editorInput struct {
@@ -88,12 +89,19 @@ func RenderEditorProject(ctx context.Context, opts EditorRenderOptions) (structs
 		filterParts = append(filterParts, audioMix.filterExpr)
 	}
 
+	videoLabel := finalLabel
+	for i, path := range opts.SubtitlePaths {
+		outLabel := fmt.Sprintf("[subtitles_%d]", i)
+		filterParts = append(filterParts, buildSubtitleFilter(videoLabel, path, outLabel))
+		videoLabel = outLabel
+	}
+
 	args := []string{"-y"}
 	for _, input := range inputs {
 		args = append(args, input.args...)
 	}
 	args = append(args, "-filter_complex", strings.Join(filterParts, ";"))
-	args = append(args, "-map", finalLabel)
+	args = append(args, "-map", videoLabel)
 	if hasAudio {
 		args = append(args, "-map", audioMix.mapLabel)
 	}
@@ -371,6 +379,19 @@ func buildEditorAudioLayerFilter(inputIndex int, start, end, volume float64, out
 		delayMs,
 		outLabel,
 	)
+}
+
+func buildSubtitleFilter(inputLabel, path, outLabel string) string {
+	escapedPath := strings.NewReplacer(
+		"\\", "\\\\",
+		":", "\\:",
+		",", "\\,",
+		"[", "\\[",
+		"]", "\\]",
+		"'", "\\'",
+		";", "\\;",
+	).Replace(path)
+	return fmt.Sprintf("%ssubtitles=filename=%s:charenc=UTF-8%s", inputLabel, escapedPath, outLabel)
 }
 
 func buildAudioMixFilter(tracks []editorAudioTrack, duration float64) (audioMixResult, bool) {

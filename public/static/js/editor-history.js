@@ -16,6 +16,7 @@
       frame: Object.assign({}, state.frame),
       framePreset: state.framePreset,
       layers: JSON.parse(JSON.stringify(state.layers)),
+      subtitles: JSON.parse(JSON.stringify(state.subtitles || [])),
       selectedId: state.selectedId,
     };
   }

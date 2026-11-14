@@ -26,8 +26,8 @@ func handleEditor(w http.ResponseWriter, r *http.Request) {
 	jobID := r.URL.Query().Get("job")
 
 	title := "Chỉnh Sửa Video Online — Video Editor Trên Trình Duyệt"
-	description := "Chỉnh sửa video online miễn phí ngay trên trình duyệt. Online video editor: thêm layer video/ảnh/text, timeline, lưu draft và xuất bản — không cần cài phần mềm."
-	descriptionEN := "Free online video editor in your browser — add video, image & text layers, edit timeline, save drafts and publish. No install required."
+	description := "Chỉnh sửa video online miễn phí ngay trên trình duyệt. Thêm layer video/ảnh/text, nhập phụ đề SRT/VTT để burn-in vào video, lưu draft và xuất bản — không cần cài phần mềm."
+	descriptionEN := "Free online video editor — add video, image & text layers, import SRT/VTT subtitles and burn them into your video. Save drafts and publish in your browser."
 
 	if jobID != "" {
 		job, err := JobService.GetJobByIdentifierForUser(jobID, userID)

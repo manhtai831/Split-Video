@@ -25,6 +25,7 @@
     frame: { width: DEFAULT_FRAME.width, height: DEFAULT_FRAME.height },
     framePreset: "16:9",
     layers: [],
+    subtitles: [],
     selectedId: null,
     currentTime: 0,
   };
@@ -206,6 +207,9 @@
           }
           return copy;
         }),
+      subtitles: state.subtitles.map(function (subtitle) {
+        return Object.assign({}, subtitle);
+      }),
     };
   }
 
@@ -272,6 +276,11 @@
         pendingKeys[layer.clientKey] = true;
       }
     });
+    state.subtitles.forEach(function (subtitle) {
+      if (subtitle && subtitle.clientKey && !subtitle.fileId) {
+        pendingKeys[subtitle.clientKey] = true;
+      }
+    });
     Object.keys(pendingFiles).forEach(function (key) {
       if (pendingKeys[key] && pendingFiles[key]) {
         files.push({ clientKey: key, file: pendingFiles[key] });
@@ -315,6 +324,25 @@
     syncRetainedResources();
   }
 
+  function applyServerSubtitles(serverSubtitles) {
+    state.subtitles = (serverSubtitles || []).map(function (subtitle) {
+      var copy = Object.assign({}, subtitle);
+      if (copy.fileId != null && copy.fileId !== "") {
+        copy.fileId = Number(copy.fileId);
+        if (!copy.mediaUrl && jobIdentifier) {
+          copy.mediaUrl =
+            "/api/jobs/" +
+            encodeURIComponent(jobIdentifier) +
+            "/files/" +
+            copy.fileId +
+            "/download";
+        }
+        delete copy.clientKey;
+      }
+      return copy;
+    });
+  }
+
   function ensureBoundLayerSelected() {
     var bound = state.layers.find(function (l) {
       return window.EditorLayers.isBoundLayer(l);
@@ -335,6 +363,7 @@
     state.frame = resp.frame || state.frame;
     state.framePreset = resp.framePreset || state.framePreset;
     applyServerLayers(resp.layers);
+    applyServerSubtitles(resp.subtitles);
     state.selectedId = window.EditorLayers.BOUND_LAYER_ID;
     isDirty = false;
     suppressDirty = false;
@@ -375,9 +404,11 @@
     var dupBtn = $("editorDuplicate");
     var pubBtn = $("editorPublish");
     var nameBtn = $("editorProjectName");
+    var subtitleBtn = $("editorAddSubtitle");
     if (dupBtn) dupBtn.disabled = isReadOnly;
     if (pubBtn) pubBtn.disabled = isReadOnly;
     if (nameBtn) nameBtn.disabled = isReadOnly;
+    if (subtitleBtn) subtitleBtn.disabled = isReadOnly;
     updateSaveUI();
   }
 
@@ -504,6 +535,7 @@
     state.frame = { width: DEFAULT_FRAME.width, height: DEFAULT_FRAME.height };
     state.framePreset = "16:9";
     state.layers = [window.EditorLayers.defaultBoundLayer()];
+    state.subtitles = [];
     state.selectedId = window.EditorLayers.BOUND_LAYER_ID;
     state.currentTime = 0;
     if (window.EditorLayers.resetIdCounter) {
@@ -578,6 +610,7 @@
     state.frame = Object.assign({}, snapshot.frame);
     state.framePreset = snapshot.framePreset;
     state.layers = JSON.parse(JSON.stringify(snapshot.layers));
+    state.subtitles = JSON.parse(JSON.stringify(snapshot.subtitles || []));
     state.selectedId = snapshot.selectedId;
     window.EditorFrame.setDimensions(state.frame.width, state.frame.height);
     isRestoringHistory = false;
@@ -597,6 +630,7 @@
   function refreshUI() {
     window.EditorLayers.render();
     window.EditorCaptions.renderCaptionTracks();
+    renderSubtitleTracks();
     if (!isPropertiesFocused()) {
       renderProperties();
     }
@@ -792,6 +826,74 @@
     );
     assignPendingFile(layer, file);
     addLayer(layer);
+  }
+
+  function addSubtitleFiles(files) {
+    if (isReadOnly) return;
+    var added = false;
+    Array.prototype.forEach.call(files || [], function (file) {
+      if (!/\.(srt|vtt)$/i.test(file.name || "")) {
+        showToast("Chỉ hỗ trợ file phụ đề SRT hoặc VTT");
+        return;
+      }
+      var key = nextClientKey();
+      pendingFiles[key] = file;
+      state.subtitles.push({
+        id: "subtitle-" + key,
+        clientKey: key,
+        name: file.name,
+      });
+      added = true;
+    });
+    if (added) {
+      notify();
+      markDirty();
+      recordHistory("Thêm phụ đề");
+    }
+  }
+
+  function removeSubtitle(id) {
+    if (isReadOnly) return;
+    var count = state.subtitles.length;
+    state.subtitles = state.subtitles.filter(function (subtitle) {
+      return subtitle.id !== id;
+    });
+    if (state.subtitles.length === count) return;
+    notify();
+    markDirty();
+    recordHistory("Xóa phụ đề");
+  }
+
+  function renderSubtitleTracks() {
+    var list = $("editorSubtitlesList");
+    var empty = $("editorSubtitlesEmpty");
+    if (!list) return;
+    list.innerHTML = "";
+    var subtitles = state.subtitles || [];
+    if (empty) empty.hidden = subtitles.length > 0;
+    subtitles.forEach(function (subtitle) {
+      var item = document.createElement("li");
+      item.className = "editor-subtitle-track";
+
+      var name = document.createElement("span");
+      name.className = "editor-subtitle-track__name";
+      name.textContent = subtitle.name || "Subtitle";
+      name.title = subtitle.name || "Subtitle";
+      item.appendChild(name);
+
+      var remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "editor-subtitle-track__remove";
+      remove.textContent = "×";
+      remove.title = "Xóa phụ đề " + (subtitle.name || "");
+      remove.setAttribute("aria-label", remove.title);
+      remove.disabled = isReadOnly;
+      remove.addEventListener("click", function () {
+        removeSubtitle(subtitle.id);
+      });
+      item.appendChild(remove);
+      list.appendChild(item);
+    });
   }
 
   function addLayer(layer) {
@@ -1328,6 +1430,9 @@
         .map(function (l) {
           return Object.assign({}, l);
         }),
+      subtitles: state.subtitles.map(function (subtitle) {
+        return Object.assign({}, subtitle);
+      }),
     };
     return JSON.stringify(payload, null, 2);
   }
@@ -1980,6 +2085,19 @@
       $("editorMediaInput").click();
     });
 
+    $("editorAddSubtitle").addEventListener("click", function () {
+      if (isReadOnly) return;
+      $("editorSubtitleInput").click();
+    });
+
+    $("editorSubtitleInput").addEventListener("change", function () {
+      var input = $("editorSubtitleInput");
+      if (input.files && input.files.length) {
+        addSubtitleFiles(input.files);
+      }
+      input.value = "";
+    });
+
     $("editorMediaInput").addEventListener("change", function () {
       var input = $("editorMediaInput");
       if (!input.files || !input.files.length) return;
@@ -2429,6 +2547,7 @@
             frame: state.frame,
             framePreset: state.framePreset,
             layers: state.layers,
+            subtitles: state.subtitles,
             selectedId: state.selectedId,
           };
         },

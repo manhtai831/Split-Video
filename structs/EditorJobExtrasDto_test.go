@@ -75,3 +75,37 @@ func TestParseEditorJobExtrasJSONRejectsAudioWithoutFileReference(t *testing.T) 
 		t.Fatal("expected audio layer without file reference to fail")
 	}
 }
+
+func TestEditorJobExtrasSubtitleUploadReference(t *testing.T) {
+	raw := `{"frame":{"width":1280,"height":720},"framePreset":"16:9","duration":12,"subtitles":[{"id":"subtitle-1","name":"captions.srt","clientKey":"ck-subtitle"}]}`
+	dto, err := ParseEditorJobExtrasJSON(raw)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	dto.ResolveSubtitleFiles("job-1", map[string]int{"ck-subtitle": 42})
+	if err := dto.ValidateResolvedSubtitleFiles(); err != nil {
+		t.Fatalf("unexpected validation error: %v", err)
+	}
+	if dto.Subtitles[0].FileID != 42 {
+		t.Fatalf("expected fileId 42, got %d", dto.Subtitles[0].FileID)
+	}
+	if dto.Subtitles[0].MediaURL != "/api/jobs/job-1/files/42/download" {
+		t.Fatalf("unexpected mediaUrl: %s", dto.Subtitles[0].MediaURL)
+	}
+	if dto.Subtitles[0].ClientKey != "" {
+		t.Fatalf("expected clientKey to be removed, got %q", dto.Subtitles[0].ClientKey)
+	}
+}
+
+func TestParseEditorJobExtrasJSONRejectsInvalidSubtitleReference(t *testing.T) {
+	tests := []string{
+		`{"frame":{"width":1280,"height":720},"duration":12,"subtitles":[{"name":"captions.srt"}]}`,
+		`{"frame":{"width":1280,"height":720},"duration":12,"subtitles":[{"fileId":4,"name":"captions.txt"}]}`,
+	}
+	for _, raw := range tests {
+		if _, err := ParseEditorJobExtrasJSON(raw); err == nil {
+			t.Fatalf("expected invalid subtitle config to fail: %s", raw)
+		}
+	}
+}
