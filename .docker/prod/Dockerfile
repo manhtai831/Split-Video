@@ -25,6 +25,7 @@ COPY --from=builder /app/dist/main ./dist/main
 COPY --from=builder /app/dist/ytdlp-updater /usr/local/bin/ytdlp-updater
 COPY --from=builder /app/dist/static ./dist/static
 COPY templates ./templates
+COPY assets ./assets
 
 RUN ytdlp-updater
 
